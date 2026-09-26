@@ -1132,13 +1132,22 @@ Frontend
 - **Xong khi:** mọi màn hình hoạt động như cũ, dữ liệu còn sau reload và trên trình duyệt khác; chọn ảnh upload lên server.
 - *Đã kiểm chứng ở mức HTTP qua proxy dev (4200 → 8080): danh sách, upload, tải ảnh, tạo quán có ảnh, chặn data URL. Chưa có test E2E trên trình duyệt thật (Playwright ở Phase 9).*
 
-### Phase 4: Spring Security + JWT + Redis (2–3 ngày)
-- [ ] `SecurityConfig`, `JwtService` (NimbusJwtEncoder/Decoder HS256), `AuthController`.
-- [ ] `RefreshTokenStore` trên Redis (xoay vòng, reuse detection, logout-all).
-- [ ] Bucket4j rate limit (auth + toàn cục).
-- [ ] Gắn `userId` từ JWT vào mọi service; test IDOR.
-- [ ] Frontend: `AuthService`, `authInterceptor`, `authGuard`, Login/Register, Đăng xuất, `restoreSession`.
+### Phase 4: Spring Security + JWT + Redis (2–3 ngày) ✅
+- [x] `SecurityConfig`, `JwtConfig` + `JwtService` (NimbusJwtEncoder/Decoder HS256, kiểm tra issuer, claim `jti` để mỗi token là duy nhất), `AuthController`.
+- [x] `RefreshTokenStore` trên Redis: chỉ lưu SHA-256 của token; xoay vòng; đánh dấu `used` bằng Lua script nguyên tử; dùng lại token đã xoay thì thu hồi cả family; logout (thu hồi family hiện tại), logout-all.
+- [x] Bucket4j rate limit (Lettuce, dùng lại RedisClient của Spring): login/register 5/phút/IP, API 100/phút/user; 429 `RATE_LIMITED` + `Retry-After`.
+- [x] Gắn `userId` từ JWT (`@CurrentUser` đọc `sub`); bỏ header tạm `X-Debug-User`; test IDOR giữ nguyên, nay chạy bằng JWT thật.
+- [x] 401/403 của Spring Security trả ProblemDetail (`UNAUTHORIZED`, `TOKEN_EXPIRED`, `FORBIDDEN`); mã mới `INVALID_CREDENTIALS`.
+- [x] Frontend: `AuthService` (access token chỉ trong bộ nhớ), `authInterceptor` (401 → refresh một lần dùng chung cho mọi request → gửi lại; thất bại → `/login?returnUrl=`), `authGuard`/`guestGuard` (`canMatch`), trang Login/Register, menu người dùng + Đăng xuất / Đăng xuất mọi thiết bị, `restoreSession` trong `provideAppInitializer`.
+- [x] Test: `AuthControllerIT` (13 test), `auth.interceptor.spec.ts` (4 test). Tổng backend 44, frontend 12.
 - **Xong khi:** chưa đăng nhập thì bị chuyển `/login`; F5 vẫn giữ phiên; login sai 6 lần/phút thì 429; user B không đọc được dữ liệu user A.
+
+**Quyết định trong Phase 4**
+- `/auth/refresh` trả cả `user` (không chỉ `accessToken`) để F5 không cần gọi thêm `/auth/me`.
+- Origin lạ gọi `/auth/refresh`/`/auth/logout` bị CORS filter chặn 403 trước; kiểm tra Origin trong controller là lớp thứ hai.
+- `GET /uploads/**` công khai vì `<img>` không gửi được Bearer; tên file là UUID khó đoán. Nếu cần riêng tư tuyệt đối thì chuyển sang URL ký (signed URL) ở Phase 10.
+- Dev: cookie `rt` không đặt `Secure` (`gfm.auth.cookie-secure=false`) vì chạy http; prod bắt buộc `Secure`.
+- Hạn chế đã biết: hai tab cùng refresh đúng một lúc có thể bị coi là dùng lại token và bị đăng xuất. Nếu gặp thực tế thì thêm khoảng ân hạn vài giây cho token vừa xoay.
 
 ### Phase 5: Concurrency (2 ngày)
 - [ ] `@Version` + kiểm tra `version` trong PATCH; handler 409 kèm `current`.

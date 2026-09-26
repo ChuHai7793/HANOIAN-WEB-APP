@@ -8,7 +8,9 @@ import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { routes } from './app.routes';
+import { authInterceptor } from './core/api/auth.interceptor';
 import { errorInterceptor } from './core/api/error.interceptor';
+import { AuthService } from './core/auth/auth.service';
 import { DataBootstrapService } from './core/services/data-bootstrap.service';
 
 export const appConfig: ApplicationConfig = {
@@ -16,8 +18,16 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     // withComponentInputBinding: tham số :id trên route đổ thẳng vào input của component
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withFetch(), withInterceptors([errorInterceptor])),
-    // Tải dữ liệu trước khi hiện trang để không nháy "chưa có quán nào". Không bao giờ reject.
-    provideAppInitializer(() => inject(DataBootstrapService).loadAll()),
+    // errorInterceptor đứng ngoài cùng: chỉ thấy lỗi cuối cùng, sau khi authInterceptor đã
+    // refresh token và thử lại, nên không hiện toast cho 401 đã tự xử lý được
+    provideHttpClient(withFetch(), withInterceptors([errorInterceptor, authInterceptor])),
+    // Khôi phục phiên (cookie refresh) rồi tải dữ liệu, trước khi router chạy guard
+    provideAppInitializer(async () => {
+      const auth = inject(AuthService);
+      const bootstrap = inject(DataBootstrapService);
+      if (await auth.restoreSession()) {
+        await bootstrap.loadAll();
+      }
+    }),
   ],
 };

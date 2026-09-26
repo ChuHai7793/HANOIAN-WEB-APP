@@ -77,6 +77,12 @@ gfm:
     secret: ${JWT_SECRET:}          # >= 32 byte, bắt buộc; app không khởi động nếu thiếu
     access-ttl: 15m
     refresh-ttl: 30d
+  auth:
+    cookie-secure: true
+  rate-limit:
+    auth-per-minute: 5              # login/register theo IP
+    api-per-minute: 100             # mọi API khác theo user
+  # Origin được phép gọi API (CORS) và gọi /auth/refresh, /auth/logout bằng cookie
   cors-origins: ${CORS_ORIGINS:http://localhost:4200}
   storage:
     driver: ${STORAGE_DRIVER:local} # local | s3
@@ -89,4 +95,3 @@ gfm:
       secret-key: ${S3_SECRET_KEY:}
   messaging.enabled: true
   mongo.enabled: false
-  debug-user-header: false

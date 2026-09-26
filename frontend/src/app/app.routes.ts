@@ -1,10 +1,24 @@
 import { Routes } from '@angular/router';
 import { ShellComponent } from './layout/shell.component';
+import { authGuard, guestGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
   {
+    path: 'login',
+    title: 'Đăng nhập · Dating Master',
+    canMatch: [guestGuard],
+    loadComponent: () => import('./features/auth/login.page').then((m) => m.LoginPage),
+  },
+  {
+    path: 'register',
+    title: 'Đăng ký · Dating Master',
+    canMatch: [guestGuard],
+    loadComponent: () => import('./features/auth/register.page').then((m) => m.RegisterPage),
+  },
+  {
     path: '',
     component: ShellComponent,
+    canMatch: [authGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'cafes' },
       {

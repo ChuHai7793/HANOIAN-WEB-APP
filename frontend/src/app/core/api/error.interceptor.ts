@@ -1,11 +1,9 @@
-import { HttpContextToken, HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 import { ToastService } from '../services/toast.service';
 import { errorMessage } from './api';
-
-/** Đặt true cho request tự xử lý lỗi, không muốn hiện toast chung. */
-export const SILENT_ERRORS = new HttpContextToken<boolean>(() => false);
+import { SILENT_ERRORS } from './http-context';
 
 /** Mọi lỗi HTTP được dịch sang tiếng Việt và hiện toast; lỗi vẫn được ném tiếp cho nơi gọi. */
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {

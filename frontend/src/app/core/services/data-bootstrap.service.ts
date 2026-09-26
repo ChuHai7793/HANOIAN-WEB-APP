@@ -7,7 +7,7 @@ export type BootstrapStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 /**
  * Tải cả 3 bảng một lần (dữ liệu nhỏ), để các màn hình giữ nguyên logic lọc/sắp xếp ở client.
- * TODO(Phase 4): gọi sau khi đăng nhập thay vì lúc khởi động app.
+ * Gọi sau khi đăng nhập / khôi phục phiên; đăng xuất thì {@link clear}.
  */
 @Injectable({ providedIn: 'root' })
 export class DataBootstrapService {
@@ -26,5 +26,13 @@ export class DataBootstrapService {
     } catch {
       this.status.set('error');
     }
+  }
+
+  /** Đăng xuất: xoá dữ liệu của tài khoản cũ khỏi bộ nhớ. */
+  clear(): void {
+    this.places.clear();
+    this.girlfriends.clear();
+    this.links.clear();
+    this.status.set('idle');
   }
 }

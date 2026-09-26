@@ -49,6 +49,8 @@ class BootstrapIT {
 
   @Test
   void unknownRoutesAreDenied() throws Exception {
-    mvc.perform(get("/actuator/env")).andExpect(status().isForbidden());
+    mvc.perform(get("/actuator/env"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
   }
 }

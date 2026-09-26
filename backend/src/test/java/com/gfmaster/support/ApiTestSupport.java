@@ -6,25 +6,28 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.gfmaster.common.security.CurrentUserArgumentResolver;
+import com.gfmaster.auth.JwtService;
 import com.gfmaster.user.User;
 import com.gfmaster.user.UserRepository;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Helper cho test API: tạo user riêng cho từng test, gọi API dưới danh nghĩa user đó. */
+/** Helper cho test API: tạo user riêng cho từng test, gọi API bằng access token JWT thật của user đó. */
 @IntegrationTest
 public abstract class ApiTestSupport {
 
   @Autowired protected MockMvc mvc;
   @Autowired protected JsonMapper json;
   @Autowired protected UserRepository users;
+  @Autowired protected JwtService jwt;
 
   protected UUID newUser() {
     User u = new User();
@@ -34,14 +37,18 @@ public abstract class ApiTestSupport {
     return users.saveAndFlush(u).getId();
   }
 
+  protected String bearer(UUID user) {
+    return "Bearer " + jwt.issueAccessToken(user, "test@local");
+  }
+
   protected ResultActions getAs(UUID user, String path) throws Exception {
-    return mvc.perform(get(path).header(CurrentUserArgumentResolver.DEBUG_HEADER, user));
+    return mvc.perform(get(path).header(HttpHeaders.AUTHORIZATION, bearer(user)));
   }
 
   protected ResultActions postAs(UUID user, String path, String body) throws Exception {
     return mvc.perform(
         post(path)
-            .header(CurrentUserArgumentResolver.DEBUG_HEADER, user)
+            .header(HttpHeaders.AUTHORIZATION, bearer(user))
             .contentType(MediaType.APPLICATION_JSON)
             .content(body));
   }
@@ -49,17 +56,21 @@ public abstract class ApiTestSupport {
   protected ResultActions patchAs(UUID user, String path, String body) throws Exception {
     return mvc.perform(
         patch(path)
-            .header(CurrentUserArgumentResolver.DEBUG_HEADER, user)
+            .header(HttpHeaders.AUTHORIZATION, bearer(user))
             .contentType(MediaType.APPLICATION_JSON)
             .content(body));
   }
 
   protected ResultActions deleteAs(UUID user, String path) throws Exception {
-    return mvc.perform(delete(path).header(CurrentUserArgumentResolver.DEBUG_HEADER, user));
+    return mvc.perform(delete(path).header(HttpHeaders.AUTHORIZATION, bearer(user)));
   }
 
   protected JsonNode body(ResultActions result) throws Exception {
-    return json.readTree(result.andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8));
+    return body(result.andReturn());
+  }
+
+  protected JsonNode body(MvcResult result) throws Exception {
+    return json.readTree(result.getResponse().getContentAsString(StandardCharsets.UTF_8));
   }
 
   // ---- Fixture ----

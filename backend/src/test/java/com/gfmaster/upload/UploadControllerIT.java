@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.gfmaster.common.security.CurrentUserArgumentResolver;
+import org.springframework.http.HttpHeaders;
 import com.gfmaster.support.ApiTestSupport;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -76,7 +76,7 @@ class UploadControllerIT extends ApiTestSupport {
     return mvc.perform(
         multipart("/api/v1/uploads/image")
             .file(new MockMultipartFile("file", name, type, bytes))
-            .header(CurrentUserArgumentResolver.DEBUG_HEADER, user));
+            .header(HttpHeaders.AUTHORIZATION, bearer(user)));
   }
 
   private static byte[] png(int w, int h) throws Exception {

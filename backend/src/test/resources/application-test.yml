@@ -1,7 +1,9 @@
 management.endpoint.health.show-details: always
 
 gfm:
-  debug-user-header: true
   storage.local-dir: ${java.io.tmpdir}/gfm-test-uploads
+  rate-limit:
+    auth-per-minute: 5
+    api-per-minute: 1000            # test gọi API dày đặc, không muốn dính giới hạn
   jwt:
     secret: test-secret-0123456789abcdef-0123456789abcdef

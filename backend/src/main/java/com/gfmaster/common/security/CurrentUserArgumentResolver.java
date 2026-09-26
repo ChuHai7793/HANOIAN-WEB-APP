@@ -2,32 +2,20 @@ package com.gfmaster.common.security;
 
 import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
-import com.gfmaster.config.GfmProperties;
 import java.util.UUID;
 import org.springframework.core.MethodParameter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-/**
- * Xác định user hiện tại.
- *
- * <p>TODO(Phase 4): lấy {@code sub} từ JWT. Tạm thời (chỉ khi {@code gfm.debug-user-header=true},
- * bật ở dev/test) đọc header {@code X-Debug-User}; thiếu header thì dùng user demo của seed.
- */
+/** userId lấy từ claim {@code sub} của JWT đã được xác thực. Không bao giờ tin userId client gửi. */
 @Component
 public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolver {
-
-  public static final String DEBUG_HEADER = "X-Debug-User";
-  static final UUID DEMO_USER_ID = UUID.fromString("00000000-0000-4000-8000-000000000001");
-
-  private final boolean debugHeaderEnabled;
-
-  public CurrentUserArgumentResolver(GfmProperties props) {
-    this.debugHeaderEnabled = props.debugUserHeader();
-  }
 
   @Override
   public boolean supportsParameter(MethodParameter parameter) {
@@ -41,17 +29,23 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
       ModelAndViewContainer mavContainer,
       NativeWebRequest request,
       WebDataBinderFactory binderFactory) {
-    if (!debugHeaderEnabled) {
+    UUID userId = currentUserId();
+    if (userId == null) {
       throw new ApiException(ErrorCode.UNAUTHORIZED);
     }
-    String header = request.getHeader(DEBUG_HEADER);
-    if (header == null || header.isBlank()) {
-      return DEMO_USER_ID;
+    return userId;
+  }
+
+  /** null nếu request chưa đăng nhập. */
+  public static UUID currentUserId() {
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
+      try {
+        return UUID.fromString(jwt.getSubject());
+      } catch (IllegalArgumentException e) {
+        return null;
+      }
     }
-    try {
-      return UUID.fromString(header.trim());
-    } catch (IllegalArgumentException e) {
-      throw new ApiException(ErrorCode.UNAUTHORIZED);
-    }
+    return null;
   }
 }

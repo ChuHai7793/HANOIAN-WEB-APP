@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { PlaceService } from '../core/services/place.service';
 import { GirlfriendService } from '../core/services/girlfriend.service';
 import { DataBootstrapService } from '../core/services/data-bootstrap.service';
+import { AuthService } from '../core/auth/auth.service';
 
 interface NavItem {
   path: string;
@@ -49,9 +50,36 @@ interface NavItem {
         </nav>
 
         <div class="absolute bottom-0 w-full border-t border-slate-100 p-4">
-          <p class="text-[11px] leading-relaxed text-slate-400">
-            Dữ liệu lưu trên server, đồng bộ giữa các thiết bị.
-          </p>
+          @if (auth.user(); as user) {
+            <div class="flex items-center gap-3">
+              <span
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700"
+              >
+                {{ initial(user.displayName) }}
+              </span>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-medium text-slate-800">{{ user.displayName }}</p>
+                <p class="truncate text-[11px] text-slate-400">{{ user.email }}</p>
+              </div>
+            </div>
+            <div class="mt-3 flex gap-2">
+              <button
+                type="button"
+                class="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
+                (click)="auth.logout()"
+              >
+                Đăng xuất
+              </button>
+              <button
+                type="button"
+                class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-500 transition hover:bg-slate-50"
+                title="Đăng xuất khỏi mọi thiết bị"
+                (click)="auth.logoutAll()"
+              >
+                Mọi thiết bị
+              </button>
+            </div>
+          }
         </div>
       </aside>
 
@@ -119,6 +147,11 @@ export class ShellComponent {
 
   protected readonly menuOpen = signal(false);
   protected readonly bootstrap = inject(DataBootstrapService);
+  protected readonly auth = inject(AuthService);
+
+  protected initial(name: string): string {
+    return name.trim().charAt(0).toUpperCase() || '?';
+  }
 
   protected readonly navItems: NavItem[] = [
     {

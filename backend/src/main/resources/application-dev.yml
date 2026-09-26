@@ -11,6 +11,6 @@ logging.level:
 management.endpoint.health.show-details: always
 
 gfm:
-  debug-user-header: true
+  auth.cookie-secure: false         # dev chạy http://localhost
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef}

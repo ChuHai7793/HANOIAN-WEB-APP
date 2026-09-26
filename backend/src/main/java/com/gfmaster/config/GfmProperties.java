@@ -1,6 +1,7 @@
 package com.gfmaster.config;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -15,17 +16,23 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("gfm")
 public record GfmProperties(
     @Valid @NotNull Jwt jwt,
+    @Valid @NotNull Auth auth,
+    @Valid @NotNull RateLimit rateLimit,
     @NotNull List<String> corsOrigins,
     @Valid @NotNull Storage storage,
     @Valid @NotNull Messaging messaging,
-    @Valid @NotNull Mongo mongo,
-    /** Chỉ bật ở dev/test: cho phép chọn user qua header X-Debug-User (tạm đến Phase 4). */
-    boolean debugUserHeader) {
+    @Valid @NotNull Mongo mongo) {
 
   public record Jwt(
       @NotBlank @Size(min = 32, message = "JWT_SECRET phải dài ít nhất 32 byte") String secret,
       @NotNull Duration accessTtl,
       @NotNull Duration refreshTtl) {}
+
+  /** {@code cookieSecure=false} chỉ dùng ở dev chạy http. */
+  public record Auth(boolean cookieSecure) {}
+
+  /** Số request tối đa mỗi phút: auth theo IP, API chung theo user. */
+  public record RateLimit(@Min(1) int authPerMinute, @Min(1) int apiPerMinute) {}
 
   public record Storage(
       @NotBlank @Pattern(regexp = "local|s3") String driver,
