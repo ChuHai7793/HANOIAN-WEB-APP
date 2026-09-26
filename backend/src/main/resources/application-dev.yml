@@ -1,0 +1,15 @@
+spring:
+  flyway:
+    # Dev nạp thêm dữ liệu mẫu (R__demo_data.sql)
+    locations: classpath:db/migration,classpath:db/seed
+  jpa:
+    properties.hibernate.format_sql: true
+
+logging.level:
+  org.hibernate.SQL: debug
+
+management.endpoint.health.show-details: always
+
+gfm:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef}

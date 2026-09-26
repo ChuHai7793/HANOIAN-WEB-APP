@@ -66,7 +66,7 @@
 |---|---|---|
 | Frontend | **Angular 21** + Tailwind v4 (giữ nguyên) | SPA |
 | Ngôn ngữ backend | **Java 21 LTS** | Bật virtual threads (`spring.threads.virtual.enabled=true`) |
-| Framework | **Spring Boot 3.5.x** (nâng lên 4.x khi các thư viện đi kèm ổn định) | Web, DI, cấu hình |
+| Framework | **Spring Boot 4.1.x** (Spring 7, Hibernate 7, Jackson 3). *Ban đầu dự định 3.5, nhưng 3.5 đã hết hỗ trợ OSS và Initializr không còn cung cấp* | Web, DI, cấu hình |
 | Build | **Maven** (kèm `mvnw`) | |
 | ORM | **Spring Data JPA + Hibernate** | Entity, repository, optimistic locking `@Version` |
 | Migration | **Flyway** (`flyway-core` + `flyway-mysql`, module này hỗ trợ MariaDB) | Toàn bộ DDL nằm trong file SQL có version; Hibernate chỉ `validate` |
@@ -1079,17 +1079,19 @@ gfmaster.example.com {
 
 > Ước lượng cho 1 người làm bán thời gian. Mỗi phase kết thúc phải chạy được.
 
-### Phase 0: Chuẩn bị (0.5 ngày)
-- [ ] `git init` ở `GF_Master/`, `.gitignore` gốc (node_modules, dist, .angular, target, .env, uploads).
-- [ ] Commit trạng thái frontend hiện tại làm mốc, tạo repo private trên GitHub.
-- [ ] `docker-compose.yml` hạ tầng (mục 11.1).
+### Phase 0: Chuẩn bị (0.5 ngày) ✅
+- [x] `git init` ở `GF_Master/`, `.gitignore` gốc (node_modules, dist, .angular, target, .env, uploads).
+- [x] Commit trạng thái frontend hiện tại làm mốc. *(Chưa tạo repo GitHub, cần người dùng tự tạo.)*
+- [x] `docker-compose.yml` hạ tầng (mục 11.1).
 - **Xong khi:** `docker compose up -d` chạy xanh; vào được Adminer và RabbitMQ UI.
 
-### Phase 1: Khung Spring Boot + Flyway (1 ngày)
-- [ ] Tạo project bằng Spring Initializr (Java 21, Maven, package `com.gfmaster`) với các starter ở mục 10.1.
-- [ ] `application*.yml`, `GfmProperties`, `JacksonConfig`, `OpenApiConfig`, `GlobalExceptionHandler` (ProblemDetail).
-- [ ] `V1__init_schema.sql`, `BaseEntity`, entity + repository cho 6 bảng; `ddl-auto=validate` chạy qua.
-- [ ] `R__demo_data.sql` (profile dev).
+### Phase 1: Khung Spring Boot + Flyway (1 ngày) ✅
+- [x] Tạo project bằng Spring Initializr (Java 21, Maven, package `com.gfmaster`, **Spring Boot 4.1.1**). Các thư viện Redisson/Bucket4j/ShedLock/MapStruct/Scrimage/S3 sẽ thêm ở phase dùng tới.
+- [x] `application*.yml`, `GfmProperties`, `JacksonConfig`, `OpenApiConfig`, `GlobalExceptionHandler` (ProblemDetail).
+- [x] `V1__init_schema.sql`, `BaseEntity`, entity + repository cho 6 bảng; `ddl-auto=validate` chạy qua.
+- [x] `R__demo_data.sql` (profile dev).
+- [x] `BootstrapIT`, `SchemaMappingIT` (Testcontainers) xanh với `./mvnw verify`.
+- *Ghi chú:* `SecurityConfig` tạm thời `permitAll` cho `/api/**` đến Phase 4.
 - **Xong khi:** app khởi động, Flyway tạo bảng, `/actuator/health` báo `db`, `redis`, `rabbit` đều UP; `/api/docs` hiện Swagger.
 
 ### Phase 2: CRUD với JPA (2–3 ngày)

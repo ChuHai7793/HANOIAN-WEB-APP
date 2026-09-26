@@ -1,0 +1,8 @@
+spring:
+  jpa:
+    properties.hibernate.generate_statistics: false
+
+management.endpoint.health.show-details: never
+
+logging.level:
+  root: info

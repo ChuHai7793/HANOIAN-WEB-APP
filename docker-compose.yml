@@ -1,0 +1,51 @@
+# Dev: chỉ hạ tầng. Backend chạy bằng ./mvnw, frontend bằng npm start.
+services:
+  mariadb:
+    image: mariadb:11.4
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root}
+      MARIADB_DATABASE: gfmaster
+      MARIADB_USER: ${DB_USER:-gfm}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-gfm}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_uca1400_ai_ci"]
+    ports: ["3306:3306"]
+    volumes: [mariadb:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "volatile-lru"]
+    ports: ["6379:6379"]
+    volumes: [redis:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBIT_USER:-gfm}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_PASSWORD:-gfm}
+    ports: ["5672:5672", "15672:15672"]   # UI: http://localhost:15672
+    volumes: [rabbitmq:/var/lib/rabbitmq]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      retries: 20
+
+  adminer:                                  # xem DB: http://localhost:8081
+    image: adminer
+    ports: ["8081:8080"]
+    depends_on: [mariadb]
+
+  mongo:                                    # chỉ chạy khi: docker compose --profile mongo up
+    image: mongo:8
+    profiles: ["mongo"]
+    ports: ["27017:27017"]
+    volumes: [mongo:/data/db]
+
+volumes: { mariadb: {}, redis: {}, rabbitmq: {}, mongo: {} }
