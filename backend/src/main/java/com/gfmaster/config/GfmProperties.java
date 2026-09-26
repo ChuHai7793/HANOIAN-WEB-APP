@@ -18,7 +18,9 @@ public record GfmProperties(
     @NotNull List<String> corsOrigins,
     @Valid @NotNull Storage storage,
     @Valid @NotNull Messaging messaging,
-    @Valid @NotNull Mongo mongo) {
+    @Valid @NotNull Mongo mongo,
+    /** Chỉ bật ở dev/test: cho phép chọn user qua header X-Debug-User (tạm đến Phase 4). */
+    boolean debugUserHeader) {
 
   public record Jwt(
       @NotBlank @Size(min = 32, message = "JWT_SECRET phải dài ít nhất 32 byte") String secret,

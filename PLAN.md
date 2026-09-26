@@ -1094,13 +1094,22 @@ gfmaster.example.com {
 - *Ghi chú:* `SecurityConfig` tạm thời `permitAll` cho `/api/**` đến Phase 4.
 - **Xong khi:** app khởi động, Flyway tạo bảng, `/actuator/health` báo `db`, `redis`, `rabbit` đều UP; `/api/docs` hiện Swagger.
 
-### Phase 2: CRUD với JPA (2–3 ngày)
-- [ ] DTO record + MapStruct cho Place, Girlfriend, PlaceLink.
-- [ ] Service + Controller (tạm dùng user demo cố định qua header giả ở profile dev).
-- [ ] `placeCount`, `/girlfriends/{id}/links` với `@EntityGraph`, `/stats`.
-- [ ] Map `DataIntegrityViolationException` sang 409 theo tên constraint.
-- [ ] Integration test CRUD + cascade.
-- **Xong khi:** mọi thao tác chạy qua Swagger; xoá place thì link mất; không có N+1 (kiểm tra bằng log SQL).
+### Phase 2: CRUD với JPA (2–3 ngày) ✅
+- [x] DTO record + MapStruct cho Place, Girlfriend, PlaceLink.
+- [x] Service + Controller (tạm dùng user demo cố định qua header giả ở profile dev).
+- [x] `placeCount`, `/girlfriends/{id}/links` với `@EntityGraph`, `/stats`.
+- [x] Map `DataIntegrityViolationException` sang 409 theo tên constraint.
+- [x] Integration test CRUD + cascade (26 test, gồm IDOR, validate, 409).
+- **Xong khi:** mọi thao tác chạy qua Swagger; xoá place thì link mất; không có N+1 (kiểm tra bằng log SQL: mỗi endpoint danh sách 1–2 câu SQL).
+
+**Quyết định trong Phase 2**
+- User hiện tại: `@CurrentUser UUID` đọc header `X-Debug-User` (chỉ khi `gfm.debug-user-header=true`, bật ở dev/test; thiếu header thì dùng user demo). Phase 4 thay bằng JWT.
+- PATCH nhận JSON thô (`PatchReader`) để phân biệt "không gửi" và "gửi null": field tuỳ chọn (`lat`, `lng`, `hasWifi`, `hasParking`, `cuisine`, `birthday`, `startedDate`, `lastVisitedAt`) gửi `null` thì xoá; field bắt buộc gửi `null` thì bỏ qua. Phần áp PATCH viết tay (MapStruct `@Condition` + `@SourcePropertyName` lỗi khi nguồn là record); MapStruct chỉ dùng cho `toEntity`/`toResponse`.
+- Kiểm tra `version` và trả 409 `VERSION_CONFLICT` kèm `current` đã làm luôn ở Phase 2 (Phase 5 còn Idempotency + dialog + test đồng thời).
+- Request bỏ qua các field chỉ đọc mà client gửi kèm (`id`, `createdAt`, `updatedAt`, `placeType`, `placeCount`); field lạ khác vẫn bị từ chối (400).
+- `GET /places/{id}` chỉ trả quán; danh sách người yêu đã đi cùng lấy qua `GET /place-links?placeId=`.
+- `GET /girlfriends/{id}/links` trả `[{ link, place }]`, sắp xếp `herRating` giảm dần rồi `lastVisitedAt` mới nhất.
+- `hibernate.type.java_time_use_direct_jdbc=true`: nếu không, `jdbc.time_zone=UTC` làm cột TIME lệch theo múi giờ JVM (08:00 thành 16:00 trên máy UTC+7). Có test hồi quy.
 
 ### Phase 3: Nối frontend với API (2 ngày)
 - [ ] `provideHttpClient`, environments, `proxy.conf.json`.

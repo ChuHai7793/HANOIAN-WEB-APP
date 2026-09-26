@@ -18,6 +18,9 @@ spring:
       order_updates: true
       # DATETIME(6) trong DB ↔ Instant (không dùng kiểu timestamp_utc riêng của Hibernate)
       type.preferred_instant_jdbc_type: TIMESTAMP
+      # Truyền thẳng LocalDate/LocalTime xuống driver, không quy đổi qua java.sql.Time + Calendar.
+      # Nếu không, jdbc.time_zone=UTC làm giờ mở cửa lệch theo múi giờ của JVM (08:00 → 16:00 ở UTC+8).
+      type.java_time_use_direct_jdbc: true
 
   flyway:
     enabled: true
@@ -86,3 +89,4 @@ gfm:
       secret-key: ${S3_SECRET_KEY:}
   messaging.enabled: true
   mongo.enabled: false
+  debug-user-header: false
