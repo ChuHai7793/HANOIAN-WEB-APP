@@ -2,5 +2,6 @@ management.endpoint.health.show-details: always
 
 gfm:
   debug-user-header: true
+  storage.local-dir: ${java.io.tmpdir}/gfm-test-uploads
   jwt:
     secret: test-secret-0123456789abcdef-0123456789abcdef

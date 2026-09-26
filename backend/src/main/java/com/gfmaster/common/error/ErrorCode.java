@@ -15,6 +15,7 @@ public enum ErrorCode {
   DATA_CONFLICT(HttpStatus.CONFLICT, "Dữ liệu bị trùng hoặc vi phạm ràng buộc."),
   IDEMPOTENCY_IN_PROGRESS(HttpStatus.CONFLICT, "Yêu cầu đang được xử lý."),
   FILE_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "File quá lớn."),
+  UNSUPPORTED_IMAGE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Chỉ nhận ảnh JPG, PNG hoặc WebP."),
   IMPORT_RUNNING(HttpStatus.LOCKED, "Đang có một lần import khác chạy."),
   RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "Bạn thao tác quá nhanh, thử lại sau."),
   INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Có lỗi xảy ra phía server.");

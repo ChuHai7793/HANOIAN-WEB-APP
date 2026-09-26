@@ -9,5 +9,6 @@ export interface PlaceLink {
   herRating: number; // nàng chấm 1..5
   lastVisitedAt: string; // 'yyyy-MM-dd'
   memory: string; // kỷ niệm
+  version: number;
   createdAt: string;
 }

@@ -1,12 +1,11 @@
 import { computed, Injectable } from '@angular/core';
 import { CrudStore } from './crud-store';
 import { Place, PlaceType } from '../models/place.model';
-import { seedPlaces } from '../data/seed';
 
 @Injectable({ providedIn: 'root' })
 export class PlaceService extends CrudStore<Place> {
   constructor() {
-    super('gfm.places', 'place', seedPlaces);
+    super('places');
   }
 
   readonly cafes = computed(() => this.items().filter((p) => p.type === 'cafe'));

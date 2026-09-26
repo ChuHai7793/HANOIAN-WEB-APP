@@ -1,73 +1,121 @@
+import { HttpClient } from '@angular/common/http';
 import { computed, inject, signal } from '@angular/core';
-import { StorageService } from './storage.service';
-import { newId, nowIso } from '../utils/id';
+import { firstValueFrom } from 'rxjs';
+import { API_BASE, errorCode, problemOf } from '../api/api';
 
 export interface Entity {
   id: string;
+  version: number;
 }
 
+/** Field do server quản lý, không gửi lên. */
+const READ_ONLY = ['id', 'version', 'createdAt', 'updatedAt'] as const;
+
 /**
- * Kho CRUD dùng chung cho mọi thực thể: nạp từ localStorage lúc khởi tạo,
- * mọi thay đổi ghi lại ngay. State giữ trong signal nên component chỉ cần đọc.
+ * Kho CRUD dùng chung cho mọi thực thể: state giữ trong signal (component chỉ việc đọc),
+ * mọi thay đổi gọi REST API. Sửa/xoá là optimistic: cập nhật giao diện ngay, lỗi thì hoàn tác.
  */
 export abstract class CrudStore<T extends Entity> {
-  private readonly storage = inject(StorageService);
+  protected readonly http = inject(HttpClient);
   private readonly state = signal<T[]>([]);
 
   readonly items = this.state.asReadonly();
   readonly count = computed(() => this.state().length);
+  readonly loaded = signal(false);
 
-  protected constructor(
-    private readonly storageKey: string,
-    private readonly idPrefix: string,
-    seed: () => T[],
-  ) {
-    const saved = this.storage.read<T>(this.storageKey);
-    if (saved) {
-      this.state.set(saved);
-    } else {
-      const initial = seed();
-      this.state.set(initial);
-      this.storage.write(this.storageKey, initial);
-    }
+  /** @param path đường dẫn sau /api/v1, ví dụ 'places' */
+  protected constructor(private readonly path: string) {}
+
+  protected get url(): string {
+    return `${API_BASE}/${this.path}`;
+  }
+
+  /** Dữ liệu server → model frontend (ví dụ ngày null → ''). */
+  protected fromApi(raw: T): T {
+    return raw;
+  }
+
+  /** Model frontend → body gửi server (ví dụ ngày '' → null). */
+  protected toApi(data: Record<string, unknown>): Record<string, unknown> {
+    return data;
+  }
+
+  async load(): Promise<void> {
+    const rows = await firstValueFrom(this.http.get<T[]>(this.url));
+    this.state.set(rows.map((r) => this.fromApi(r)));
+    this.loaded.set(true);
   }
 
   byId(id: string): T | undefined {
     return this.state().find((item) => item.id === id);
   }
 
-  create(data: Omit<T, 'id'>): T {
-    const item = { ...data, id: newId(this.idPrefix) } as T;
-    this.persist([...this.state(), item]);
-    return item;
+  async create(data: Omit<T, 'id'>): Promise<T> {
+    const raw = await firstValueFrom(this.http.post<T>(this.url, this.body(data)));
+    const created = this.fromApi(raw);
+    this.state.update((list) => [...list, created]);
+    return created;
   }
 
-  update(id: string, changes: Partial<T>): void {
-    this.persist(
-      this.state().map((item) => (item.id === id ? { ...item, ...changes } : item)),
-    );
+  /**
+   * PATCH kèm version đang giữ. Server báo VERSION_CONFLICT thì thay bằng bản mới nhất server
+   * gửi kèm (`current`); lỗi khác thì hoàn tác. Lỗi luôn được ném lại để form giữ nguyên.
+   */
+  async update(id: string, changes: Partial<T>): Promise<T> {
+    const current = this.byId(id);
+    if (!current) throw new Error(`Không tìm thấy bản ghi ${id}`);
+
+    this.replace({ ...current, ...changes, id, version: current.version });
+    try {
+      const raw = await firstValueFrom(
+        this.http.patch<T>(`${this.url}/${id}`, { ...this.body(changes), version: current.version }),
+      );
+      const saved = this.fromApi(raw);
+      this.replace(saved);
+      return saved;
+    } catch (err) {
+      const problem = problemOf(err);
+      if (problem?.code === 'VERSION_CONFLICT' && problem.current) {
+        this.replace(this.fromApi(problem.current as T));
+      } else if (problem?.code === 'NOT_FOUND') {
+        this.dropLocal((item) => item.id === id);
+      } else {
+        this.replace(current);
+      }
+      throw err;
+    }
   }
 
-  remove(id: string): void {
-    this.persist(this.state().filter((item) => item.id !== id));
+  async remove(id: string): Promise<void> {
+    const current = this.byId(id);
+    this.dropLocal((item) => item.id === id);
+    try {
+      await firstValueFrom(this.http.delete<void>(`${this.url}/${id}`));
+    } catch (err) {
+      // Đã bị xoá ở thiết bị khác: kết quả cuối cùng vẫn đúng
+      if (errorCode(err) === 'NOT_FOUND') return;
+      if (current) this.state.update((list) => [...list, current]);
+      throw err;
+    }
   }
 
-  /** Xoá nhiều bản ghi theo điều kiện — dùng khi xoá kèm liên kết */
-  removeWhere(predicate: (item: T) => boolean): void {
-    this.persist(this.state().filter((item) => !predicate(item)));
+  /** Chỉ xoá trong state, không gọi API (dùng khi server đã tự cascade). */
+  dropLocal(predicate: (item: T) => boolean): void {
+    this.state.update((list) => list.filter((item) => !predicate(item)));
   }
 
-  /** Xoá sạch dữ liệu và nạp lại bộ mẫu */
-  reset(seed: () => T[]): void {
-    this.persist(seed());
+  clear(): void {
+    this.state.set([]);
+    this.loaded.set(false);
   }
 
-  protected touch(): string {
-    return nowIso();
+  private replace(item: T): void {
+    this.state.update((list) => list.map((x) => (x.id === item.id ? item : x)));
   }
 
-  private persist(next: T[]): void {
-    this.state.set(next);
-    this.storage.write(this.storageKey, next);
+  private body(data: object): Record<string, unknown> {
+    const copy: Record<string, unknown> = { ...data };
+    for (const key of READ_ONLY) delete copy[key];
+    return this.toApi(copy);
   }
 }

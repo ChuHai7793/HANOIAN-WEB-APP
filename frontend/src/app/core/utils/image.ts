@@ -5,18 +5,18 @@ export interface CompressOptions {
   quality?: number;
 }
 
-/** Giới hạn kích thước file gốc được chấp nhận, tránh treo trình duyệt */
+/** Giới hạn kích thước file gốc được chấp nhận, khớp với giới hạn upload của server */
 export const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 /**
- * Đọc file ảnh từ máy, thu nhỏ và nén thành data URL để nhét vừa localStorage.
- * Ảnh 4MB từ điện thoại thường còn khoảng 40–90KB sau bước này.
+ * Thu nhỏ và nén ảnh ngay trên trình duyệt trước khi upload để tiết kiệm băng thông.
+ * Server vẫn tự xử lý lại (xoay EXIF, resize, WebP), nên đây chỉ là bước tối ưu.
  */
-export async function fileToCompressedDataUrl(
+export async function fileToCompressedBlob(
   file: File,
   options: CompressOptions = {},
-): Promise<string> {
-  const { maxSize = 800, quality = 0.75 } = options;
+): Promise<Blob> {
+  const { maxSize = 1200, quality = 0.85 } = options;
 
   if (!file.type.startsWith('image/')) {
     throw new Error('File này không phải ảnh.');
@@ -43,8 +43,15 @@ export async function fileToCompressedDataUrl(
   ctx.drawImage(img, 0, 0, width, height);
 
   // WebP nén tốt hơn JPEG khoảng 25%; trình duyệt nào không hỗ trợ thì tự rơi về JPEG
-  const webp = canvas.toDataURL('image/webp', quality);
-  return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', quality);
+  const webp = await canvasToBlob(canvas, 'image/webp', quality);
+  if (webp?.type === 'image/webp') return webp;
+  const jpeg = await canvasToBlob(canvas, 'image/jpeg', quality);
+  if (!jpeg) throw new Error('Không nén được ảnh này.');
+  return jpeg;
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob | null> {
+  return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
 }
 
 function loadImage(file: File): Promise<HTMLImageElement> {
@@ -61,13 +68,6 @@ function loadImage(file: File): Promise<HTMLImageElement> {
     };
     img.src = objectUrl;
   });
-}
-
-/** Ước lượng dung lượng thật của một chuỗi data URL base64 */
-export function dataUrlBytes(dataUrl: string): number {
-  const base64 = dataUrl.split(',')[1] ?? '';
-  const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
-  return Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
 }
 
 export function formatBytes(bytes: number): string {

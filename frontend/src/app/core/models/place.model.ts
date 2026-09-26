@@ -39,6 +39,8 @@ export interface Place {
   /** Riêng quán ăn */
   cuisine?: string;
 
+  /** Optimistic locking: gửi kèm khi sửa, server tăng sau mỗi lần ghi */
+  version: number;
   createdAt: string;
   updatedAt: string;
 }

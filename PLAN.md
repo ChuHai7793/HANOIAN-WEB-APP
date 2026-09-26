@@ -1111,12 +1111,26 @@ gfmaster.example.com {
 - `GET /girlfriends/{id}/links` trả `[{ link, place }]`, sắp xếp `herRating` giảm dần rồi `lastVisitedAt` mới nhất.
 - `hibernate.type.java_time_use_direct_jdbc=true`: nếu không, `jdbc.time_zone=UTC` làm cột TIME lệch theo múi giờ JVM (08:00 thành 16:00 trên máy UTC+7). Có test hồi quy.
 
-### Phase 3: Nối frontend với API (2 ngày)
-- [ ] `provideHttpClient`, environments, `proxy.conf.json`.
-- [ ] Viết lại `CrudStore`, `DataBootstrapService`, thêm `version` vào model.
-- [ ] Sửa component theo bảng 9.4; `ToastService`, `errorInterceptor`.
-- [ ] Xoá `StorageService`, `seed.ts`.
-- **Xong khi:** mọi màn hình hoạt động như cũ, dữ liệu còn sau reload và trên trình duyệt khác.
+### Phase 3: Nối frontend với API + upload ảnh đồng bộ (2.5 ngày) ✅
+> **Điều chỉnh so với bản đầu:** phần upload ảnh *đồng bộ* được kéo từ Phase 6 lên đây. Lý do: từ Phase 2 server đã chặn ảnh base64 (`data:`), nếu chờ tới Phase 6 thì chức năng chọn ảnh sẽ hỏng suốt Phase 3–5, trái với tiêu chí "mọi màn hình hoạt động như cũ". Phần *bất đồng bộ* (thumbnail qua RabbitMQ, dọn ảnh mồ côi) vẫn ở Phase 6.
+
+Backend
+- [x] `StorageDriver` + `LocalStorageDriver` (chặn path traversal), phục vụ `/uploads/**` bằng ResourceHandler, cache 1 năm (tên file là UUID).
+- [x] `ImageProcessor` (Scrimage): kiểm tra magic bytes JPEG/PNG/WebP, xoay EXIF, cạnh dài ≤ 1200px (không phóng to), WebP q78, bỏ metadata.
+- [x] `POST /api/v1/uploads/image` (201, lưu bảng `uploads` status `READY`), `DELETE /api/v1/uploads/{id}` (chỉ chủ sở hữu); mã lỗi `UNSUPPORTED_IMAGE` (415).
+- [x] `UploadControllerIT` (resize, không upscale, chặn file giả đuôi ảnh, xoá chỉ chủ sở hữu, chặn traversal).
+
+Frontend
+- [x] `provideHttpClient(withFetch(), withInterceptors([errorInterceptor]))`, `proxy.conf.json` (`/api`, `/uploads` → 8080). Không dùng `environments/`: dev và prod đều cùng origin nên hằng `API_BASE = '/api/v1'` là đủ.
+- [x] Viết lại `CrudStore` (optimistic update/remove + rollback; 409 `VERSION_CONFLICT` thay bằng `current`; 404 khi xoá coi như thành công), `DataBootstrapService` (chạy trong `provideAppInitializer`, không bao giờ reject; banner "Thử lại" khi lỗi), thêm `version` vào model.
+- [x] Service chuẩn hoá ngày: server `null` ↔ giao diện `''` (`birthday`, `startedDate`, `lastVisitedAt`).
+- [x] Component: `handleSave`/`confirmDelete`/`saveProfile`/`saveLink`/`confirmUnlink` thành async, có cờ `saving`, lỗi thì giữ form; `removeByPlace/removeByGirlfriend` đổi thành `dropByPlace/dropByGirlfriend` (chỉ xoá state, server đã cascade).
+- [x] `ToastService` + `ToastHostComponent`, `errorInterceptor` dịch `code` sang tiếng Việt.
+- [x] `image-picker`: nén ở client thành Blob (≤1200px) → upload có % tiến trình → nhận URL `/uploads/...`.
+- [x] Xoá `StorageService`, `seed.ts`, banner `quotaExceeded`.
+- [x] Unit test Vitest `crud-store.spec.ts` (8 test).
+- **Xong khi:** mọi màn hình hoạt động như cũ, dữ liệu còn sau reload và trên trình duyệt khác; chọn ảnh upload lên server.
+- *Đã kiểm chứng ở mức HTTP qua proxy dev (4200 → 8080): danh sách, upload, tải ảnh, tạo quán có ảnh, chặn data URL. Chưa có test E2E trên trình duyệt thật (Playwright ở Phase 9).*
 
 ### Phase 4: Spring Security + JWT + Redis (2–3 ngày)
 - [ ] `SecurityConfig`, `JwtService` (NimbusJwtEncoder/Decoder HS256), `AuthController`.
@@ -1133,14 +1147,15 @@ gfmaster.example.com {
 - [ ] Bộ test concurrency (mục 12).
 - **Xong khi:** 4 test concurrency xanh; mở 2 tab sửa cùng một quán thì tab sau thấy dialog xung đột; bấm "Lưu" liên tục không tạo bản trùng.
 
-### Phase 6: Upload ảnh + RabbitMQ (2–3 ngày)
+### Phase 6: RabbitMQ: thumbnail, dọn dẹp, cache stats (1.5–2 ngày)
+> Upload đồng bộ (`StorageDriver`, `ImageProcessor`, `UploadController`, `image-picker`, chặn `data:`) đã làm ở Phase 3. Phase này chỉ còn phần bất đồng bộ.
 - [ ] `RabbitConfig` (exchange, queue, DLQ, JSON converter, confirms), `DomainEventPublisher` + relay AFTER_COMMIT, `ProcessedMessageGuard`.
-- [ ] `StorageDriver` (local), `ImageProcessor` (Scrimage), `UploadController`, phục vụ `/uploads/**` (ResourceHandler ở dev).
-- [ ] `ImageVariantConsumer` (thumbnail), `StorageCleanupConsumer`.
+- [ ] `UploadService` publish `image.uploaded` (status `THUMB_PENDING`); `ImageVariantConsumer` sinh thumbnail 320px, cập nhật `thumb_url` + `READY`.
+- [ ] Xoá ảnh qua event `upload.deleted` → `StorageCleanupConsumer` (thay cho xoá file đồng bộ hiện tại).
 - [ ] `OrphanUploadCleanupJob` + ShedLock.
-- [ ] Frontend `image-picker` upload thật + progress; DTO chặn `data:`.
+- [ ] Cache `/stats` bằng Redis (`@Cacheable`), evict qua queue `gfm.cache.evict`.
 - [ ] Chuyển ảnh `frontend/assets/img` sang `seed-assets`.
-- **Xong khi:** upload ảnh 5MB thì nhận WebP khoảng 100–200KB, vài giây sau có thumbnail; tắt consumer thì message nằm chờ trong queue, bật lại thì tự xử lý; message lỗi vào DLQ.
+- **Xong khi:** upload ảnh xong vài giây sau có thumbnail; tắt consumer thì message nằm chờ trong queue, bật lại thì tự xử lý; message lỗi vào DLQ.
 
 ### Phase 7: Google Maps resolve + cache Redis (0.5–1 ngày)
 - [ ] `GmapUrlParser` (port + unit test), `ShortLinkResolver` (java.net.http.HttpClient, whitelist, timeout).
@@ -1176,7 +1191,7 @@ gfmaster.example.com {
 - [ ] OAuth2 Google login, quên mật khẩu.
 - [ ] PWA + offline.
 
-**Tổng MVP (Phase 0–10): khoảng 16–21 ngày công.**
+**Tổng MVP (Phase 0–10): khoảng 16–21 ngày công.** (Phase 3 tăng 0.5 ngày, Phase 6 giảm tương ứng do chuyển phần upload đồng bộ.)
 
 ---
 

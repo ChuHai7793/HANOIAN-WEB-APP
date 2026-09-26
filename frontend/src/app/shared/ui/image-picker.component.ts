@@ -1,12 +1,12 @@
-import { Component, computed, input, model, signal } from '@angular/core';
-import {
-  dataUrlBytes,
-  fileToCompressedDataUrl,
-  formatBytes,
-} from '../../core/utils/image';
+import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
+import { Component, computed, inject, input, model, signal } from '@angular/core';
+import { lastValueFrom, tap } from 'rxjs';
+import { errorMessage } from '../../core/api/api';
+import { UploadResult, UploadService } from '../../core/services/upload.service';
+import { fileToCompressedBlob, formatBytes } from '../../core/utils/image';
 
 /**
- * Chọn ảnh từ máy (hoặc kéo thả), nén lại rồi trả về data URL.
+ * Chọn ảnh từ máy (hoặc kéo thả), nén lại, upload lên server rồi trả về URL /uploads/...
  * Vẫn cho phép dán link ảnh ngoài như trước.
  */
 @Component({
@@ -58,7 +58,14 @@ import {
         (drop)="onDrop($event)"
       >
         @if (busy()) {
-          <p class="text-sm text-slate-500">Đang xử lý ảnh…</p>
+          <p class="text-sm text-slate-500">
+            {{ progress() === null ? 'Đang nén ảnh…' : 'Đang tải ảnh lên… ' + progress() + '%' }}
+          </p>
+          @if (progress() !== null) {
+            <div class="mx-auto mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-slate-200">
+              <div class="h-full bg-brand-500 transition-all" [style.width.%]="progress()"></div>
+            </div>
+          }
         } @else {
           <p class="text-2xl">🖼️</p>
           <p class="mt-1 text-sm font-medium text-slate-700">Chọn ảnh từ máy</p>
@@ -97,20 +104,26 @@ import {
   `,
 })
 export class ImagePickerComponent {
+  private readonly uploads = inject(UploadService);
+
   readonly value = model('');
   readonly label = input('Ảnh');
   readonly round = input(false);
-  /** Cạnh dài nhất sau khi nén — avatar nhỏ hơn ảnh quán */
-  readonly maxSize = input(800);
+  /** Cạnh dài nhất khi nén ở client — avatar nhỏ hơn ảnh quán */
+  readonly maxSize = input(1200);
 
   protected readonly busy = signal(false);
+  /** null = đang nén ở client, số = % đã upload */
+  protected readonly progress = signal<number | null>(null);
   protected readonly dragging = signal(false);
   protected readonly error = signal('');
+  private readonly uploadedSize = signal<number | null>(null);
 
-  protected readonly isUploaded = computed(() => this.value().startsWith('data:'));
-  protected readonly sizeText = computed(() =>
-    this.isUploaded() ? formatBytes(dataUrlBytes(this.value())) : '',
-  );
+  protected readonly isUploaded = computed(() => this.value().startsWith('/uploads/'));
+  protected readonly sizeText = computed(() => {
+    const size = this.uploadedSize();
+    return size === null ? 'Đã lưu trên server' : `Đã lưu trên server · ${formatBytes(size)}`;
+  });
 
   protected onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -135,18 +148,44 @@ export class ImagePickerComponent {
   protected clear(): void {
     this.value.set('');
     this.error.set('');
+    this.uploadedSize.set(null);
   }
 
+  /** Nén ở client → upload → nhận URL /uploads/... do server trả về. */
   private async handleFile(file: File): Promise<void> {
     this.busy.set(true);
+    this.progress.set(null);
     this.error.set('');
     try {
-      const dataUrl = await fileToCompressedDataUrl(file, { maxSize: this.maxSize() });
-      this.value.set(dataUrl);
+      const blob = await fileToCompressedBlob(file, { maxSize: this.maxSize() });
+      const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+      const result = await this.upload(blob, `image.${ext}`);
+      this.value.set(result.url);
+      this.uploadedSize.set(result.sizeBytes);
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Không xử lý được ảnh này.');
+      // Lỗi HTTP đã được errorInterceptor hiện toast; ở đây chỉ báo ngay dưới ô chọn ảnh
+      this.error.set(err instanceof HttpErrorResponse ? errorMessage(err) : err instanceof Error ? err.message : 'Không xử lý được ảnh này.');
     } finally {
       this.busy.set(false);
+      this.progress.set(null);
     }
+  }
+
+  private async upload(blob: Blob, filename: string): Promise<UploadResult> {
+    let result: UploadResult | null = null;
+    this.progress.set(0);
+    await lastValueFrom(
+      this.uploads.uploadImage(blob, filename).pipe(
+        tap((event) => {
+          if (event.type === HttpEventType.UploadProgress && event.total) {
+            this.progress.set(Math.round((100 * event.loaded) / event.total));
+          } else if (event.type === HttpEventType.Response && event.body) {
+            result = event.body;
+          }
+        }),
+      ),
+    );
+    if (!result) throw new Error('Server không trả về ảnh.');
+    return result;
   }
 }

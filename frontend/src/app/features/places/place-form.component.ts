@@ -361,6 +361,7 @@ export class PlaceFormComponent {
       hasWifi: cfg.showAmenities ? v.hasWifi : undefined,
       hasParking: cfg.showAmenities ? v.hasParking : undefined,
       cuisine: cfg.showCuisine ? v.cuisine : undefined,
+      version: existing?.version ?? 0,
       createdAt: existing?.createdAt ?? nowIso(),
       updatedAt: nowIso(),
     };

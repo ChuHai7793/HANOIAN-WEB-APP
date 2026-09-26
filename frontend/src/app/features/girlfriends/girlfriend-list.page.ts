@@ -217,6 +217,7 @@ export class GirlfriendListPage {
   protected readonly formOpen = signal(false);
   protected readonly editing = signal<Girlfriend | null>(null);
   protected readonly pendingDelete = signal<Girlfriend | null>(null);
+  protected readonly saving = signal(false);
 
   protected readonly all = computed(() => this.service.items());
   protected readonly visible = computed(() => {
@@ -263,22 +264,35 @@ export class GirlfriendListPage {
     this.editing.set(null);
   }
 
-  protected handleSave(gf: Girlfriend): void {
+  protected async handleSave(gf: Girlfriend): Promise<void> {
+    if (this.saving()) return;
+    this.saving.set(true);
     const existing = this.editing();
     const { id, ...data } = gf;
-    if (existing) {
-      this.service.update(existing.id, data);
-    } else {
-      this.service.create(data);
+    try {
+      if (existing) {
+        await this.service.update(existing.id, data);
+      } else {
+        await this.service.create(data);
+      }
+      this.closeForm();
+    } catch {
+      // giữ form mở, toast đã hiện
+    } finally {
+      this.saving.set(false);
     }
-    this.closeForm();
   }
 
-  protected confirmDelete(): void {
+  protected async confirmDelete(): Promise<void> {
     const target = this.pendingDelete();
     if (!target) return;
-    this.links.removeByGirlfriend(target.id);
-    this.service.remove(target.id);
     this.pendingDelete.set(null);
+    try {
+      await this.service.remove(target.id);
+      // Server đã xoá link theo (ON DELETE CASCADE)
+      this.links.dropByGirlfriend(target.id);
+    } catch {
+      // store đã hoàn tác
+    }
   }
 }

@@ -246,6 +246,7 @@ export class GirlfriendFormComponent {
       startedDate: v.startedDate,
       hobbies: this.hobbies(),
       note: v.note.trim(),
+      version: existing?.version ?? 0,
       createdAt: existing?.createdAt ?? nowIso(),
       updatedAt: nowIso(),
     });

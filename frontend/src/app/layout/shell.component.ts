@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { PlaceService } from '../core/services/place.service';
 import { GirlfriendService } from '../core/services/girlfriend.service';
-import { StorageService } from '../core/services/storage.service';
+import { DataBootstrapService } from '../core/services/data-bootstrap.service';
 
 interface NavItem {
   path: string;
@@ -50,7 +50,7 @@ interface NavItem {
 
         <div class="absolute bottom-0 w-full border-t border-slate-100 p-4">
           <p class="text-[11px] leading-relaxed text-slate-400">
-            Dữ liệu lưu trong localStorage của trình duyệt này.
+            Dữ liệu lưu trên server, đồng bộ giữa các thiết bị.
           </p>
         </div>
       </aside>
@@ -88,13 +88,24 @@ interface NavItem {
 
         <!-- Không đặt padding ở đây: từng trang tự lo, để vùng sticky bám sát mép trên -->
         <main class="flex-1">
-          @if (quotaExceeded()) {
+          @if (bootstrap.status() === 'error') {
             <div
-              class="mx-4 mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:mx-6 lg:mx-8"
+              class="mx-4 mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:mx-6 lg:mx-8"
             >
-              <strong>Bộ nhớ trình duyệt đã đầy.</strong> Thay đổi vừa rồi có thể chưa được lưu. Hãy
-              xoá bớt ảnh của những quán không còn dùng, hoặc dùng link ảnh ngoài thay vì upload.
+              <p class="flex-1">
+                <strong>Không tải được dữ liệu từ server.</strong> Kiểm tra kết nối mạng hoặc thử lại
+                sau ít phút.
+              </p>
+              <button
+                type="button"
+                class="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-700"
+                (click)="bootstrap.loadAll()"
+              >
+                Thử lại
+              </button>
             </div>
+          } @else if (bootstrap.status() === 'loading') {
+            <p class="mx-4 mt-4 text-sm text-slate-500 sm:mx-6 lg:mx-8">Đang tải dữ liệu…</p>
           }
           <router-outlet />
         </main>
@@ -107,7 +118,7 @@ export class ShellComponent {
   private readonly girlfriends = inject(GirlfriendService);
 
   protected readonly menuOpen = signal(false);
-  protected readonly quotaExceeded = inject(StorageService).quotaExceeded;
+  protected readonly bootstrap = inject(DataBootstrapService);
 
   protected readonly navItems: NavItem[] = [
     {

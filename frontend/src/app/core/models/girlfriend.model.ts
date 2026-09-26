@@ -11,6 +11,7 @@ export interface Girlfriend {
   startedDate: string; // ngày quen nhau, 'yyyy-MM-dd'
   hobbies: string[];
   note: string;
+  version: number;
   createdAt: string;
   updatedAt: string;
 }

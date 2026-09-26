@@ -323,6 +323,7 @@ export class PlaceListComponent {
   protected readonly editing = signal<Place | null>(null);
   protected readonly detailing = signal<PlaceRow | null>(null);
   protected readonly pendingDelete = signal<Place | null>(null);
+  protected readonly saving = signal(false);
 
   protected readonly all = computed(() => this.placeService.byType(this.config().type)());
   protected readonly hasAny = computed(() => this.all().length > 0);
@@ -399,24 +400,37 @@ export class PlaceListComponent {
     this.editing.set(null);
   }
 
-  protected handleSave(place: Place): void {
+  /** Lỗi thì giữ form để người dùng sửa/thử lại (toast do errorInterceptor hiện) */
+  protected async handleSave(place: Place): Promise<void> {
+    if (this.saving()) return;
+    this.saving.set(true);
     const existing = this.editing();
-    if (existing) {
-      const { id, ...changes } = place;
-      this.placeService.update(existing.id, changes);
-    } else {
-      const { id, ...data } = place;
-      this.placeService.create(data);
+    const { id, ...data } = place;
+    try {
+      if (existing) {
+        await this.placeService.update(existing.id, data);
+      } else {
+        await this.placeService.create(data);
+      }
+      this.closeForm();
+    } catch {
+      // giữ form mở
+    } finally {
+      this.saving.set(false);
     }
-    this.closeForm();
   }
 
-  protected confirmDelete(): void {
+  protected async confirmDelete(): Promise<void> {
     const target = this.pendingDelete();
     if (!target) return;
-    this.linkService.removeByPlace(target.id);
-    this.placeService.remove(target.id);
     this.pendingDelete.set(null);
+    try {
+      await this.placeService.remove(target.id);
+      // Server đã xoá link theo (ON DELETE CASCADE)
+      this.linkService.dropByPlace(target.id);
+    } catch {
+      // store đã hoàn tác, toast đã hiện
+    }
   }
 
   protected locateMe(): void {

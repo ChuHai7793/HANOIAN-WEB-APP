@@ -176,6 +176,7 @@ export class LinkPlaceDialogComponent {
       herRating: this.herRating(),
       lastVisitedAt: this.visitedAt(),
       memory: this.memory().trim(),
+      version: existing?.version ?? 0,
       createdAt: existing?.createdAt ?? nowIso(),
     });
   }

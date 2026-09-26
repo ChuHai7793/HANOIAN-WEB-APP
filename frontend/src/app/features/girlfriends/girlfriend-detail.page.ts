@@ -402,6 +402,7 @@ export class GirlfriendDetailPage {
   protected readonly linkDialogOpen = signal(false);
   protected readonly editingLink = signal<PlaceLink | null>(null);
   protected readonly pendingUnlink = signal<LinkedPlace | null>(null);
+  protected readonly saving = signal(false);
   protected readonly suggestion = signal<{
     stops: { label: string; place: Place }[];
     routeLink: string;
@@ -494,10 +495,18 @@ export class GirlfriendDetailPage {
     return directionsUrl(place.lat, place.lng, `${place.name} ${place.address}`);
   }
 
-  protected saveProfile(gf: Girlfriend): void {
+  protected async saveProfile(gf: Girlfriend): Promise<void> {
+    if (this.saving()) return;
+    this.saving.set(true);
     const { id, ...changes } = gf;
-    this.service.update(this.id(), changes);
-    this.editOpen.set(false);
+    try {
+      await this.service.update(this.id(), changes);
+      this.editOpen.set(false);
+    } catch {
+      // giữ form mở; nếu xung đột version thì store đã nạp bản mới nhất
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   protected openLink(): void {
@@ -515,22 +524,34 @@ export class GirlfriendDetailPage {
     this.editingLink.set(null);
   }
 
-  protected saveLink(link: PlaceLink): void {
+  protected async saveLink(link: PlaceLink): Promise<void> {
+    if (this.saving()) return;
+    this.saving.set(true);
     const existing = this.editingLink();
     const { id, ...data } = link;
-    if (existing) {
-      this.linkService.update(existing.id, data);
-    } else {
-      this.linkService.create(data);
+    try {
+      if (existing) {
+        await this.linkService.update(existing.id, data);
+      } else {
+        await this.linkService.create(data);
+      }
+      this.closeLinkDialog();
+    } catch {
+      // giữ dialog mở (ví dụ 409 gắn trùng)
+    } finally {
+      this.saving.set(false);
     }
-    this.closeLinkDialog();
   }
 
-  protected confirmUnlink(): void {
+  protected async confirmUnlink(): Promise<void> {
     const row = this.pendingUnlink();
     if (!row) return;
-    this.linkService.remove(row.link.id);
     this.pendingUnlink.set(null);
+    try {
+      await this.linkService.remove(row.link.id);
+    } catch {
+      // store đã hoàn tác
+    }
   }
 
   /** Bốc ngẫu nhiên trong nhóm quán nàng chấm từ 4 sao trở lên */
