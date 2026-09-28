@@ -182,4 +182,4 @@ Extension Java của VS Code tự biên dịch (bằng trình biên dịch Eclip
 
 ---
 
-**Trước:** [Phase 6](07-phase-6-rabbitmq.md) · **Tiếp theo:** Phase 8 (Import bất đồng bộ, xem [PLAN.md](../PLAN.md)) · **Tra cứu:** [Thuật ngữ](99-thuat-ngu.md)
+**Trước:** [Phase 6](07-phase-6-rabbitmq.md) · **Tiếp theo:** [Phase 8](09-phase-8-import.md) · **Tra cứu:** [Thuật ngữ](99-thuat-ngu.md)

@@ -1200,10 +1200,19 @@ Frontend
 - `PlaceService` tự điền `lat/lng` từ link đầy đủ khi thiếu (chỉ parse, không gọi mạng).
 - Seed Hà Nội: số liệu tra từ nguồn công khai, thiếu thì để NULL; `seed-assets/` nằm ngoài `src/main/resources` để không vào jar prod.
 
-### Phase 8: Import bất đồng bộ (1–1.5 ngày)
-- [ ] `ImportController` (202 + jobId), Redisson lock, `ImportConsumer` (transaction, batch insert, decode ảnh).
-- [ ] `GET /import/jobs/{id}`; dialog + polling ở frontend.
+### Phase 8: Import bất đồng bộ (1–1.5 ngày) ✅
+- [x] `ImportController` (202 + jobId), khoá Redis (`SET NX` + token, thay cho Redisson), consumer (một transaction, decode ảnh).
+- [x] `GET /import/jobs/{id}`; dialog + polling ở frontend.
 - **Xong khi:** dữ liệu localStorage cũ (kèm ảnh) xuất hiện đầy đủ trên tài khoản; import lần hai trong lúc lần một đang chạy thì nhận 423.
+- Test: `ImportIT` (4), `ConcurrencyIT` thêm ca (4), `DirectEventDispatcherIT` thêm ca import; frontend `legacy-import.service.spec` (7). Tổng backend 114, frontend 37. *Chưa thử dialog trên trình duyệt thật.*
+
+**Quyết định trong Phase 8**
+- Khoá `lock:import:{userId}` bằng `SET NX EX 10m` với token ngẫu nhiên, nhả bằng Lua so-sánh-rồi-xoá. Không dùng Redisson: khoá lấy ở request nhưng nhả ở consumer (luồng/instance khác), RLock gắn với luồng.
+- Payload lưu cột `import_jobs.payload` (migration V2) thay vì storage (storage local là công khai qua `/uploads/**`); DONE thì xoá; `ImportJobCleanup` (mỗi giờ, ShedLock) xoá payload job xong quá 3 ngày, đánh FAILED job kẹt quá 1 giờ. Giới hạn 10MB (< max_allowed_packet 16MB), đếm byte khi đọc.
+- Dòng hỏng bị **bỏ qua** (ghi lý do vào `stats.skippedReasons`, tối đa 20), không từ chối cả file; mỗi dòng qua đúng DTO + Bean Validation + service như API.
+- DONE ghi cùng transaction với dữ liệu nhập ⇒ giao lại message an toàn. `REQUIRES_NEW` cho mọi transaction của `run()`.
+- `UploadService` xoá file vừa ghi khi transaction rollback (áp dụng cả upload thường).
+- Frontend bỏ qua bộ dữ liệu mẫu cũ còn nguyên; xong thì đổi tên key thành `gfm.*.imported`, "Không nhập" thành `gfm.*.skipped`.
 
 ### Phase 9: Hoàn thiện & bảo mật (1–2 ngày)
 - [ ] Rà checklist mục 8.

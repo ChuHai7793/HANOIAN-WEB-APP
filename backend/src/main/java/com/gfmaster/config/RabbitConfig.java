@@ -4,6 +4,7 @@ import static com.gfmaster.messaging.Topology.CACHE_EVICT;
 import static com.gfmaster.messaging.Topology.DLX;
 import static com.gfmaster.messaging.Topology.EVENTS;
 import static com.gfmaster.messaging.Topology.IMAGE_VARIANTS;
+import static com.gfmaster.messaging.Topology.IMPORT;
 import static com.gfmaster.messaging.Topology.STORAGE_CLEANUP;
 import static com.gfmaster.messaging.Topology.dlq;
 
@@ -19,9 +20,12 @@ import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.boot.amqp.autoconfigure.RabbitTemplateCustomizer;
+import org.springframework.boot.amqp.autoconfigure.SimpleRabbitListenerContainerFactoryConfigurer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -75,12 +79,29 @@ public class RabbitConfig {
     Queue images = queueWithDlq(IMAGE_VARIANTS, dlx, all);
     Queue cleanup = queueWithDlq(STORAGE_CLEANUP, dlx, all);
     Queue evict = queueWithDlq(CACHE_EVICT, dlx, all);
+    Queue imports = queueWithDlq(IMPORT, dlx, all);
 
     all.add(BindingBuilder.bind(images).to(events).with("image.uploaded"));
     all.add(BindingBuilder.bind(cleanup).to(events).with("upload.deleted"));
     all.add(BindingBuilder.bind(evict).to(events).with("place.*"));
     all.add(BindingBuilder.bind(evict).to(events).with("girlfriend.*"));
+    all.add(BindingBuilder.bind(imports).to(events).with("import.requested"));
     return new Declarables(all);
+  }
+
+  /**
+   * Import nặng (nhiều ảnh): mỗi consumer chỉ nhận 1 message một lúc (prefetch 1), tối đa 2 import
+   * chạy song song trên một instance. Các cấu hình khác (retry...) lấy từ application.yml.
+   */
+  @Bean
+  SimpleRabbitListenerContainerFactory importListenerFactory(
+      SimpleRabbitListenerContainerFactoryConfigurer configurer, ConnectionFactory connectionFactory) {
+    SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+    configurer.configure(factory, connectionFactory);
+    factory.setPrefetchCount(1);
+    factory.setConcurrentConsumers(1);
+    factory.setMaxConcurrentConsumers(2);
+    return factory;
   }
 
   private static Queue queueWithDlq(String name, DirectExchange dlx, List<Declarable> all) {

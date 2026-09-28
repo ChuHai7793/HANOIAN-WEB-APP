@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import com.gfmaster.messaging.Topology;
 import com.gfmaster.support.ApiTestSupport;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -16,6 +17,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.core.MessageListenerContainer;
+import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -31,6 +34,7 @@ import tools.jackson.databind.JsonNode;
 class ConcurrencyIT extends ApiTestSupport {
 
   @Autowired JdbcTemplate jdbc;
+  @Autowired RabbitListenerEndpointRegistry listeners;
 
   /** (1) Hai thiết bị sửa cùng một quán từ cùng version: đúng một bên thắng, bên kia 409. */
   @Test
@@ -113,7 +117,35 @@ class ConcurrencyIT extends ApiTestSupport {
         .isEqualTo(1);
   }
 
-  // (4) 2 import song song → 202 + 423: làm cùng tính năng import ở Phase 8.
+  /**
+   * (4) Hai lần import cùng lúc của một user: khoá Redis chỉ cho một lần chạy. Consumer tạm dừng để
+   * lần đầu chưa kịp xong (và nhả khoá) trước khi lần hai tới.
+   */
+  @Test
+  void concurrentImportsOfSameUserOnlyOneIsAccepted() throws Exception {
+    UUID user = newUser();
+    String payload = "{\"girlfriends\": [{\"name\": \"Lan\"}]}";
+    MessageListenerContainer consumer = listeners.getListenerContainer(Topology.IMPORT);
+    consumer.stop();
+    try {
+      List<MockHttpServletResponse> results =
+          runConcurrently(
+              2,
+              i ->
+                  post("/api/v1/import/local-storage")
+                      .header(HttpHeaders.AUTHORIZATION, bearer(user))
+                      .contentType(MediaType.APPLICATION_JSON)
+                      .content(payload));
+
+      assertThat(statuses(results)).containsExactlyInAnyOrder(202, 423);
+      MockHttpServletResponse locked = results.stream().filter(r -> r.getStatus() == 423).findFirst().orElseThrow();
+      assertThat(body(locked).get("code").asString()).isEqualTo("IMPORT_RUNNING");
+      assertThat(jdbc.queryForObject("select count(*) from import_jobs where user_id = ?", Integer.class, user.toString()))
+          .isEqualTo(1);
+    } finally {
+      consumer.start();
+    }
+  }
 
   // ---- Helpers ----
 

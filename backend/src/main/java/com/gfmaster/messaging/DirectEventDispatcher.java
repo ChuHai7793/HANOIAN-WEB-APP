@@ -3,7 +3,9 @@ package com.gfmaster.messaging;
 import com.gfmaster.common.messaging.DomainEvent;
 import com.gfmaster.common.messaging.DomainEvent.EntityChanged;
 import com.gfmaster.common.messaging.DomainEvent.ImageUploaded;
+import com.gfmaster.common.messaging.DomainEvent.ImportRequested;
 import com.gfmaster.common.messaging.DomainEvent.UploadsDeleted;
+import com.gfmaster.importer.ImportService;
 import com.gfmaster.stats.StatsService;
 import com.gfmaster.upload.ThumbnailService;
 import com.gfmaster.upload.storage.StorageDriver;
@@ -23,11 +25,14 @@ public class DirectEventDispatcher {
   private final ThumbnailService thumbnails;
   private final StorageDriver storage;
   private final StatsService stats;
+  private final ImportService imports;
 
-  public DirectEventDispatcher(ThumbnailService thumbnails, StorageDriver storage, StatsService stats) {
+  public DirectEventDispatcher(
+      ThumbnailService thumbnails, StorageDriver storage, StatsService stats, ImportService imports) {
     this.thumbnails = thumbnails;
     this.storage = storage;
     this.stats = stats;
+    this.imports = imports;
   }
 
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
@@ -36,6 +41,7 @@ public class DirectEventDispatcher {
       case ImageUploaded e -> thumbnails.generate(e.uploadId());
       case UploadsDeleted e -> e.storageKeys().forEach(storage::delete);
       case EntityChanged e -> stats.evict(e.userId());
+      case ImportRequested e -> imports.run(e);
     }
   }
 }

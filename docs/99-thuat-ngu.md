@@ -7,6 +7,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **401 / 403 / 404 / 409 / 429** | Mã HTTP: chưa đăng nhập / không có quyền / không thấy / xung đột / quá nhiều request | [P2 §2.1](03-phase-2-crud-api.md#21-rest-và-http) |
 | **Access token** | JWT ngắn hạn (15 phút), gửi kèm mọi request API qua header `Authorization: Bearer` | [P4 §2.4](05-phase-4-xac-thuc-jwt.md#24-access-token-và-refresh-token) |
 | **ACID** | Bốn tính chất của transaction: Atomic (trọn vẹn), Consistent (nhất quán), Isolated (cô lập), Durable (bền vững) | [P2 §2.2](03-phase-2-crud-api.md#22-kiến-trúc-3-tầng-controller-service-repository) |
+| **202 Accepted** | Server đã nhận yêu cầu, sẽ xử lý sau; client hỏi lại kết quả | [P8 §2.1](09-phase-8-import.md#21-202-accepted-và-polling) |
 | **Ack** | Consumer báo broker đã xử lý xong; chỉ khi đó message mới bị xoá khỏi queue | [P6 §2.6](07-phase-6-rabbitmq.md#26-ack-prefetch-và-vì-sao-message-nằm-chờ) |
 | **Actuator** | Module Spring Boot cung cấp endpoint vận hành như `/actuator/health` | [P1 §2.8](02-phase-1-khung-spring-boot-flyway.md#28-actuator-và-openapiswagger) |
 | **Adminer** | Web UI xem và sửa database, http://localhost:8081 | [00 §4.7](00-cong-cu-va-moi-truong.md#47-giao-diện-web-đi-kèm) |
@@ -46,6 +47,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **CSRF** | Trang lạ lợi dụng cookie của bạn để gửi request thay bạn | [P4 §2.6](05-phase-4-xac-thuc-jwt.md#26-csrf-và-kiểm-tra-origin) |
 | **Debounce** | Chờ người dùng ngừng gõ một lúc rồi mới xử lý | [P7 §2.6](08-phase-7-google-maps.md#26-frontend-debounce-và-bỏ-kết-quả-cũ) |
 | **DI / IoC** | Dependency Injection / Inversion of Control: framework tạo và truyền dependency | [P1 §2.1](02-phase-1-khung-spring-boot-flyway.md#21-spring-framework-và-spring-boot) |
+| **Distributed lock** | Khoá dùng chung cho mọi instance (ở đây là key Redis có token và TTL) | [P8 §2.2](09-phase-8-import.md#22-khoá-phân-tán-distributed-lock-bằng-redis) |
 | **DLQ (Dead Letter Queue)** | Queue chứa message lỗi hết lượt retry, để xem và xử lý tay | [P6 §2.5](07-phase-6-rabbitmq.md#25-retry-và-dead-letter-queue-dlq) |
 | **DNS rebinding** | Tên miền đổi IP giữa lúc kiểm tra và lúc kết nối để lách chặn SSRF | [P7 §2.2](08-phase-7-google-maps.md#22-ssrf-server-side-request-forgery) |
 | **Docker Compose** | Khai báo nhiều container trong một file YAML | [00 §4](00-cong-cu-va-moi-truong.md#4-docker-và-docker-compose) |
@@ -105,6 +107,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **Path traversal** | Dùng `../` để thoát khỏi thư mục được phép | [P3 §3.4](04-phase-3-frontend-noi-api-upload.md#34-storage-driver-và-path-traversal) |
 | **Pessimistic locking** | Khoá bản ghi ngay lúc đọc (`SELECT ... FOR UPDATE`), người khác phải chờ | [P5 §2.2](06-phase-5-concurrency.md#22-optimistic-locking-nhắc-lại) |
 | **Poison message** | Message luôn làm consumer lỗi; requeue mãi sẽ chặn cả queue | [P6 §2.5](07-phase-6-rabbitmq.md#25-retry-và-dead-letter-queue-dlq) |
+| **Polling** | Client hỏi lại server theo chu kỳ tới khi có kết quả | [P8 §2.1](09-phase-8-import.md#21-202-accepted-và-polling) |
 | **Port mapping** | Nối cổng máy thật với cổng trong container, `"máy:container"` | [00 §4.3](00-cong-cu-va-moi-truong.md#43-khái-niệm) |
 | **ProblemDetail (RFC 9457)** | Chuẩn định dạng JSON cho lỗi API | [P1 §2.7](02-phase-1-khung-spring-boot-flyway.md#27-chuẩn-lỗi-problemdetail-rfc-9457) |
 | **Profile (Spring)** | Tập cấu hình theo môi trường: dev/test/prod | [P1 §2.3](02-phase-1-khung-spring-boot-flyway.md#23-cấu-hình-profile-và-configurationproperties) |
@@ -147,6 +150,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **Token bucket** | Thuật toán rate limit: xô token nạp dần | [P4 §2.10](05-phase-4-xac-thuc-jwt.md#210-rate-limiting-thuật-toán-token-bucket) |
 | **Transaction** | Nhóm thao tác DB "được ăn cả, ngã về không" | [P2 §2.2](03-phase-2-crud-api.md#22-kiến-trúc-3-tầng-controller-service-repository) |
 | **Transactional Outbox** | Ghi message vào bảng trong cùng transaction rồi job gửi đi, không mất event | [P6 §2.3](07-phase-6-rabbitmq.md#23-publish-sau-commit-after_commit) |
+| **TransactionSynchronization** | Callback Spring gọi quanh lúc commit/rollback, ví dụ xoá file khi rollback | [P8 §2.5](09-phase-8-import.md#25-ảnh-base64-và-file-ghi-ngoài-transaction) |
 | **TTL** | Thời gian sống của key Redis, hết hạn thì tự xoá | [P4 §2.8](05-phase-4-xac-thuc-jwt.md#28-redis-cấu-trúc-lưu-refresh-token) |
 | **User enumeration** | Dò xem email nào đã đăng ký qua khác biệt thông báo lỗi | [P4 §2.9](05-phase-4-xac-thuc-jwt.md#29-bảo-vệ-mật-khẩu-và-chống-dò-email) |
 | **utf8mb4** | Bảng mã MariaDB lưu được mọi ký tự Unicode, kể cả emoji | [P0 §2.6](01-phase-0-chuan-bi.md#26-cấu-hình-đáng-chú-ý-trong-docker-composeyml) |

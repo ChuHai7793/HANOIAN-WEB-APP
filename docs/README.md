@@ -17,7 +17,8 @@ Bộ tài liệu này kể lại **từng bước** quá trình biến một SPA
 | 5 | [06-phase-5-concurrency.md](06-phase-5-concurrency.md) | Idempotency-Key, dialog xung đột version, test chạy song song | ✅ Đã làm |
 | 6 | [07-phase-6-rabbitmq.md](07-phase-6-rabbitmq.md) | RabbitMQ: thumbnail nền, xoá file, DLQ, cache `/stats`, job dọn ảnh (ShedLock) | ✅ Đã làm |
 | 7 | [08-phase-7-google-maps.md](08-phase-7-google-maps.md) | Giải link Google Maps rút gọn (chống SSRF), cache, rate limit; dữ liệu mẫu quán Hà Nội | ✅ Đã làm |
-| 8–11 | [PLAN.md §14](../PLAN.md) | Import, Hoàn thiện, Deploy… | ⏳ Chưa làm, sẽ viết thêm tài liệu khi làm |
+| 8 | [09-phase-8-import.md](09-phase-8-import.md) | Import bất đồng bộ dữ liệu localStorage cũ: 202 + polling, khoá Redis, một transaction | ✅ Đã làm |
+| 9–11 | [PLAN.md §14](../PLAN.md) | Hoàn thiện, Deploy, Mở rộng | ⏳ Chưa làm, sẽ viết thêm tài liệu khi làm |
 | — | [99-thuat-ngu.md](99-thuat-ngu.md) | Bảng tra thuật ngữ A–Z | Tra cứu |
 
 Mỗi file phase có cùng bố cục:

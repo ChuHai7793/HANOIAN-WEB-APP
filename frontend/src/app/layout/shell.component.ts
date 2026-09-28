@@ -4,6 +4,7 @@ import { PlaceService } from '../core/services/place.service';
 import { GirlfriendService } from '../core/services/girlfriend.service';
 import { DataBootstrapService } from '../core/services/data-bootstrap.service';
 import { AuthService } from '../core/auth/auth.service';
+import { LegacyImportDialogComponent } from '../shared/ui/legacy-import-dialog.component';
 
 interface NavItem {
   path: string;
@@ -14,7 +15,7 @@ interface NavItem {
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LegacyImportDialogComponent],
   template: `
     <div class="flex min-h-screen">
       <!-- Sidebar -->
@@ -137,6 +138,8 @@ interface NavItem {
           }
           <router-outlet />
         </main>
+        <!-- Hỏi đưa dữ liệu localStorage của bản cũ lên tài khoản (chỉ hiện khi có) -->
+        <app-legacy-import-dialog />
       </div>
     </div>
   `,

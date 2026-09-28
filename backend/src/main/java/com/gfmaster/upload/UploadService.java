@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -61,18 +63,24 @@ public class UploadService {
     if (file == null || file.isEmpty()) {
       throw new ApiException(ErrorCode.UNSUPPORTED_IMAGE, "Chưa chọn file ảnh.");
     }
-    ProcessedImage image;
     try {
-      image = processor.process(file.getBytes());
+      return storeImage(userId, file.getBytes());
     } catch (IOException e) {
       throw new ApiException(ErrorCode.UNSUPPORTED_IMAGE, "Không đọc được file ảnh này.");
     }
+  }
+
+  /** Dùng chung cho upload qua API và import dữ liệu cũ (ảnh data: URL đã decode). */
+  @Transactional
+  public UploadResponse storeImage(UUID userId, byte[] raw) {
+    ProcessedImage image = processor.process(raw);
 
     // Tên file do server sinh: {userId}/{yyyy}/{MM}/{uuid}.webp
     LocalDate today = LocalDate.now();
     String key =
         "%s/%d/%02d/%s.webp".formatted(userId, today.getYear(), today.getMonthValue(), UUID.randomUUID());
     String url = storage.put(key, image.bytes(), WEBP);
+    deleteFileIfRolledBack(key);
 
     Upload upload = new Upload();
     upload.setUser(users.getReferenceById(userId));
@@ -94,6 +102,22 @@ public class UploadService {
     uploads.delete(upload);
     // File xoá sau commit: transaction rollback thì file vẫn còn, không có bản ghi trỏ vào file đã mất
     events.publish(new UploadsDeleted(userId, filesOf(upload)));
+  }
+
+  /**
+   * Ghi file không nằm trong transaction DB: nếu transaction rollback (ví dụ import lỗi giữa
+   * chừng) thì file vừa ghi không có bản ghi nào trỏ tới, job dọn ảnh mồ côi cũng không thấy. Xoá
+   * ngay khi biết đã rollback.
+   */
+  private void deleteFileIfRolledBack(String key) {
+    if (!TransactionSynchronizationManager.isSynchronizationActive()) return;
+    TransactionSynchronizationManager.registerSynchronization(
+        new TransactionSynchronization() {
+          @Override
+          public void afterCompletion(int status) {
+            if (status == STATUS_ROLLED_BACK) storage.delete(key);
+          }
+        });
   }
 
   private static UploadResponse toResponse(Upload u) {

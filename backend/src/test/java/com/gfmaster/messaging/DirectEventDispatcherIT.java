@@ -1,6 +1,7 @@
 package com.gfmaster.messaging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.gfmaster.common.messaging.DomainEvent;
@@ -8,10 +9,14 @@ import com.gfmaster.common.messaging.DomainEvent.EntityChanged;
 import com.gfmaster.common.messaging.DomainEvent.EntityChanged.Action;
 import com.gfmaster.common.messaging.DomainEvent.EntityChanged.Entity;
 import com.gfmaster.common.messaging.DomainEvent.ImageUploaded;
+import com.gfmaster.common.messaging.DomainEvent.ImportRequested;
+import com.gfmaster.importer.ImportLock;
+import com.gfmaster.importer.ImportService;
 import com.gfmaster.stats.StatsService;
 import com.gfmaster.support.ApiTestSupport;
 import com.gfmaster.upload.ThumbnailService;
 import com.gfmaster.upload.storage.StorageDriver;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
@@ -40,6 +45,7 @@ class DirectEventDispatcherIT extends ApiTestSupport {
   @Autowired StatsService stats;
   @Autowired StringRedisTemplate redis;
   @Autowired RabbitListenerEndpointRegistry listeners;
+  @Autowired ImportService imports;
 
   @Test
   void thumbnailGeneratedAfterCommitIsPersisted() throws Exception {
@@ -67,11 +73,34 @@ class DirectEventDispatcherIT extends ApiTestSupport {
     UUID user = newUser();
     stats.stats(user);
     String key = "cache:stats::" + user;
-    assertThat(redis.hasKey(key)).isTrue();
+    // Cache.put() cũng được phép ghi trễ (như evict), nên chờ key xuất hiện
+    await().atMost(Duration.ofSeconds(5)).until(() -> Boolean.TRUE.equals(redis.hasKey(key)));
 
     dispatchAfterCommit(new EntityChanged(user, Entity.place, UUID.randomUUID(), Action.created));
 
     assertThat(redis.hasKey(key)).isFalse();
+  }
+
+  @Test
+  void importRunAfterCommitIsPersisted() throws Exception {
+    var consumer = listeners.getListenerContainer(Topology.IMPORT);
+    consumer.stop();
+    try {
+      UUID user = newUser();
+      UUID jobId = imports.start(user, "{\"girlfriends\": [{\"name\": \"Lan\"}]}");
+      String token = redis.opsForValue().get(ImportLock.key(user));
+
+      dispatchAfterCommit(new ImportRequested(user, jobId, token));
+
+      // Dùng REQUIRES_NEW: dữ liệu và trạng thái DONE phải được lưu dù chạy trong AFTER_COMMIT
+      assertThat(jdbc.queryForObject("select status from import_jobs where id = ?", String.class, jobId.toString()))
+          .isEqualTo("DONE");
+      assertThat(jdbc.queryForObject("select count(*) from girlfriends where user_id = ?", Integer.class, user.toString()))
+          .isEqualTo(1);
+      assertThat(redis.hasKey(ImportLock.key(user))).isFalse();
+    } finally {
+      consumer.start();
+    }
   }
 
   /** Chạy dispatcher trong afterCommit của một transaction vừa commit, như Spring làm. */
@@ -79,7 +108,7 @@ class DirectEventDispatcherIT extends ApiTestSupport {
     assertThat(TransactionSynchronizationManager.isActualTransactionActive())
         .as("không được có transaction dở dang trên luồng test")
         .isFalse();
-    DirectEventDispatcher dispatcher = new DirectEventDispatcher(thumbnails, storage, stats);
+    DirectEventDispatcher dispatcher = new DirectEventDispatcher(thumbnails, storage, stats, imports);
     AtomicBoolean ran = new AtomicBoolean();
     tx.executeWithoutResult(
         status ->

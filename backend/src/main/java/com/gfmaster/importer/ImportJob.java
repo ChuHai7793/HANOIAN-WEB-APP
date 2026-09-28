@@ -39,8 +39,13 @@ public class ImportJob {
   @Column(nullable = false, length = 20)
   private ImportJobStatus status = ImportJobStatus.QUEUED;
 
-  @Column(nullable = false, length = 255)
+  /** Chỉ dùng khi payload nằm ở storage ngoài (S3); hiện payload lưu thẳng trong cột {@code payload}. */
+  @Column(length = 255)
   private String payloadKey;
+
+  /** JSON gốc từ localStorage. Xoá (null) khi import xong; job lỗi giữ lại vài ngày để xem. */
+  @Column(columnDefinition = "longtext")
+  private String payload;
 
   /** JSON dạng {"places":12,"girlfriends":3,...}. Kiểu JSON của MariaDB thực chất là LONGTEXT. */
   @Column(columnDefinition = "longtext")

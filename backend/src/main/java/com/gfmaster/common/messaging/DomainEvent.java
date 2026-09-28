@@ -29,6 +29,14 @@ public sealed interface DomainEvent {
     }
   }
 
+  /** Người dùng gửi dữ liệu localStorage cũ; {@code lockToken} để consumer nhả đúng khoá import. */
+  record ImportRequested(UUID userId, UUID jobId, String lockToken) implements DomainEvent {
+    @Override
+    public String routingKey() {
+      return "import.requested";
+    }
+  }
+
   /** Quán hoặc người yêu được tạo/sửa/xoá, ví dụ routing key {@code place.created}. */
   record EntityChanged(UUID userId, Entity entity, UUID entityId, Action action) implements DomainEvent {
     public enum Entity {

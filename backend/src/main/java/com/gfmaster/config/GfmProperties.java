@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.util.unit.DataSize;
 import org.springframework.validation.annotation.Validated;
 
 /** Cấu hình riêng của app ({@code gfm.*}). Thiếu secret thì app không khởi động. */
@@ -23,6 +24,7 @@ public record GfmProperties(
     @Valid @NotNull Storage storage,
     @Valid @NotNull Messaging messaging,
     @Valid @NotNull Jobs jobs,
+    @Valid @NotNull Importer importer,
     @Valid @NotNull Mongo mongo) {
 
   public record Jwt(
@@ -48,6 +50,9 @@ public record GfmProperties(
   public record S3(String endpoint, String bucket, String accessKey, String secretKey) {}
 
   public record Messaging(boolean enabled) {}
+
+  /** Import dữ liệu localStorage cũ. {@code maxSize} phải nhỏ hơn max_allowed_packet của MariaDB (16MB). */
+  public record Importer(@NotNull DataSize maxSize, @NotNull Duration lockTtl) {}
 
   /** Job định kỳ. {@code cron} theo cú pháp Spring (giây phút giờ ngày tháng thứ). */
   public record Jobs(@Valid @NotNull OrphanUploads orphanUploads) {}

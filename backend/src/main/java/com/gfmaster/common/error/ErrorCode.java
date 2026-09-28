@@ -21,6 +21,7 @@ public enum ErrorCode {
   FILE_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "File quá lớn."),
   UNSUPPORTED_IMAGE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Chỉ nhận ảnh JPG, PNG hoặc WebP."),
   IMPORT_RUNNING(HttpStatus.LOCKED, "Đang có một lần import khác chạy."),
+  IMPORT_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "Dữ liệu import quá lớn."),
   MAPS_URL_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "Chỉ nhận link Google Maps (https)."),
   MAPS_RESOLVE_FAILED(HttpStatus.BAD_GATEWAY, "Không mở được link Google Maps, thử lại sau."),
   RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "Bạn thao tác quá nhanh, thử lại sau."),
