@@ -11,6 +11,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **Actuator** | Module Spring Boot cung cấp endpoint vận hành như `/actuator/health` | [P1 §2.8](02-phase-1-khung-spring-boot-flyway.md#28-actuator-và-openapiswagger) |
 | **Adminer** | Web UI xem và sửa database, http://localhost:8081 | [00 §4.7](00-cong-cu-va-moi-truong.md#47-giao-diện-web-đi-kèm) |
 | **AFTER_COMMIT** | Chỉ chạy listener sau khi transaction commit thành công (`@TransactionalEventListener`) | [P6 §2.3](07-phase-6-rabbitmq.md#23-publish-sau-commit-after_commit) |
+| **Allowlist** | Chỉ cho phép một danh sách cố định (an toàn hơn liệt kê cái bị cấm) | [P7 §2.2](08-phase-7-google-maps.md#22-ssrf-server-side-request-forgery) |
 | **Annotation processor** | Chương trình chạy lúc biên dịch Java để sinh code (Lombok, MapStruct) | [P1 §2.4](02-phase-1-khung-spring-boot-flyway.md#24-orm-jpa-và-hibernate) |
 | **AOF (Append Only File)** | Chế độ Redis ghi mọi lệnh ra đĩa, khởi động lại không mất dữ liệu | [P0 §2.6](01-phase-0-chuan-bi.md#26-cấu-hình-đáng-chú-ý-trong-docker-composeyml) |
 | **App initializer** | Hàm Angular chạy trước khi app hiển thị (khôi phục phiên, tải dữ liệu) | [P3 §2.6](04-phase-3-frontend-noi-api-upload.md#26-app-initializer) |
@@ -43,8 +44,10 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **CRLF / LF** | Ký tự xuống dòng Windows (`\r\n`) / Linux (`\n`) | [P0 §2.3](01-phase-0-chuan-bi.md#23-gitattributes-và-vấn-đề-xuống-dòng-line-endings) |
 | **CRUD** | Create, Read, Update, Delete: bốn thao tác cơ bản với dữ liệu | [P2](03-phase-2-crud-api.md) |
 | **CSRF** | Trang lạ lợi dụng cookie của bạn để gửi request thay bạn | [P4 §2.6](05-phase-4-xac-thuc-jwt.md#26-csrf-và-kiểm-tra-origin) |
+| **Debounce** | Chờ người dùng ngừng gõ một lúc rồi mới xử lý | [P7 §2.6](08-phase-7-google-maps.md#26-frontend-debounce-và-bỏ-kết-quả-cũ) |
 | **DI / IoC** | Dependency Injection / Inversion of Control: framework tạo và truyền dependency | [P1 §2.1](02-phase-1-khung-spring-boot-flyway.md#21-spring-framework-và-spring-boot) |
 | **DLQ (Dead Letter Queue)** | Queue chứa message lỗi hết lượt retry, để xem và xử lý tay | [P6 §2.5](07-phase-6-rabbitmq.md#25-retry-và-dead-letter-queue-dlq) |
+| **DNS rebinding** | Tên miền đổi IP giữa lúc kiểm tra và lúc kết nối để lách chặn SSRF | [P7 §2.2](08-phase-7-google-maps.md#22-ssrf-server-side-request-forgery) |
 | **Docker Compose** | Khai báo nhiều container trong một file YAML | [00 §4](00-cong-cu-va-moi-truong.md#4-docker-và-docker-compose) |
 | **DTO** | Object chỉ để truyền dữ liệu qua API, tách khỏi entity | [P2 §2.3](03-phase-2-crud-api.md#23-dto-record-và-bean-validation) |
 | **Entity** | Class Java ánh xạ vào một bảng DB | [P1 §2.4](02-phase-1-khung-spring-boot-flyway.md#24-orm-jpa-và-hibernate) |
@@ -134,6 +137,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **Single-flight** | Nhiều lời gọi cùng lúc dùng chung một kết quả (refresh một lần) | [P4 §2.12](05-phase-4-xac-thuc-jwt.md#212-frontend-guard-interceptor-refresh-open-redirect) |
 | **SPA** | Ứng dụng web một trang; JS tự vẽ các trang và gọi API | [P3 §2.1](04-phase-3-frontend-noi-api-upload.md#21-spa-và-angular) |
 | **Spring Boot / Starter** | Spring kèm auto-config / gói dependency theo chủ đề | [P1 §2.1](02-phase-1-khung-spring-boot-flyway.md#21-spring-framework-và-spring-boot) |
+| **SSRF** | Lừa server gọi tới địa chỉ nội bộ (metadata cloud, admin nội bộ) | [P7 §2.2](08-phase-7-google-maps.md#22-ssrf-server-side-request-forgery) |
 | **Stateless** | Server không giữ trạng thái phiên; mọi thông tin nằm trong token | [P4 §2.2](05-phase-4-xac-thuc-jwt.md#22-session-truyền-thống-và-token-stateless) |
 | **Storage driver** | Interface lưu file; thay local bằng S3 mà không sửa chỗ khác | [P3 §3.4](04-phase-3-frontend-noi-api-upload.md#34-storage-driver-và-path-traversal) |
 | **Testcontainers** | Thư viện bật container Docker thật khi chạy test | [P1 §2.10](02-phase-1-khung-spring-boot-flyway.md#210-kiểm-thử-với-testcontainers) |

@@ -33,8 +33,8 @@ public record GfmProperties(
   /** {@code cookieSecure=false} chỉ dùng ở dev chạy http. */
   public record Auth(boolean cookieSecure) {}
 
-  /** Số request tối đa mỗi phút: auth theo IP, API chung theo user. */
-  public record RateLimit(@Min(1) int authPerMinute, @Min(1) int apiPerMinute) {}
+  /** Số request tối đa mỗi phút: auth theo IP, API chung theo user, giải link Maps theo user. */
+  public record RateLimit(@Min(1) int authPerMinute, @Min(1) int apiPerMinute, @Min(1) int mapsPerMinute) {}
 
   /** Response đã xử lý được giữ {@code ttl}; khoá "đang xử lý" tự hết hạn sau {@code inProgressTtl}. */
   public record Idempotency(@NotNull Duration ttl, @NotNull Duration inProgressTtl) {}

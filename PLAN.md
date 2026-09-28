@@ -1170,7 +1170,7 @@ Frontend
 - [x] Xoá ảnh qua event `upload.deleted` → consumer xoá file (thay cho xoá file đồng bộ).
 - [x] `OrphanUploadCleanupJob` + ShedLock.
 - [x] Cache `/stats` bằng Redis (`@Cacheable`), evict qua queue `gfm.cache.evict`.
-- [ ] Chuyển ảnh `frontend/assets/img` sang `seed-assets`. *Hoãn: 17 ảnh là quán ở Hà Nội, không khớp bộ seed hiện tại (quán Sài Gòn, ảnh Unsplash); cần quyết định có thay bộ seed không.*
+- [x] Chuyển ảnh `frontend/assets/img` sang `backend/seed-assets` *(làm cùng Phase 7)*: seed thay bằng 16 quán thật ở Hà Nội, `SeedAssetLoader` (profile dev) nạp ảnh vào `/uploads/seed/`. Ảnh `nik.png` chưa dùng vì không xác định được quán.
 - Test: `UploadMessagingIT` (5), `StatsCacheIT` (3), `ProcessedMessageGuardIT` (3), `DirectEventDispatcherIT` (2). Tổng backend 68.
 - **Xong khi:** upload ảnh xong vài giây sau có thumbnail; tắt consumer thì message nằm chờ trong queue, bật lại thì tự xử lý; message lỗi vào DLQ.
 
@@ -1184,11 +1184,21 @@ Frontend
 - ShedLock key `shedlock:gfm:orphan-upload-cleanup`; job xoá theo lô 200 bản, mỗi lô một transaction.
 - Frontend chưa hiển thị thumbnail (xem hạn chế trong docs/07).
 
-### Phase 7: Google Maps resolve + cache Redis (0.5–1 ngày)
-- [ ] `GmapUrlParser` (port + unit test), `ShortLinkResolver` (java.net.http.HttpClient, whitelist, timeout).
-- [ ] `@Cacheable("gmap-resolve")` TTL 7 ngày, rate limit riêng.
-- [ ] `place-form` tự gọi resolve.
+### Phase 7: Google Maps resolve + cache Redis (0.5–1 ngày) ✅
+- [x] `GmapUrlParser` (port + unit test), `ShortLinkResolver` (java.net.http.HttpClient, whitelist, timeout).
+- [x] `@Cacheable("gmap-resolve")` TTL 7 ngày, rate limit riêng (20/phút/user).
+- [x] `place-form` tự gọi resolve.
 - **Xong khi:** dán link `maps.app.goo.gl` thì tự điền toạ độ; lần thứ hai trả về ngay từ cache.
+- *Đã chạy resolver với Google thật (link danh sách quán → `lat = null` đúng thiết kế); chưa thử với link rút gọn của một địa điểm cụ thể.*
+- Test: `GmapUrlParserTest` (16), `ShortLinkResolverTest` (17), `MapsControllerIT` (5), `DemoSeedIT` (2); frontend `gmap-url.spec`, `maps.service.spec`. Tổng backend 108, frontend 30.
+
+**Quyết định trong Phase 7**
+- Chống SSRF ở **mọi bước** redirect: `https`, cổng mặc định, không `user@`, host khớp tuyệt đối allowlist (`maps.app.goo.gl`, `goo.gl`, `google.com`, `www.google.com`, `maps.google.com`, `google.com.vn`, `www.google.com.vn`); ngay trước khi gọi, mọi IP của host phải công khai. Redirect thủ công, tối đa 5.
+- Link hợp lệ nhưng không có toạ độ → `200 {lat: null, lng: null, resolvedUrl}` (có cache); lỗi mạng → 502 `MAPS_RESOLVE_FAILED` (không cache); URL bị chặn → 400 `MAPS_URL_NOT_ALLOWED`.
+- `consent.google.com`: không gọi, lấy tham số `continue`.
+- Parser ưu tiên `!3d!4d` (vị trí ghim) trước `@lat,lng` (tâm bản đồ); frontend đổi theo.
+- `PlaceService` tự điền `lat/lng` từ link đầy đủ khi thiếu (chỉ parse, không gọi mạng).
+- Seed Hà Nội: số liệu tra từ nguồn công khai, thiếu thì để NULL; `seed-assets/` nằm ngoài `src/main/resources` để không vào jar prod.
 
 ### Phase 8: Import bất đồng bộ (1–1.5 ngày)
 - [ ] `ImportController` (202 + jobId), Redisson lock, `ImportConsumer` (transaction, batch insert, decode ảnh).

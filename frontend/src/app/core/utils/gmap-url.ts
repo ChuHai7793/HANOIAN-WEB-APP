@@ -7,26 +7,26 @@ export interface ParsedGmapUrl {
  * Rút toạ độ ra khỏi thứ người dùng dán vào ô nhập. Nhận cả hai kiểu:
  *
  * Link Google Maps đầy đủ:
- *   .../@10.7769,106.7009,17z/...
- *   ...!3d10.7769!4d106.7009...
- *   ...?q=10.7769,106.7009   |   ...&ll=10.7769,106.7009
+ *   ...!3d10.7769!4d106.7009...      (vị trí ghim của địa điểm, ưu tiên)
+ *   .../@10.7769,106.7009,17z/...    (tâm khung bản đồ, có thể lệch khỏi quán)
+ *   ...?q=10.7769,106.7009   |   &ll=   |   &query=   |   /maps/search/10.77,+106.70
  *
  * Hoặc toạ độ dán thẳng: "10.7769, 106.7009"
  *
- * Link rút gọn (maps.app.goo.gl) không chứa toạ độ. Không giải được ở phía trình
- * duyệt vì Google chặn CORS nên không đọc được đích của redirect — muốn tự động
- * thì phải có backend đứng ra gọi hộ.
+ * Cùng quy tắc với GmapUrlParser ở backend. Link rút gọn (maps.app.goo.gl) không chứa
+ * toạ độ và trình duyệt không tự giải được (CORS): dùng MapsService gọi /maps/resolve.
  */
 export function parseGmapUrl(input: string): ParsedGmapUrl {
   const empty: ParsedGmapUrl = { lat: null, lng: null };
-  const text = input?.trim();
+  const text = safeDecode(input?.trim() ?? '');
   if (!text) return empty;
 
   const patterns: RegExp[] = [
     /^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/,
-    /@(-?\d+\.\d+),(-?\d+\.\d+)/,
     /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
-    /[?&](?:q|ll|center|destination)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,
+    /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /[?&](?:q|ll|center|destination|query)=(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/,
+    /\/maps\/search\/(-?\d+\.\d+),\s*\+?(-?\d+\.\d+)/,
   ];
 
   for (const pattern of patterns) {
@@ -38,6 +38,20 @@ export function parseGmapUrl(input: string): ParsedGmapUrl {
     }
   }
   return empty;
+}
+
+/** Link rút gọn của Google Maps: không có toạ độ, phải nhờ server giải. */
+export function isShortMapsLink(input: string): boolean {
+  return /^https:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps)\//i.test(input?.trim() ?? '');
+}
+
+/** "%2C" → ",", "+" → " ". Chuỗi % hỏng thì giữ nguyên. */
+function safeDecode(text: string): string {
+  try {
+    return decodeURIComponent(text.replace(/\+/g, ' '));
+  } catch {
+    return text;
+  }
 }
 
 export function isValidCoordinate(lat: number, lng: number): boolean {

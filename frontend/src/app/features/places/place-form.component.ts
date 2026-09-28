@@ -10,8 +10,10 @@ import { RatingStarsComponent } from '../../shared/ui/rating-stars.component';
 import { ImagePickerComponent } from '../../shared/ui/image-picker.component';
 import { CUISINES, Place, PRICE_RANGES } from '../../core/models/place.model';
 import { PlaceTypeConfig } from './place.config';
-import { embedMapUrl, parseGmapUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
+import { embedMapUrl, isShortMapsLink, parseGmapUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
 import { nowIso } from '../../core/utils/id';
+import { MapsService } from '../../core/services/maps.service';
+import { errorMessage } from '../../core/api/api';
 
 @Component({
   selector: 'app-place-form',
@@ -140,8 +142,15 @@ import { nowIso } from '../../core/utils/id';
             formControlName="googleMapsUrl"
             (input)="syncFromLink()"
             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-            placeholder="https://www.google.com/maps/…"
+            placeholder="https://www.google.com/maps/… hoặc https://maps.app.goo.gl/…"
           />
+          @if (resolvingLink()) {
+            <p class="mt-1 text-xs text-slate-500">⏳ Đang lấy toạ độ từ link rút gọn…</p>
+          } @else if (linkMessage(); as msg) {
+            <p class="mt-1 text-xs" [class]="msg.ok ? 'text-emerald-600' : 'text-amber-600'">
+              {{ msg.text }}
+            </p>
+          }
 
           <label class="mb-1.5 mt-4 block text-sm font-medium text-slate-700">
             Toạ độ <span class="font-normal text-slate-400">(không bắt buộc)</span>
@@ -228,6 +237,8 @@ import { nowIso } from '../../core/utils/id';
 export class PlaceFormComponent {
   private readonly fb = inject(FormBuilder);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly maps = inject(MapsService);
+  private resolveTimer?: ReturnType<typeof setTimeout>;
 
   readonly config = input.required<PlaceTypeConfig>();
   /** null = thêm mới */
@@ -241,6 +252,8 @@ export class PlaceFormComponent {
 
   protected readonly coords = signal<{ lat: number; lng: number } | null>(null);
   protected readonly coordinateError = signal(false);
+  protected readonly resolvingLink = signal(false);
+  protected readonly linkMessage = signal<{ ok: boolean; text: string } | null>(null);
   protected readonly ratingValue = signal(4);
   /** Data URL của ảnh vừa upload, hoặc link ảnh ngoài */
   protected readonly imageUrl = signal('');
@@ -313,12 +326,51 @@ export class PlaceFormComponent {
     return viewOnMapUrl(null, null, query || 'quán cà phê gần đây');
   }
 
-  /** Link đầy đủ thường đã chứa toạ độ — lấy luôn để khỏi bắt người dùng nhập tay */
+  /**
+   * Link đầy đủ thường đã chứa toạ độ — lấy luôn để khỏi bắt người dùng nhập tay. Link rút gọn
+   * (maps.app.goo.gl) thì nhờ server đi theo redirect để lấy toạ độ.
+   */
   protected syncFromLink(): void {
-    const parsed = parseGmapUrl(this.form.value.googleMapsUrl ?? '');
-    if (parsed.lat === null || parsed.lng === null) return;
-    this.form.patchValue({ coordinates: `${parsed.lat}, ${parsed.lng}` });
-    this.coords.set({ lat: parsed.lat, lng: parsed.lng });
+    clearTimeout(this.resolveTimer);
+    this.linkMessage.set(null);
+    const url = (this.form.value.googleMapsUrl ?? '').trim();
+    const parsed = parseGmapUrl(url);
+    if (parsed.lat !== null && parsed.lng !== null) {
+      this.applyCoords(parsed.lat, parsed.lng);
+      return;
+    }
+    if (isShortMapsLink(url)) {
+      // Chờ người dùng dán/gõ xong rồi mới gọi server
+      this.resolveTimer = setTimeout(() => this.resolveShortLink(url), 400);
+    }
+  }
+
+  private async resolveShortLink(url: string): Promise<void> {
+    const stillCurrent = () => (this.form.value.googleMapsUrl ?? '').trim() === url;
+    this.resolvingLink.set(true);
+    try {
+      const result = await this.maps.resolve(url);
+      // Người dùng đã sửa link trong lúc chờ: bỏ kết quả cũ
+      if (!stillCurrent()) return;
+      if (result.lat !== null && result.lng !== null) {
+        this.applyCoords(result.lat, result.lng);
+        this.linkMessage.set({ ok: true, text: 'Đã lấy toạ độ từ link rút gọn.' });
+      } else {
+        this.linkMessage.set({
+          ok: false,
+          text: 'Link này không chứa toạ độ. Mở link, copy toạ độ rồi dán vào ô bên dưới.',
+        });
+      }
+    } catch (err) {
+      if (stillCurrent()) this.linkMessage.set({ ok: false, text: errorMessage(err) });
+    } finally {
+      this.resolvingLink.set(false);
+    }
+  }
+
+  private applyCoords(lat: number, lng: number): void {
+    this.form.patchValue({ coordinates: `${lat}, ${lng}` });
+    this.coords.set({ lat, lng });
     this.coordinateError.set(false);
   }
 

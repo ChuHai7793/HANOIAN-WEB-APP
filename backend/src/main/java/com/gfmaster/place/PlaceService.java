@@ -7,10 +7,13 @@ import com.gfmaster.common.messaging.DomainEvent.EntityChanged.Action;
 import com.gfmaster.common.messaging.DomainEvent.EntityChanged.Entity;
 import com.gfmaster.common.messaging.DomainEventPublisher;
 import com.gfmaster.common.web.Patch;
+import com.gfmaster.maps.GmapUrlParser;
 import com.gfmaster.place.dto.PlacePatch;
 import com.gfmaster.place.dto.PlaceRequest;
 import com.gfmaster.place.dto.PlaceResponse;
 import com.gfmaster.user.UserRepository;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -52,6 +55,7 @@ public class PlaceService {
     Place place = mapper.toEntity(request);
     place.setUser(users.getReferenceById(userId));
     normalizeTypeFields(place);
+    fillCoordinatesFromLink(place);
     Place saved = places.saveAndFlush(place);
     changed(userId, saved.getId(), Action.created);
     return mapper.toResponse(saved);
@@ -64,6 +68,7 @@ public class PlaceService {
     }
     mapper.apply(patch, place);
     normalizeTypeFields(place);
+    fillCoordinatesFromLink(place);
     // Hibernate tăng version lúc flush; nếu có transaction khác vừa ghi thì ném OptimisticLock → 409
     Place saved = places.saveAndFlush(place);
     changed(userId, id, Action.updated);
@@ -85,6 +90,17 @@ public class PlaceService {
 
   private Place load(UUID userId, UUID id) {
     return places.findByIdAndUserId(id, userId).orElseThrow(ApiException::notFound);
+  }
+
+  /** Có link Google Maps đầy đủ mà chưa có toạ độ thì đọc từ link (không gọi mạng). */
+  private static void fillCoordinatesFromLink(Place place) {
+    if (place.getLat() != null || place.getLng() != null) return;
+    GmapUrlParser.parse(place.getGoogleMapsUrl())
+        .ifPresent(
+            c -> {
+              place.setLat(BigDecimal.valueOf(c.lat()).setScale(6, RoundingMode.HALF_UP));
+              place.setLng(BigDecimal.valueOf(c.lng()).setScale(6, RoundingMode.HALF_UP));
+            });
   }
 
   /** Quán ăn không có wifi/parking; cafe/bar không có ẩm thực. */
