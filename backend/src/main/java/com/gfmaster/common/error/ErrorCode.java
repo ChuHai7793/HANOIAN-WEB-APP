@@ -16,6 +16,8 @@ public enum ErrorCode {
   EMAIL_TAKEN(HttpStatus.CONFLICT, "Email đã được sử dụng."),
   DATA_CONFLICT(HttpStatus.CONFLICT, "Dữ liệu bị trùng hoặc vi phạm ràng buộc."),
   IDEMPOTENCY_IN_PROGRESS(HttpStatus.CONFLICT, "Yêu cầu đang được xử lý."),
+  IDEMPOTENCY_KEY_REUSED(
+      HttpStatus.UNPROCESSABLE_CONTENT, "Idempotency-Key đã được dùng cho một yêu cầu khác."),
   FILE_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "File quá lớn."),
   UNSUPPORTED_IMAGE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Chỉ nhận ảnh JPG, PNG hoặc WebP."),
   IMPORT_RUNNING(HttpStatus.LOCKED, "Đang có một lần import khác chạy."),

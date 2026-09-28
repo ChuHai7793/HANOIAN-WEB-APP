@@ -322,4 +322,4 @@ Chuỗi `refreshAccessToken().then().finally()` → `from()` → `switchMap()` c
 
 ---
 
-**Trước:** [Phase 3](04-phase-3-frontend-noi-api-upload.md) · **Tiếp theo:** Phase 5 (Concurrency, xem [PLAN.md](../PLAN.md)) · **Tra cứu:** [Thuật ngữ](99-thuat-ngu.md)
+**Trước:** [Phase 3](04-phase-3-frontend-noi-api-upload.md) · **Tiếp theo:** [Phase 5](06-phase-5-concurrency.md) · **Tra cứu:** [Thuật ngữ](99-thuat-ngu.md)

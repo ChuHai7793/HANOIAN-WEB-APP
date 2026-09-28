@@ -26,6 +26,7 @@ const MESSAGES: Record<string, string> = {
   EMAIL_TAKEN: 'Email đã được sử dụng.',
   DATA_CONFLICT: 'Dữ liệu bị trùng.',
   IDEMPOTENCY_IN_PROGRESS: 'Yêu cầu đang được xử lý, chờ chút nhé.',
+  IDEMPOTENCY_KEY_REUSED: 'Yêu cầu bị trùng mã với một yêu cầu khác, hãy thử lại.',
   FILE_TOO_LARGE: 'Ảnh quá lớn (tối đa 12MB).',
   UNSUPPORTED_IMAGE: 'Chỉ nhận ảnh JPG, PNG hoặc WebP.',
   IMPORT_RUNNING: 'Đang có một lần import khác chạy.',

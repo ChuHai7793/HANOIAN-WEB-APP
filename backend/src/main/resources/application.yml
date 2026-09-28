@@ -82,6 +82,9 @@ gfm:
   rate-limit:
     auth-per-minute: 5              # login/register theo IP
     api-per-minute: 100             # mọi API khác theo user
+  idempotency:
+    ttl: 24h                        # POST cùng Idempotency-Key trong 24h nhận lại response cũ
+    in-progress-ttl: 5m             # app chết giữa chừng thì khoá "đang xử lý" tự nhả sau 5 phút
   # Origin được phép gọi API (CORS) và gọi /auth/refresh, /auth/logout bằng cookie
   cors-origins: ${CORS_ORIGINS:http://localhost:4200}
   storage:

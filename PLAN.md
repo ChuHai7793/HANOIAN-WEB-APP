@@ -1149,12 +1149,19 @@ Frontend
 - Dev: cookie `rt` không đặt `Secure` (`gfm.auth.cookie-secure=false`) vì chạy http; prod bắt buộc `Secure`.
 - Hạn chế đã biết: hai tab cùng refresh đúng một lúc có thể bị coi là dùng lại token và bị đăng xuất. Nếu gặp thực tế thì thêm khoảng ân hạn vài giây cho token vừa xoay.
 
-### Phase 5: Concurrency (2 ngày)
-- [ ] `@Version` + kiểm tra `version` trong PATCH; handler 409 kèm `current`.
-- [ ] `IdempotencyFilter` (Redis) + `idempotencyInterceptor` ở frontend.
-- [ ] `ConflictDialogComponent` ở frontend.
-- [ ] Bộ test concurrency (mục 12).
-- **Xong khi:** 4 test concurrency xanh; mở 2 tab sửa cùng một quán thì tab sau thấy dialog xung đột; bấm "Lưu" liên tục không tạo bản trùng.
+### Phase 5: Concurrency (2 ngày) ✅
+- [x] `@Version` + kiểm tra `version` trong PATCH; handler 409 kèm `current` *(đã có từ Phase 2)*.
+- [x] `IdempotencyFilter` (Redis) + `idempotencyInterceptor` ở frontend.
+- [x] `ConflictDialogComponent` ở frontend (Tải bản mới / Ghi đè).
+- [x] Bộ test concurrency (mục 12): `ConcurrencyIT` 3 test song song, `IdempotencyIT` 8 test. Tổng backend 55, frontend 17.
+- **Xong khi:** ~~4~~ 3 test concurrency xanh (test import song song chuyển sang Phase 8, vì cần tính năng import); mở 2 tab sửa cùng một quán thì tab sau thấy dialog xung đột; bấm "Lưu" liên tục không tạo bản trùng.
+
+**Quyết định trong Phase 5**
+- Redis giữ hai TTL: `in-progress-ttl: 5m` (app chết giữa chừng thì key tự nhả) và `ttl: 24h` cho kết quả đã xong. Không lưu 5xx/401/403/429 để client thử lại được với cùng key; 4xx khác được lưu và trả lại.
+- Key gắn với đường dẫn: dùng lại key cho endpoint khác thì trả 422 `IDEMPOTENCY_KEY_REUSED`. Không so hash của body (frontend luôn sinh key theo body).
+- `/auth/**` không áp dụng idempotency để không lưu access token vào Redis.
+- Frontend giữ key theo **nội dung body** trong `CrudStore.create()`: gửi lại đúng dữ liệu cũ sau lỗi thì dùng key cũ, thành công thì bỏ key. Component không phải tự quản lý key.
+- Dialog xung đột do `CrudStore` gọi qua `ConflictService` (Promise), nên component không cần sửa. Đóng dialog = "Tải bản mới". 409 do Hibernate phát hiện (không kèm `current`) thì frontend tự `GET` lại.
 
 ### Phase 6: RabbitMQ: thumbnail, dọn dẹp, cache stats (1.5–2 ngày)
 > Upload đồng bộ (`StorageDriver`, `ImageProcessor`, `UploadController`, `image-picker`, chặn `data:`) đã làm ở Phase 3. Phase này chỉ còn phần bất đồng bộ.

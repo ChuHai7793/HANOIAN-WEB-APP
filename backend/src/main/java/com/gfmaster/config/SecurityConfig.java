@@ -1,10 +1,12 @@
 package com.gfmaster.config;
 
 import com.gfmaster.common.security.ProblemSecurityHandlers;
+import com.gfmaster.common.web.IdempotencyFilter;
 import com.gfmaster.common.web.RateLimitFilter;
 import com.gfmaster.common.web.RateLimiter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,6 +18,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Stateless, xác thực bằng Bearer JWT. CSRF tắt vì API không dùng cookie để xác thực; riêng
@@ -26,7 +29,12 @@ public class SecurityConfig {
 
   @Bean
   SecurityFilterChain apiSecurity(
-      HttpSecurity http, ProblemSecurityHandlers problems, RateLimiter limiter, GfmProperties props)
+      HttpSecurity http,
+      ProblemSecurityHandlers problems,
+      RateLimiter limiter,
+      StringRedisTemplate redis,
+      JsonMapper json,
+      GfmProperties props)
       throws Exception {
     http.csrf(csrf -> csrf.disable())
         .cors(Customizer.withDefaults())
@@ -62,8 +70,10 @@ public class SecurityConfig {
                     .authenticationEntryPoint(problems.entryPoint())
                     .accessDeniedHandler(problems.accessDenied()))
         .exceptionHandling(
-            e -> e.authenticationEntryPoint(problems.entryPoint()).accessDeniedHandler(problems.accessDenied()))
-        .addFilterAfter(new RateLimitFilter(limiter, problems, props), BearerTokenAuthenticationFilter.class);
+            e -> e.authenticationEntryPoint(problems.entryPoint()).accessDeniedHandler(problems.accessDenied()));
+    // Thứ tự: xác thực JWT → rate limit → idempotency (cả hai cần userId)
+    http.addFilterAfter(new RateLimitFilter(limiter, problems, props), BearerTokenAuthenticationFilter.class)
+        .addFilterAfter(new IdempotencyFilter(redis, json, problems, props), RateLimitFilter.class);
     return http.build();
   }
 
@@ -80,6 +90,7 @@ public class SecurityConfig {
     cors.addAllowedHeader("*");
     cors.setAllowCredentials(true);
     cors.addExposedHeader("Retry-After");
+    cors.addExposedHeader(IdempotencyFilter.REPLAYED_HEADER);
     var source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/api/**", cors);
     return source;

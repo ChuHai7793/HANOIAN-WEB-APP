@@ -18,6 +18,7 @@ public record GfmProperties(
     @Valid @NotNull Jwt jwt,
     @Valid @NotNull Auth auth,
     @Valid @NotNull RateLimit rateLimit,
+    @Valid @NotNull Idempotency idempotency,
     @NotNull List<String> corsOrigins,
     @Valid @NotNull Storage storage,
     @Valid @NotNull Messaging messaging,
@@ -33,6 +34,9 @@ public record GfmProperties(
 
   /** Số request tối đa mỗi phút: auth theo IP, API chung theo user. */
   public record RateLimit(@Min(1) int authPerMinute, @Min(1) int apiPerMinute) {}
+
+  /** Response đã xử lý được giữ {@code ttl}; khoá "đang xử lý" tự hết hạn sau {@code inProgressTtl}. */
+  public record Idempotency(@NotNull Duration ttl, @NotNull Duration inProgressTtl) {}
 
   public record Storage(
       @NotBlank @Pattern(regexp = "local|s3") String driver,

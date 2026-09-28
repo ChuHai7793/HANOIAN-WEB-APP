@@ -30,9 +30,11 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **computed** | Signal suy ra từ signal khác, tự tính lại | [P3 §2.1](04-phase-3-frontend-noi-api-upload.md#21-spa-và-angular) |
 | **Constraint** | Ràng buộc trong DB: PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK | [P1 §2.6](02-phase-1-khung-spring-boot-flyway.md#26-kiểu-dữ-liệu-mariadb-được-dùng) |
 | **Container / Image** | Image = bản đóng gói phần mềm; container = image đang chạy | [00 §4.3](00-cong-cu-va-moi-truong.md#43-khái-niệm) |
+| **ContentCachingResponseWrapper** | Bọc response để giữ bản sao body, đọc lại được sau khi controller ghi | [P5 §2.4](06-phase-5-concurrency.md#24-luồng-idempotencyfilter-trên-redis) |
 | **Conventional Commits** | Quy ước commit message dạng `feat: ...`, `fix: ...` | [00 §3.3](00-cong-cu-va-moi-truong.md#33-quy-ước-commit-message) |
 | **Cookie httpOnly / Secure / SameSite** | Thuộc tính cookie: JS không đọc được / chỉ gửi qua HTTPS / không gửi từ site khác | [P4 §2.5](05-phase-4-xac-thuc-jwt.md#25-cookie-httponly-secure-samesite-path) |
 | **CORS** | Cơ chế server cho phép JS ở origin khác đọc response | [P3 §2.4](04-phase-3-frontend-noi-api-upload.md#24-dev-proxy-same-origin-và-cors) |
+| **CountDownLatch** | Bộ đếm lùi; luồng `await()` đứng chờ tới khi về 0, dùng làm "cổng xuất phát" trong test song song | [P5 §2.7](06-phase-5-concurrency.md#27-test-đồng-thời-executorservice-và-countdownlatch) |
 | **CRLF / LF** | Ký tự xuống dòng Windows (`\r\n`) / Linux (`\n`) | [P0 §2.3](01-phase-0-chuan-bi.md#23-gitattributes-và-vấn-đề-xuống-dòng-line-endings) |
 | **CRUD** | Create, Read, Update, Delete: bốn thao tác cơ bản với dữ liệu | [P2](03-phase-2-crud-api.md) |
 | **CSRF** | Trang lạ lợi dụng cookie của bạn để gửi request thay bạn | [P4 §2.6](05-phase-4-xac-thuc-jwt.md#26-csrf-và-kiểm-tra-origin) |
@@ -42,6 +44,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **Entity** | Class Java ánh xạ vào một bảng DB | [P1 §2.4](02-phase-1-khung-spring-boot-flyway.md#24-orm-jpa-và-hibernate) |
 | **@EntityGraph** | Chỉ định Hibernate tải kèm quan hệ bằng JOIN, tránh N+1 | [P2 §2.9](03-phase-2-crud-api.md#29-vấn-đề-n1-và-cách-tránh) |
 | **Environment variable** | Biến `TÊN=giá trị` truyền cho chương trình khi chạy | [P0 §2.4](01-phase-0-chuan-bi.md#24-biến-môi-trường-và-env) |
+| **ExecutorService** | Nhóm luồng (thread pool) chạy nhiều tác vụ song song | [P5 §2.7](06-phase-5-concurrency.md#27-test-đồng-thời-executorservice-và-countdownlatch) |
 | **EXIF** | Metadata trong ảnh (hướng xoay, GPS…); server bỏ khi mã hoá lại | [P3 §3.3](04-phase-3-frontend-noi-api-upload.md#33-xử-lý-ảnh-exif-resize-webp) |
 | **Fail fast** | Phát hiện lỗi cấu hình ngay lúc khởi động thay vì lúc chạy | [P1 §2.3](02-phase-1-khung-spring-boot-flyway.md#23-cấu-hình-profile-và-configurationproperties) |
 | **Failsafe / Surefire** | Plugin Maven chạy test tích hợp `*IT` / unit test `*Test` | [P1 §2.10](02-phase-1-khung-spring-boot-flyway.md#210-kiểm-thử-với-testcontainers) |
@@ -58,6 +61,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **HttpClient / HttpContext** | Dịch vụ gọi HTTP của Angular / cờ gắn riêng cho từng request | [P3 §2.2–2.3](04-phase-3-frontend-noi-api-upload.md#22-httpclient-observable-và-promise) |
 | **IDOR** | Lỗ hổng đổi `id` trên URL là đọc được dữ liệu người khác | [P2 §2.5](03-phase-2-crud-api.md#25-idor-và-404-thay-vì-403) |
 | **Idempotent** | Gọi nhiều lần cho cùng kết quả như gọi một lần | [P2 §2.1](03-phase-2-crud-api.md#21-rest-và-http) |
+| **Idempotency-Key** | Mã client gắn vào POST; gửi lại cùng mã thì server trả kết quả cũ, không tạo thêm | [P5 §2.3](06-phase-5-concurrency.md#23-idempotency-và-idempotency-key) |
 | **Interceptor** | Hàm chen vào mọi request/response HTTP phía client | [P3 §2.3](04-phase-3-frontend-noi-api-upload.md#23-interceptor-và-httpcontext) |
 | **Jackson** | Thư viện chuyển Java ↔ JSON; Boot 4 dùng Jackson 3 (`tools.jackson`) | [P1 §2.9](02-phase-1-khung-spring-boot-flyway.md#29-jackson-chuyển-đổi-json) |
 | **JDK / JRE / JVM** | Bộ phát triển / môi trường chạy / máy ảo Java | [00 §5.1](00-cong-cu-va-moi-truong.md#51-jdk-và-jre) |
@@ -66,7 +70,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **JWT** | Token có chữ ký gồm header.payload.signature | [P4 §2.3](05-phase-4-xac-thuc-jwt.md#23-jwt-json-web-token) |
 | **Lazy loading** | Chỉ tải dữ liệu/code khi thật sự cần (quan hệ JPA, route Angular) | [P2 §2.9](03-phase-2-crud-api.md#29-vấn-đề-n1-và-cách-tránh) |
 | **Lombok** | Sinh getter/setter/constructor lúc biên dịch | [P1 §2.4](02-phase-1-khung-spring-boot-flyway.md#24-orm-jpa-và-hibernate) |
-| **Lost update** | Hai người sửa cùng lúc, bản sau ghi đè mất bản trước | [P2 §2.4](03-phase-2-crud-api.md#24-optimistic-locking-và-version) |
+| **Lost update** | Hai người sửa cùng lúc, bản sau ghi đè mất bản trước | [P2 §2.4](03-phase-2-crud-api.md#24-optimistic-locking-và-version), [P5 §2.1](06-phase-5-concurrency.md#21-race-condition-và-lost-update) |
 | **Lua script (Redis)** | Đoạn lệnh chạy nguyên tử trên Redis | [P4 §2.8](05-phase-4-xac-thuc-jwt.md#28-redis-cấu-trúc-lưu-refresh-token) |
 | **Magic bytes** | Vài byte đầu file cho biết định dạng thật | [P3 §3.2](04-phase-3-frontend-noi-api-upload.md#32-không-tin-client-magic-bytes) |
 | **MapStruct** | Sinh code chuyển Entity ↔ DTO lúc biên dịch | [P2 §2.3](03-phase-2-crud-api.md#23-dto-record-và-bean-validation) |
@@ -89,6 +93,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **ORM** | Lớp chuyển đổi giữa bảng DB và đối tượng | [P1 §2.4](02-phase-1-khung-spring-boot-flyway.md#24-orm-jpa-và-hibernate) |
 | **PATCH semantics** | Sửa một phần; phân biệt "không gửi" với "gửi null" | [P2 §2.8](03-phase-2-crud-api.md#28-patch-không-gửi-khác-gửi-null) |
 | **Path traversal** | Dùng `../` để thoát khỏi thư mục được phép | [P3 §3.4](04-phase-3-frontend-noi-api-upload.md#34-storage-driver-và-path-traversal) |
+| **Pessimistic locking** | Khoá bản ghi ngay lúc đọc (`SELECT ... FOR UPDATE`), người khác phải chờ | [P5 §2.2](06-phase-5-concurrency.md#22-optimistic-locking-nhắc-lại) |
 | **Port mapping** | Nối cổng máy thật với cổng trong container, `"máy:container"` | [00 §4.3](00-cong-cu-va-moi-truong.md#43-khái-niệm) |
 | **ProblemDetail (RFC 9457)** | Chuẩn định dạng JSON cho lỗi API | [P1 §2.7](02-phase-1-khung-spring-boot-flyway.md#27-chuẩn-lỗi-problemdetail-rfc-9457) |
 | **Profile (Spring)** | Tập cấu hình theo môi trường: dev/test/prod | [P1 §2.3](02-phase-1-khung-spring-boot-flyway.md#23-cấu-hình-profile-và-configurationproperties) |
@@ -111,6 +116,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **Same-Origin Policy** | Trình duyệt chặn JS đọc response từ origin khác | [P3 §2.4](04-phase-3-frontend-noi-api-upload.md#24-dev-proxy-same-origin-và-cors) |
 | **Scrimage** | Thư viện xử lý ảnh Java (resize, WebP) | [P3 §3.3](04-phase-3-frontend-noi-api-upload.md#33-xử-lý-ảnh-exif-resize-webp) |
 | **SecurityContext** | Nơi Spring Security lưu "ai đang gọi" cho request hiện tại | [P4 §2.11](05-phase-4-xac-thuc-jwt.md#211-spring-security-filter-chain-và-resource-server) |
+| **SET NX** | Lệnh Redis chỉ ghi khi key chưa tồn tại, nguyên tử: nhiều request cùng lúc thì chỉ một bên thắng | [P5 §2.4](06-phase-5-concurrency.md#24-luồng-idempotencyfilter-trên-redis) |
 | **Seed** | Dữ liệu mẫu nạp sẵn cho môi trường dev | [P1 Bước 5](02-phase-1-khung-spring-boot-flyway.md#bước-5-dữ-liệu-mẫu-r__demo_datasql) |
 | **Service (Compose)** | Một mục trong `services:`; mỗi service chạy thành một container | [00 §4.5](00-cong-cu-va-moi-truong.md#45-đọc-hiểu-một-service-trong-docker-composeyml) |
 | **Signal** | Giá trị phản ứng của Angular; đổi thì giao diện tự vẽ lại | [P3 §2.1](04-phase-3-frontend-noi-api-upload.md#21-spa-và-angular) |

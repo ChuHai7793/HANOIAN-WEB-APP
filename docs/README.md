@@ -14,7 +14,8 @@ Bộ tài liệu này kể lại **từng bước** quá trình biến một SPA
 | 2 | [03-phase-2-crud-api.md](03-phase-2-crud-api.md) | REST API CRUD, DTO, PATCH, optimistic locking, chống IDOR, N+1 | ✅ Đã làm |
 | 3 | [04-phase-3-frontend-noi-api-upload.md](04-phase-3-frontend-noi-api-upload.md) | Angular gọi API, optimistic UI, upload ảnh | ✅ Đã làm |
 | 4 | [05-phase-4-xac-thuc-jwt.md](05-phase-4-xac-thuc-jwt.md) | Đăng nhập JWT, refresh token trong Redis, rate limit | ✅ Đã làm |
-| 5–11 | [PLAN.md §14](../PLAN.md) | Concurrency, RabbitMQ, Maps, Import, Deploy… | ⏳ Chưa làm, sẽ viết thêm tài liệu khi làm |
+| 5 | [06-phase-5-concurrency.md](06-phase-5-concurrency.md) | Idempotency-Key, dialog xung đột version, test chạy song song | ✅ Đã làm |
+| 6–11 | [PLAN.md §14](../PLAN.md) | RabbitMQ, Maps, Import, Deploy… | ⏳ Chưa làm, sẽ viết thêm tài liệu khi làm |
 | — | [99-thuat-ngu.md](99-thuat-ngu.md) | Bảng tra thuật ngữ A–Z | Tra cứu |
 
 Mỗi file phase có cùng bố cục:

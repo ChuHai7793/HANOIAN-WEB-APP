@@ -10,6 +10,7 @@ import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/api/auth.interceptor';
 import { errorInterceptor } from './core/api/error.interceptor';
+import { idempotencyInterceptor } from './core/api/idempotency.interceptor';
 import { AuthService } from './core/auth/auth.service';
 import { DataBootstrapService } from './core/services/data-bootstrap.service';
 
@@ -20,7 +21,11 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     // errorInterceptor đứng ngoài cùng: chỉ thấy lỗi cuối cùng, sau khi authInterceptor đã
     // refresh token và thử lại, nên không hiện toast cho 401 đã tự xử lý được
-    provideHttpClient(withFetch(), withInterceptors([errorInterceptor, authInterceptor])),
+    // idempotencyInterceptor đứng trước authInterceptor: lần gửi lại sau refresh giữ nguyên key
+    provideHttpClient(
+      withFetch(),
+      withInterceptors([errorInterceptor, idempotencyInterceptor, authInterceptor]),
+    ),
     // Khôi phục phiên (cookie refresh) rồi tải dữ liệu, trước khi router chạy guard
     provideAppInitializer(async () => {
       const auth = inject(AuthService);
