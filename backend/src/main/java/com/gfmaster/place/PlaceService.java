@@ -2,6 +2,10 @@ package com.gfmaster.place;
 
 import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
+import com.gfmaster.common.messaging.DomainEvent.EntityChanged;
+import com.gfmaster.common.messaging.DomainEvent.EntityChanged.Action;
+import com.gfmaster.common.messaging.DomainEvent.EntityChanged.Entity;
+import com.gfmaster.common.messaging.DomainEventPublisher;
 import com.gfmaster.common.web.Patch;
 import com.gfmaster.place.dto.PlacePatch;
 import com.gfmaster.place.dto.PlaceRequest;
@@ -20,11 +24,14 @@ public class PlaceService {
   private final PlaceRepository places;
   private final UserRepository users;
   private final PlaceMapper mapper;
+  private final DomainEventPublisher events;
 
-  public PlaceService(PlaceRepository places, UserRepository users, PlaceMapper mapper) {
+  public PlaceService(
+      PlaceRepository places, UserRepository users, PlaceMapper mapper, DomainEventPublisher events) {
     this.places = places;
     this.users = users;
     this.mapper = mapper;
+    this.events = events;
   }
 
   @Transactional(readOnly = true)
@@ -45,7 +52,9 @@ public class PlaceService {
     Place place = mapper.toEntity(request);
     place.setUser(users.getReferenceById(userId));
     normalizeTypeFields(place);
-    return mapper.toResponse(places.saveAndFlush(place));
+    Place saved = places.saveAndFlush(place);
+    changed(userId, saved.getId(), Action.created);
+    return mapper.toResponse(saved);
   }
 
   public PlaceResponse update(UUID userId, UUID id, Patch<PlacePatch> patch) {
@@ -56,7 +65,9 @@ public class PlaceService {
     mapper.apply(patch, place);
     normalizeTypeFields(place);
     // Hibernate tăng version lúc flush; nếu có transaction khác vừa ghi thì ném OptimisticLock → 409
-    return mapper.toResponse(places.saveAndFlush(place));
+    Place saved = places.saveAndFlush(place);
+    changed(userId, id, Action.updated);
+    return mapper.toResponse(saved);
   }
 
   public void delete(UUID userId, UUID id) {
@@ -64,6 +75,12 @@ public class PlaceService {
     if (places.deleteByIdAndUserId(id, userId) == 0) {
       throw ApiException.notFound();
     }
+    changed(userId, id, Action.deleted);
+  }
+
+  /** Gửi sau commit; hiện dùng để xoá cache /stats (đổi loại quán cũng làm số đếm thay đổi). */
+  private void changed(UUID userId, UUID id, Action action) {
+    events.publish(new EntityChanged(userId, Entity.place, id, action));
   }
 
   private Place load(UUID userId, UUID id) {

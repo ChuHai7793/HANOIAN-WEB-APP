@@ -261,4 +261,4 @@ Sau `conflicts.choose('overwrite')`, store chỉ gửi PATCH mới khi Promise c
 
 ---
 
-**Trước:** [Phase 4](05-phase-4-xac-thuc-jwt.md) · **Tiếp theo:** Phase 6 (RabbitMQ, xem [PLAN.md](../PLAN.md)) · **Tra cứu:** [Thuật ngữ](99-thuat-ngu.md)
+**Trước:** [Phase 4](05-phase-4-xac-thuc-jwt.md) · **Tiếp theo:** [Phase 6](07-phase-6-rabbitmq.md) · **Tra cứu:** [Thuật ngữ](99-thuat-ngu.md)

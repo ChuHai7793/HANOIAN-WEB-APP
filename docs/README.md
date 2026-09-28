@@ -15,7 +15,8 @@ Bộ tài liệu này kể lại **từng bước** quá trình biến một SPA
 | 3 | [04-phase-3-frontend-noi-api-upload.md](04-phase-3-frontend-noi-api-upload.md) | Angular gọi API, optimistic UI, upload ảnh | ✅ Đã làm |
 | 4 | [05-phase-4-xac-thuc-jwt.md](05-phase-4-xac-thuc-jwt.md) | Đăng nhập JWT, refresh token trong Redis, rate limit | ✅ Đã làm |
 | 5 | [06-phase-5-concurrency.md](06-phase-5-concurrency.md) | Idempotency-Key, dialog xung đột version, test chạy song song | ✅ Đã làm |
-| 6–11 | [PLAN.md §14](../PLAN.md) | RabbitMQ, Maps, Import, Deploy… | ⏳ Chưa làm, sẽ viết thêm tài liệu khi làm |
+| 6 | [07-phase-6-rabbitmq.md](07-phase-6-rabbitmq.md) | RabbitMQ: thumbnail nền, xoá file, DLQ, cache `/stats`, job dọn ảnh (ShedLock) | ✅ Đã làm |
+| 7–11 | [PLAN.md §14](../PLAN.md) | Maps, Import, Hoàn thiện, Deploy… | ⏳ Chưa làm, sẽ viết thêm tài liệu khi làm |
 | — | [99-thuat-ngu.md](99-thuat-ngu.md) | Bảng tra thuật ngữ A–Z | Tra cứu |
 
 Mỗi file phase có cùng bố cục:
@@ -37,9 +38,10 @@ Mỗi file phase có cùng bố cục:
                  Spring Boot (Java 21)
                    │         │          │
                    ▼         ▼          ▼
-                MariaDB    Redis     RabbitMQ
-               (dữ liệu)  (phiên,   (việc chạy nền,
-                          rate limit) từ Phase 6)
+                MariaDB    Redis        RabbitMQ
+               (dữ liệu)  (phiên, rate  (việc chạy nền:
+                          limit, cache, thumbnail, xoá file,
+                          idempotency) xoá cache)
 ```
 
 Khi phát triển trên máy (dev), Caddy chưa có. Vai trò "cùng một địa chỉ" do **proxy của Angular dev server** đảm nhận: `http://localhost:4200/api/*` được chuyển sang `http://localhost:8080`. Xem [Phase 3 §2.4](04-phase-3-frontend-noi-api-upload.md#24-dev-proxy-same-origin-và-cors).

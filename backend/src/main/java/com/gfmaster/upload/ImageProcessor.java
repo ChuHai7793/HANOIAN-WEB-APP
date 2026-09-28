@@ -5,6 +5,7 @@ import com.gfmaster.common.error.ErrorCode;
 import com.sksamuel.scrimage.ImmutableImage;
 import com.sksamuel.scrimage.webp.WebpWriter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component;
 public class ImageProcessor {
 
   static final int MAX_EDGE = 1200;
+  static final int THUMB_EDGE = 320;
   private static final WebpWriter WRITER = WebpWriter.DEFAULT.withQ(78);
 
   public record ProcessedImage(byte[] bytes, int width, int height) {}
@@ -33,6 +35,19 @@ public class ImageProcessor {
       return new ProcessedImage(image.bytes(WRITER), image.width, image.height);
     } catch (IOException e) {
       throw new ApiException(ErrorCode.UNSUPPORTED_IMAGE, "Không đọc được file ảnh này.");
+    }
+  }
+
+  /** Thumbnail cạnh dài tối đa 320px từ ảnh đã chuẩn hoá (WebP do {@link #process} sinh ra). */
+  public ProcessedImage thumbnail(byte[] processed) {
+    try {
+      ImmutableImage image = ImmutableImage.loader().fromBytes(processed);
+      if (image.width > THUMB_EDGE || image.height > THUMB_EDGE) {
+        image = image.bound(THUMB_EDGE, THUMB_EDGE);
+      }
+      return new ProcessedImage(image.bytes(WRITER), image.width, image.height);
+    } catch (IOException e) {
+      throw new UncheckedIOException("Không đọc được ảnh để tạo thumbnail", e);
     }
   }
 

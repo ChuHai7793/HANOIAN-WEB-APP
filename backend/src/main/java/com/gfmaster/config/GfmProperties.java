@@ -22,6 +22,7 @@ public record GfmProperties(
     @NotNull List<String> corsOrigins,
     @Valid @NotNull Storage storage,
     @Valid @NotNull Messaging messaging,
+    @Valid @NotNull Jobs jobs,
     @Valid @NotNull Mongo mongo) {
 
   public record Jwt(
@@ -47,6 +48,12 @@ public record GfmProperties(
   public record S3(String endpoint, String bucket, String accessKey, String secretKey) {}
 
   public record Messaging(boolean enabled) {}
+
+  /** Job định kỳ. {@code cron} theo cú pháp Spring (giây phút giờ ngày tháng thứ). */
+  public record Jobs(@Valid @NotNull OrphanUploads orphanUploads) {}
+
+  /** Ảnh upload quá {@code olderThan} mà không quán/người yêu nào dùng thì bị xoá. */
+  public record OrphanUploads(@NotBlank String cron, @NotNull Duration olderThan) {}
 
   public record Mongo(boolean enabled) {}
 }

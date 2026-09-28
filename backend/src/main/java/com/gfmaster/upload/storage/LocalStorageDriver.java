@@ -39,6 +39,15 @@ public class LocalStorageDriver implements StorageDriver {
   }
 
   @Override
+  public byte[] get(String key) {
+    try {
+      return Files.readAllBytes(resolve(key));
+    } catch (IOException e) {
+      throw new UncheckedIOException("Không đọc được file " + key, e);
+    }
+  }
+
+  @Override
   public void delete(String key) {
     try {
       Files.deleteIfExists(resolve(key));

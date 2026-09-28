@@ -2,6 +2,7 @@ package com.gfmaster.support;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -9,11 +10,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.gfmaster.auth.JwtService;
 import com.gfmaster.user.User;
 import com.gfmaster.user.UserRepository;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import javax.imageio.ImageIO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
@@ -74,6 +80,25 @@ public abstract class ApiTestSupport {
   }
 
   // ---- Fixture ----
+
+  protected ResultActions upload(UUID user, String name, String type, byte[] bytes) throws Exception {
+    return mvc.perform(
+        multipart("/api/v1/uploads/image")
+            .file(new MockMultipartFile("file", name, type, bytes))
+            .header(HttpHeaders.AUTHORIZATION, bearer(user)));
+  }
+
+  /** Ảnh PNG một màu kích thước w×h. */
+  protected static byte[] png(int w, int h) throws Exception {
+    BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+    var g = img.createGraphics();
+    g.setColor(Color.PINK);
+    g.fillRect(0, 0, w, h);
+    g.dispose();
+    var out = new ByteArrayOutputStream();
+    ImageIO.write(img, "png", out);
+    return out.toByteArray();
+  }
 
   protected JsonNode createPlace(UUID user, String type, String name) throws Exception {
     String extra =

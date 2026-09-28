@@ -1163,15 +1163,26 @@ Frontend
 - Frontend giữ key theo **nội dung body** trong `CrudStore.create()`: gửi lại đúng dữ liệu cũ sau lỗi thì dùng key cũ, thành công thì bỏ key. Component không phải tự quản lý key.
 - Dialog xung đột do `CrudStore` gọi qua `ConflictService` (Promise), nên component không cần sửa. Đóng dialog = "Tải bản mới". 409 do Hibernate phát hiện (không kèm `current`) thì frontend tự `GET` lại.
 
-### Phase 6: RabbitMQ: thumbnail, dọn dẹp, cache stats (1.5–2 ngày)
+### Phase 6: RabbitMQ: thumbnail, dọn dẹp, cache stats (1.5–2 ngày) ✅
 > Upload đồng bộ (`StorageDriver`, `ImageProcessor`, `UploadController`, `image-picker`, chặn `data:`) đã làm ở Phase 3. Phase này chỉ còn phần bất đồng bộ.
-- [ ] `RabbitConfig` (exchange, queue, DLQ, JSON converter, confirms), `DomainEventPublisher` + relay AFTER_COMMIT, `ProcessedMessageGuard`.
-- [ ] `UploadService` publish `image.uploaded` (status `THUMB_PENDING`); `ImageVariantConsumer` sinh thumbnail 320px, cập nhật `thumb_url` + `READY`.
-- [ ] Xoá ảnh qua event `upload.deleted` → `StorageCleanupConsumer` (thay cho xoá file đồng bộ hiện tại).
-- [ ] `OrphanUploadCleanupJob` + ShedLock.
-- [ ] Cache `/stats` bằng Redis (`@Cacheable`), evict qua queue `gfm.cache.evict`.
-- [ ] Chuyển ảnh `frontend/assets/img` sang `seed-assets`.
+- [x] `RabbitConfig` (exchange, queue, DLQ, JSON converter, confirms), `DomainEventPublisher` + relay AFTER_COMMIT, `ProcessedMessageGuard`.
+- [x] `UploadService` publish `image.uploaded` (status `THUMB_PENDING`); consumer sinh thumbnail 320px, cập nhật `thumb_url` + `READY`.
+- [x] Xoá ảnh qua event `upload.deleted` → consumer xoá file (thay cho xoá file đồng bộ).
+- [x] `OrphanUploadCleanupJob` + ShedLock.
+- [x] Cache `/stats` bằng Redis (`@Cacheable`), evict qua queue `gfm.cache.evict`.
+- [ ] Chuyển ảnh `frontend/assets/img` sang `seed-assets`. *Hoãn: 17 ảnh là quán ở Hà Nội, không khớp bộ seed hiện tại (quán Sài Gòn, ảnh Unsplash); cần quyết định có thay bộ seed không.*
+- Test: `UploadMessagingIT` (5), `StatsCacheIT` (3), `ProcessedMessageGuardIT` (3), `DirectEventDispatcherIT` (2). Tổng backend 68.
 - **Xong khi:** upload ảnh xong vài giây sau có thumbnail; tắt consumer thì message nằm chờ trong queue, bật lại thì tự xử lý; message lỗi vào DLQ.
+
+**Quyết định trong Phase 6**
+- Một class `EventConsumers` chứa cả 3 `@RabbitListener` (thay cho 3 class consumer riêng như dự kiến): mỗi listener chỉ 1 dòng gọi sang service.
+- `DomainEvent` là `sealed interface` với 3 record (`ImageUploaded`, `UploadsDeleted`, `EntityChanged`); `EntityChanged` cho routing key `place.*` / `girlfriend.*`. Link chưa phát event vì chưa có queue nào cần.
+- `gfm.messaging.enabled=false`: không nạp bean Rabbit, `DirectEventDispatcher` xử lý event ngay sau commit. `ThumbnailService` dùng `REQUIRES_NEW` (trong AFTER_COMMIT, `REQUIRED` nhập vào transaction đã commit và không lưu gì).
+- Thumbnail đặt cạnh ảnh gốc (`abc.webp` → `abc-320.webp`); xoá upload thì xoá cả hai. `UploadResponse.status` giờ là `THUMB_PENDING` ngay sau upload.
+- Cache dùng serializer JSON gắn đúng kiểu (không lưu `@class`), key `cache:stats::{userId}`, TTL 10 phút. `@CacheEvict(beforeInvocation = true)` để xoá ngay (`evictIfPresent`), vì `evict()` mặc định được phép trễ.
+- Test chỉ dùng một Spring context: không dùng `@TestPropertySource` riêng cho nhánh tắt RabbitMQ (context thứ hai kéo theo bộ container thứ hai và làm hỏng context đầu).
+- ShedLock key `shedlock:gfm:orphan-upload-cleanup`; job xoá theo lô 200 bản, mỗi lô một transaction.
+- Frontend chưa hiển thị thumbnail (xem hạn chế trong docs/07).
 
 ### Phase 7: Google Maps resolve + cache Redis (0.5–1 ngày)
 - [ ] `GmapUrlParser` (port + unit test), `ShortLinkResolver` (java.net.http.HttpClient, whitelist, timeout).

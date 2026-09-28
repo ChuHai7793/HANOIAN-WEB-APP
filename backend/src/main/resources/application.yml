@@ -97,4 +97,8 @@ gfm:
       access-key: ${S3_ACCESS_KEY:}
       secret-key: ${S3_SECRET_KEY:}
   messaging.enabled: true
+  jobs:
+    orphan-uploads:
+      cron: "0 0 3 * * *"           # 03:00 hằng ngày
+      older-than: 7d                # chừa thời gian cho form đang mở dở
   mongo.enabled: false

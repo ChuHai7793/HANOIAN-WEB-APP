@@ -6,5 +6,8 @@ public interface StorageDriver {
   /** Ghi file và trả về URL công khai (ví dụ {@code /uploads/<key>}). */
   String put(String key, byte[] content, String contentType);
 
+  /** Đọc lại nội dung file; không tồn tại thì ném {@link java.io.UncheckedIOException}. */
+  byte[] get(String key);
+
   void delete(String key);
 }
