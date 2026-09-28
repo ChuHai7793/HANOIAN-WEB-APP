@@ -182,7 +182,7 @@ git push -u origin dev
 | Kiểm tra | Cách làm | Mong đợi |
 |---|---|---|
 | Container chạy | `docker compose ps` | 3 dịch vụ `healthy`, adminer `Up` |
-| Vào được DB | Mở http://localhost:8081, đăng nhập như [§4.4](00-cong-cu-va-moi-truong.md#44-giao-diện-web-đi-kèm) | Thấy database `gfmaster` (chưa có bảng) |
+| Vào được DB | Mở http://localhost:8081, đăng nhập như [§4.7](00-cong-cu-va-moi-truong.md#47-giao-diện-web-đi-kèm) | Thấy database `gfmaster` (chưa có bảng) |
 | RabbitMQ UI | http://localhost:15672, `gfm`/`gfm` | Trang Overview |
 | Redis | `docker compose exec redis redis-cli ping` | `PONG` |
 | Không commit bí mật | `git ls-files \| Select-String "\.env$"` | Không có kết quả |

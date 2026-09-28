@@ -95,7 +95,43 @@ Máy Windows cài Git có sẵn **Git Credential Manager (GCM)**. Lần đầu p
 
 Backend cần MariaDB, Redis, RabbitMQ. Cài trực tiếp từng thứ lên Windows thì lâu, dễ xung đột phiên bản, và mỗi máy mỗi khác. **Docker** chạy mỗi phần mềm trong một "hộp" cô lập, cấu hình giống hệt nhau trên mọi máy, xoá đi cũng không để lại rác.
 
-### 4.2. Khái niệm
+Vì vậy **không cần cài** MySQL/MariaDB, Redis for Windows, RabbitMQ installer, Erlang hay MongoDB lên Windows. Chỉ cần Docker Desktop.
+
+### 4.2. Cài đặt và cấu hình Docker Desktop
+
+**Cài trên Windows 11 (kể cả bản Home):**
+
+1. **Bật WSL 2** (Windows Subsystem for Linux): mở PowerShell bằng *Run as administrator*, chạy `wsl --install`, rồi khởi động lại máy. Bản Home không có Hyper-V nên Docker bắt buộc chạy qua WSL 2.
+2. Tải **Docker Desktop** ở docker.com/products/docker-desktop rồi cài. Khi được hỏi, chọn *Use WSL 2 instead of Hyper-V*.
+3. Mở Docker Desktop, chờ biểu tượng cá voi báo **Engine running**.
+4. Kiểm tra:
+   ```powershell
+   docker version          # phải có cả phần Client và Server
+   docker run hello-world  # tải image nhỏ, chạy thử rồi thoát
+   wsl --status            # Default Version: 2
+   ```
+   Nếu `docker version` báo lỗi ở phần *Server* thì thường là do Docker Desktop chưa được mở.
+
+**Cấu hình nên chỉnh** (Docker Desktop → *Settings*):
+
+| Mục | Nên đặt | Vì sao |
+|---|---|---|
+| General → *Use the WSL 2 based engine* | Bật | Bắt buộc với Windows Home |
+| General → *Start Docker Desktop when you sign in* | Tuỳ bạn | Nếu tắt thì phải tự mở app trước mỗi lần dev |
+| Resources | Không có thanh trượt RAM/CPU khi dùng WSL 2 | Giới hạn bằng file `.wslconfig` (xem dưới) |
+| Docker Engine | Để mặc định | — |
+
+Mặc định WSL 2 có thể dùng tới một nửa RAM của máy. Muốn giới hạn thì tạo file `%USERPROFILE%\.wslconfig`:
+
+```ini
+[wsl2]
+memory=6GB
+processors=4
+```
+
+Sau đó chạy `wsl --shutdown` rồi mở lại Docker Desktop. Các dịch vụ của dự án chỉ dùng khoảng 1–1.5GB, nên 4–6GB là đủ.
+
+### 4.3. Khái niệm
 
 | Khái niệm | Giải thích | Ví dụ trong dự án |
 |---|---|---|
@@ -105,11 +141,89 @@ Backend cần MariaDB, Redis, RabbitMQ. Cài trực tiếp từng thứ lên Win
 | **Port mapping** | Nối cổng trên máy thật với cổng trong container: `"3306:3306"` = máy:container. | App trên máy gọi `localhost:3306` |
 | **Volume** | Vùng lưu trữ nằm ngoài container để dữ liệu **không mất** khi xoá/tạo lại container. | `mariadb:/var/lib/mysql` |
 | **Healthcheck** | Lệnh Docker chạy định kỳ để biết dịch vụ đã sẵn sàng chưa (không chỉ "đã khởi động"). | `healthcheck.sh --connect` |
+| **Environment** | Biến môi trường truyền vào container. Image đọc chúng để tự cấu hình. | `MARIADB_DATABASE: gfmaster` |
+| **Network** | Compose tự tạo một mạng riêng cho dự án. Các container gọi nhau bằng **tên service**. | Adminer kết nối tới host `mariadb` |
 | **Docker Compose** | Khai báo nhiều container trong một file YAML và bật/tắt cùng lúc. | [docker-compose.yml](../docker-compose.yml) |
+| **Service (Compose)** | Một mục trong `services:`. Mỗi service chạy thành một container. | `mariadb`, `redis`, `rabbitmq`, `adminer`, `mongo` |
 | **Profile (Compose)** | Nhóm dịch vụ chỉ chạy khi được yêu cầu. | `mongo` chỉ chạy với `--profile mongo` |
 | **Docker Desktop** | Ứng dụng Windows chứa Docker Engine, chạy qua WSL2. **Phải mở nó trước** khi dùng lệnh `docker`. | — |
 
-### 4.3. Lệnh hay dùng
+### 4.4. Docker hoạt động thế nào
+
+```
+Windows ──► Docker Desktop ──► máy ảo Linux nhẹ (WSL 2) ──► Docker Engine
+                                                             ├─ container mariadb   :3306
+                                                             ├─ container redis     :6379
+                                                             ├─ container rabbitmq  :5672, :15672
+                                                             ├─ container adminer   :8081
+                                                             └─ container mongo     :27017 (chỉ khi --profile mongo)
+```
+
+**Khi chạy `docker compose up -d`:**
+
+1. Compose đọc [docker-compose.yml](../docker-compose.yml) và file `.env`, rồi thay các biến `${...}` bằng giá trị thật.
+2. Tải các image còn thiếu từ Docker Hub. Chỉ lần đầu mới chậm.
+3. Tạo network `gf_master_default` và các volume (`gf_master_mariadb`, ...).
+4. **Mỗi service thành một container**, có tên dạng `gf_master-mariadb-1` (tên thư mục, tên service, số thứ tự). File có 5 service nhưng `mongo` có profile, nên mặc định chạy **4 container**.
+5. Healthcheck bắt đầu chạy. Khi `docker compose ps` báo `healthy` thì dịch vụ dùng được.
+
+**Những lần chạy sau:**
+
+- Container đã có và cấu hình không đổi: Docker chỉ bật lại container cũ.
+- Sửa cấu hình một service (image, ports, command…): Docker **xoá container cũ, tạo container mới**. Dữ liệu vẫn còn vì nằm trong volume.
+
+**Ai gọi tới ai:**
+
+- Backend (`mvnw`) và frontend (`npm start`) chạy **trực tiếp trên Windows**, không nằm trong Docker. Chúng gọi `localhost:3306`, `localhost:6379`... qua cổng đã map.
+- Container gọi container (ví dụ Adminer gọi MariaDB) thì dùng **tên service** `mariadb`, không dùng `localhost`, vì trong container `localhost` là chính nó.
+
+### 4.5. Đọc hiểu một service trong `docker-compose.yml`
+
+Lấy service `mariadb` làm ví dụ:
+
+```yaml
+services:
+  mariadb:                      # tên service, đồng thời là hostname trong mạng Docker
+    image: mariadb:11.4         # image dùng để tạo container, tự tải nếu máy chưa có
+    environment:                # biến môi trường truyền vào container
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root}  # lấy từ .env, không có thì dùng "root"
+      MARIADB_DATABASE: gfmaster                             # tự tạo database gfmaster
+      MARIADB_USER: ${DB_USER:-gfm}                          # tự tạo user gfm...
+      MARIADB_PASSWORD: ${DB_PASSWORD:-gfm}                  # ...mật khẩu gfm, toàn quyền trên gfmaster
+    command: ["--character-set-server=utf8mb4",              # tham số thêm khi khởi động MariaDB:
+              "--collation-server=utf8mb4_uca1400_ai_ci"]    # lưu được tiếng Việt và emoji, so sánh chuỗi không phân biệt hoa/thường và dấu
+    ports: ["3306:3306"]        # cổng Windows : cổng trong container
+    volumes: [mariadb:/var/lib/mysql]  # thư mục dữ liệu của MariaDB lưu vào volume "mariadb"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]  # thử kết nối và kiểm tra InnoDB đã khởi tạo xong
+      interval: 5s              # kiểm tra 5 giây một lần
+      retries: 20               # sai 20 lần liên tiếp thì báo unhealthy
+```
+
+- `${BIEN:-macdinh}` nghĩa là lấy giá trị của `BIEN` trong `.env`. Nếu không có hoặc để trống thì dùng giá trị đứng sau `:-`.
+- Lần đầu chạy, volume còn trống nên script khởi tạo của image đọc các biến `MARIADB_*` để tạo root, database và user.
+
+> **Cẩn thận:** các biến `MARIADB_*` **chỉ có tác dụng một lần, khi volume còn trống**. Nếu sau đó đổi `DB_PASSWORD` trong `.env`, mật khẩu trong DB **không đổi theo**, vì user đã được lưu trong volume. Có hai cách: chạy `docker compose down -v` rồi `up` lại (mất dữ liệu), hoặc đổi bằng SQL `ALTER USER 'gfm'@'%' IDENTIFIED BY '...';`.
+
+Các service còn lại cũng theo cấu trúc này:
+
+| Service | Điểm đáng chú ý |
+|---|---|
+| `redis` | `--appendonly yes`: ghi log thao tác xuống đĩa để khởi động lại không mất dữ liệu. `--maxmemory 256mb` + `volatile-lru`: khi đầy thì xoá key có TTL ít dùng nhất trước |
+| `rabbitmq` | Image `-management` có sẵn web UI ở cổng 15672. Cổng 5672 dành cho app (giao thức AMQP) |
+| `adminer` | `depends_on: [mariadb]`: chỉ khởi động sau khi container mariadb đã được tạo |
+| `mongo` | `profiles: ["mongo"]`: mặc định không chạy. Chưa có mật khẩu (chỉ dùng cho dev) |
+
+Tự kiểm tra:
+
+```powershell
+docker compose ps                 # thấy 4 container
+docker volume ls                  # thấy gf_master_mariadb, gf_master_redis, ...
+docker compose exec mariadb mariadb -ugfm -pgfm gfmaster -e "SHOW TABLES;"
+docker compose exec redis redis-cli ping      # PONG
+```
+
+### 4.6. Lệnh hay dùng
 
 ```powershell
 docker compose up -d            # bật tất cả dịch vụ ở nền (-d = detached)
@@ -119,9 +233,11 @@ docker compose stop             # tạm dừng (giữ dữ liệu)
 docker compose down             # xoá container (vẫn giữ volume = giữ dữ liệu)
 docker compose down -v          # xoá cả volume = XOÁ SẠCH dữ liệu, cẩn thận
 docker compose exec mariadb mariadb -ugfm -pgfm gfmaster   # mở MariaDB shell
+docker compose --profile mongo up -d                       # bật thêm MongoDB
+docker system df                # Docker đang chiếm bao nhiêu ổ đĩa
 ```
 
-### 4.4. Giao diện web đi kèm
+### 4.7. Giao diện web đi kèm
 
 | Công cụ | Địa chỉ | Đăng nhập |
 |---|---|---|

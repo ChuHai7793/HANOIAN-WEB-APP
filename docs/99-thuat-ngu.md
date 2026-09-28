@@ -8,7 +8,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **Access token** | JWT ngắn hạn (15 phút), gửi kèm mọi request API qua header `Authorization: Bearer` | [P4 §2.4](05-phase-4-xac-thuc-jwt.md#24-access-token-và-refresh-token) |
 | **ACID** | Bốn tính chất của transaction: Atomic (trọn vẹn), Consistent (nhất quán), Isolated (cô lập), Durable (bền vững) | [P2 §2.2](03-phase-2-crud-api.md#22-kiến-trúc-3-tầng-controller-service-repository) |
 | **Actuator** | Module Spring Boot cung cấp endpoint vận hành như `/actuator/health` | [P1 §2.8](02-phase-1-khung-spring-boot-flyway.md#28-actuator-và-openapiswagger) |
-| **Adminer** | Web UI xem và sửa database, http://localhost:8081 | [00 §4.4](00-cong-cu-va-moi-truong.md#44-giao-diện-web-đi-kèm) |
+| **Adminer** | Web UI xem và sửa database, http://localhost:8081 | [00 §4.7](00-cong-cu-va-moi-truong.md#47-giao-diện-web-đi-kèm) |
 | **Annotation processor** | Chương trình chạy lúc biên dịch Java để sinh code (Lombok, MapStruct) | [P1 §2.4](02-phase-1-khung-spring-boot-flyway.md#24-orm-jpa-và-hibernate) |
 | **AOF (Append Only File)** | Chế độ Redis ghi mọi lệnh ra đĩa, khởi động lại không mất dữ liệu | [P0 §2.6](01-phase-0-chuan-bi.md#26-cấu-hình-đáng-chú-ý-trong-docker-composeyml) |
 | **App initializer** | Hàm Angular chạy trước khi app hiển thị (khôi phục phiên, tải dữ liệu) | [P3 §2.6](04-phase-3-frontend-noi-api-upload.md#26-app-initializer) |
@@ -29,7 +29,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **Component (Angular)** | Một phần giao diện: class + template | [P3 §2.1](04-phase-3-frontend-noi-api-upload.md#21-spa-và-angular) |
 | **computed** | Signal suy ra từ signal khác, tự tính lại | [P3 §2.1](04-phase-3-frontend-noi-api-upload.md#21-spa-và-angular) |
 | **Constraint** | Ràng buộc trong DB: PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK | [P1 §2.6](02-phase-1-khung-spring-boot-flyway.md#26-kiểu-dữ-liệu-mariadb-được-dùng) |
-| **Container / Image** | Image = bản đóng gói phần mềm; container = image đang chạy | [00 §4.2](00-cong-cu-va-moi-truong.md#42-khái-niệm) |
+| **Container / Image** | Image = bản đóng gói phần mềm; container = image đang chạy | [00 §4.3](00-cong-cu-va-moi-truong.md#43-khái-niệm) |
 | **Conventional Commits** | Quy ước commit message dạng `feat: ...`, `fix: ...` | [00 §3.3](00-cong-cu-va-moi-truong.md#33-quy-ước-commit-message) |
 | **Cookie httpOnly / Secure / SameSite** | Thuộc tính cookie: JS không đọc được / chỉ gửi qua HTTPS / không gửi từ site khác | [P4 §2.5](05-phase-4-xac-thuc-jwt.md#25-cookie-httponly-secure-samesite-path) |
 | **CORS** | Cơ chế server cho phép JS ở origin khác đọc response | [P3 §2.4](04-phase-3-frontend-noi-api-upload.md#24-dev-proxy-same-origin-và-cors) |
@@ -52,7 +52,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **FormData / multipart** | Định dạng body HTTP chở file nhị phân | [P3 §3.1](04-phase-3-frontend-noi-api-upload.md#31-multipartform-data) |
 | **Guard (Angular)** | Hàm chạy trước khi vào route, dùng để chặn/chuyển hướng | [P4 §2.12](05-phase-4-xac-thuc-jwt.md#212-frontend-guard-interceptor-refresh-open-redirect) |
 | **Hash (mật mã)** | Hàm một chiều: dễ tính, không suy ngược (SHA-256, BCrypt) | [P4 §2.8](05-phase-4-xac-thuc-jwt.md#28-redis-cấu-trúc-lưu-refresh-token) |
-| **Healthcheck** | Lệnh kiểm tra dịch vụ đã sẵn sàng | [00 §4.2](00-cong-cu-va-moi-truong.md#42-khái-niệm) |
+| **Healthcheck** | Lệnh kiểm tra dịch vụ đã sẵn sàng | [00 §4.3](00-cong-cu-va-moi-truong.md#43-khái-niệm) |
 | **Hibernate** | Thư viện ORM cài đặt chuẩn JPA | [P1 §2.4](02-phase-1-khung-spring-boot-flyway.md#24-orm-jpa-và-hibernate) |
 | **HS256 (HMAC-SHA256)** | Thuật toán ký JWT bằng một khoá bí mật dùng chung | [P4 §2.3](05-phase-4-xac-thuc-jwt.md#23-jwt-json-web-token) |
 | **HttpClient / HttpContext** | Dịch vụ gọi HTTP của Angular / cờ gắn riêng cho từng request | [P3 §2.2–2.3](04-phase-3-frontend-noi-api-upload.md#22-httpclient-observable-và-promise) |
@@ -79,6 +79,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **MockMvc** | Gửi request giả vào Spring MVC trong test, không mở cổng mạng | [P2 §3 Bước 6](03-phase-2-crud-api.md#bước-6-test) |
 | **Monorepo** | Frontend + backend trong cùng một repo | [P0 §2.1](01-phase-0-chuan-bi.md#21-monorepo) |
 | **N+1** | 1 truy vấn danh sách + N truy vấn con cho từng dòng | [P2 §2.9](03-phase-2-crud-api.md#29-vấn-đề-n1-và-cách-tránh) |
+| **Network (Docker)** | Mạng riêng Compose tạo cho dự án; container gọi nhau bằng tên service | [00 §4.4](00-cong-cu-va-moi-truong.md#44-docker-hoạt-động-thế-nào) |
 | **Observable** | Luồng giá trị theo thời gian (RxJS); HttpClient trả về kiểu này | [P3 §2.2](04-phase-3-frontend-noi-api-upload.md#22-httpclient-observable-và-promise) |
 | **Open redirect** | Lợi dụng tham số chuyển hướng để đưa người dùng sang trang lạ | [P4 §2.12](05-phase-4-xac-thuc-jwt.md#212-frontend-guard-interceptor-refresh-open-redirect) |
 | **OpenAPI / Swagger** | Chuẩn mô tả API / trang web đọc và gọi thử API (`/api/docs`) | [P1 §2.8](02-phase-1-khung-spring-boot-flyway.md#28-actuator-và-openapiswagger) |
@@ -88,6 +89,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **ORM** | Lớp chuyển đổi giữa bảng DB và đối tượng | [P1 §2.4](02-phase-1-khung-spring-boot-flyway.md#24-orm-jpa-và-hibernate) |
 | **PATCH semantics** | Sửa một phần; phân biệt "không gửi" với "gửi null" | [P2 §2.8](03-phase-2-crud-api.md#28-patch-không-gửi-khác-gửi-null) |
 | **Path traversal** | Dùng `../` để thoát khỏi thư mục được phép | [P3 §3.4](04-phase-3-frontend-noi-api-upload.md#34-storage-driver-và-path-traversal) |
+| **Port mapping** | Nối cổng máy thật với cổng trong container, `"máy:container"` | [00 §4.3](00-cong-cu-va-moi-truong.md#43-khái-niệm) |
 | **ProblemDetail (RFC 9457)** | Chuẩn định dạng JSON cho lỗi API | [P1 §2.7](02-phase-1-khung-spring-boot-flyway.md#27-chuẩn-lỗi-problemdetail-rfc-9457) |
 | **Profile (Spring)** | Tập cấu hình theo môi trường: dev/test/prod | [P1 §2.3](02-phase-1-khung-spring-boot-flyway.md#23-cấu-hình-profile-và-configurationproperties) |
 | **Projection** | Truy vấn chỉ lấy vài cột vào interface nhỏ | [P2 §2.9](03-phase-2-crud-api.md#29-vấn-đề-n1-và-cách-tránh) |
@@ -110,6 +112,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **Scrimage** | Thư viện xử lý ảnh Java (resize, WebP) | [P3 §3.3](04-phase-3-frontend-noi-api-upload.md#33-xử-lý-ảnh-exif-resize-webp) |
 | **SecurityContext** | Nơi Spring Security lưu "ai đang gọi" cho request hiện tại | [P4 §2.11](05-phase-4-xac-thuc-jwt.md#211-spring-security-filter-chain-và-resource-server) |
 | **Seed** | Dữ liệu mẫu nạp sẵn cho môi trường dev | [P1 Bước 5](02-phase-1-khung-spring-boot-flyway.md#bước-5-dữ-liệu-mẫu-r__demo_datasql) |
+| **Service (Compose)** | Một mục trong `services:`; mỗi service chạy thành một container | [00 §4.5](00-cong-cu-va-moi-truong.md#45-đọc-hiểu-một-service-trong-docker-composeyml) |
 | **Signal** | Giá trị phản ứng của Angular; đổi thì giao diện tự vẽ lại | [P3 §2.1](04-phase-3-frontend-noi-api-upload.md#21-spa-và-angular) |
 | **Signed URL** | URL có chữ ký và hạn dùng, để chia sẻ file riêng tư | [P4 §5.4](05-phase-4-xac-thuc-jwt.md#54-hạn-chế-đã-biết) |
 | **Single-flight** | Nhiều lời gọi cùng lúc dùng chung một kết quả (refresh một lần) | [P4 §2.12](05-phase-4-xac-thuc-jwt.md#212-frontend-guard-interceptor-refresh-open-redirect) |
@@ -129,6 +132,7 @@ Tra nhanh các thuật ngữ dùng trong dự án. Cột **Xem** trỏ tới ph�
 | **Version (entity)** | Số tăng sau mỗi lần ghi, dùng cho optimistic locking | [P2 §2.4](03-phase-2-crud-api.md#24-optimistic-locking-và-version) |
 | **Virtual threads** | Luồng nhẹ của Java 21, chịu được nhiều request đồng thời | [P1 Bước 2](02-phase-1-khung-spring-boot-flyway.md#bước-2-viết-cấu-hình) |
 | **Vitest / HttpTestingController** | Framework test JS / backend giả của Angular trong test | [P3 Bước 8](04-phase-3-frontend-noi-api-upload.md#bước-8-unit-test-frontend) |
-| **Volume (Docker)** | Vùng lưu dữ liệu ngoài container, không mất khi xoá container | [00 §4.2](00-cong-cu-va-moi-truong.md#42-khái-niệm) |
+| **Volume (Docker)** | Vùng lưu dữ liệu ngoài container, không mất khi xoá container | [00 §4.3](00-cong-cu-va-moi-truong.md#43-khái-niệm) |
 | **WebP** | Định dạng ảnh nhẹ hơn JPEG ~25–35% | [P3 §3.3](04-phase-3-frontend-noi-api-upload.md#33-xử-lý-ảnh-exif-resize-webp) |
+| **WSL 2** | Máy ảo Linux nhẹ tích hợp trong Windows; Docker Desktop chạy trên nó | [00 §4.2](00-cong-cu-va-moi-truong.md#42-cài-đặt-và-cấu-hình-docker-desktop) |
 | **XSS** | Chèn JavaScript độc vào trang để đánh cắp dữ liệu/token | [P4 §2.4](05-phase-4-xac-thuc-jwt.md#24-access-token-và-refresh-token) |
