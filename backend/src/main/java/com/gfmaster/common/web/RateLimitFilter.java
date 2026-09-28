@@ -26,17 +26,21 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class RateLimitFilter extends OncePerRequestFilter {
 
   private static final Set<String> AUTH_PATHS = Set.of("/api/v1/auth/login", "/api/v1/auth/register");
+  /** Mỗi lần gọi có thể khiến server gọi ra Google: giới hạn chặt hơn API thường. */
+  private static final String MAPS_PATH = "/api/v1/maps/resolve";
 
   private final RateLimiter limiter;
   private final ProblemSecurityHandlers problems;
   private final int authPerMinute;
   private final int apiPerMinute;
+  private final int mapsPerMinute;
 
   public RateLimitFilter(RateLimiter limiter, ProblemSecurityHandlers problems, GfmProperties props) {
     this.limiter = limiter;
     this.problems = problems;
     this.authPerMinute = props.rateLimit().authPerMinute();
     this.apiPerMinute = props.rateLimit().apiPerMinute();
+    this.mapsPerMinute = props.rateLimit().mapsPerMinute();
   }
 
   @Override
@@ -65,6 +69,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
       return limiter.tryConsume("auth:" + request.getRemoteAddr(), authPerMinute);
     }
     UUID userId = CurrentUserArgumentResolver.currentUserId();
-    return userId == null ? null : limiter.tryConsume("api:" + userId, apiPerMinute);
+    if (userId == null) return null;
+    if (MAPS_PATH.equals(request.getRequestURI())) {
+      RateLimiter.Decision maps = limiter.tryConsume("maps:" + userId, mapsPerMinute);
+      if (!maps.allowed()) return maps;
+    }
+    return limiter.tryConsume("api:" + userId, apiPerMinute);
   }
 }

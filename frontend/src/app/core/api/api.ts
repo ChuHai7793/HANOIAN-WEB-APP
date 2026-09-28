@@ -30,6 +30,8 @@ const MESSAGES: Record<string, string> = {
   FILE_TOO_LARGE: 'Ảnh quá lớn (tối đa 12MB).',
   UNSUPPORTED_IMAGE: 'Chỉ nhận ảnh JPG, PNG hoặc WebP.',
   IMPORT_RUNNING: 'Đang có một lần import khác chạy.',
+  MAPS_URL_NOT_ALLOWED: 'Chỉ nhận link Google Maps (bắt đầu bằng https://).',
+  MAPS_RESOLVE_FAILED: 'Không mở được link Google Maps, thử lại sau hoặc nhập toạ độ bằng tay.',
   RATE_LIMITED: 'Bạn thao tác quá nhanh, thử lại sau ít phút.',
   INTERNAL_ERROR: 'Server gặp lỗi, thử lại sau.',
 };

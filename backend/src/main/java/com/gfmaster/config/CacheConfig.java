@@ -1,5 +1,7 @@
 package com.gfmaster.config;
 
+import com.gfmaster.maps.MapsService;
+import com.gfmaster.maps.ShortLinkResolver.Resolved;
 import com.gfmaster.stats.StatsService;
 import com.gfmaster.stats.StatsService.StatsResponse;
 import java.time.Duration;
@@ -36,6 +38,12 @@ public class CacheConfig {
                     .entryTtl(Duration.ofMinutes(10))
                     .serializeValuesWith(
                         SerializationPair.fromSerializer(
-                            new JacksonJsonRedisSerializer<>(json, StatsResponse.class))));
+                            new JacksonJsonRedisSerializer<>(json, StatsResponse.class))))
+            .withCacheConfiguration(
+                MapsService.CACHE,
+                defaults
+                    .entryTtl(Duration.ofDays(7))
+                    .serializeValuesWith(
+                        SerializationPair.fromSerializer(new JacksonJsonRedisSerializer<>(json, Resolved.class))));
   }
 }

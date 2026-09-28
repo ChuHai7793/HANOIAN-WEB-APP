@@ -56,6 +56,11 @@ public class LocalStorageDriver implements StorageDriver {
     }
   }
 
+  @Override
+  public boolean exists(String key) {
+    return Files.isRegularFile(resolve(key));
+  }
+
   /** Chặn path traversal: key không được thoát ra ngoài thư mục gốc. */
   private Path resolve(String key) {
     Path target = root.resolve(key).normalize();

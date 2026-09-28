@@ -253,8 +253,8 @@ Bản đầu của `DirectEventDispatcherIT` dùng `@TestPropertySource(properti
 - **Frontend chưa dùng thumbnail**: danh sách vẫn tải ảnh 1200px. Muốn dùng thì cần trả `thumbUrl` kèm quán/người yêu (hoặc suy ra từ URL) và có ảnh dự phòng khi thumbnail chưa có.
 - **Upload vào DLQ vẫn ở `THUMB_PENDING`**: ảnh gốc vẫn hiển thị bình thường. Có thể thêm consumer cho DLQ để đánh dấu `FAILED`.
 - **Có thể mất event nếu app chết đúng lúc giữa commit và publish** (§2.3). Nâng cấp lên Outbox khi cần.
-- **Chưa chuyển ảnh `frontend/assets/img` sang `seed-assets`** như PLAN ghi. Đó là 17 ảnh quán ở Hà Nội (18MB) mà dữ liệu mẫu hiện tại (quán ở Sài Gòn, ảnh Unsplash) không dùng. Cần quyết định có thay bộ dữ liệu mẫu hay không.
+- Việc chuyển ảnh `frontend/assets/img` sang `seed-assets` làm ở [Phase 7 Bước 6](08-phase-7-google-maps.md#bước-6-dữ-liệu-mẫu-hà-nội), cùng lúc thay bộ dữ liệu mẫu.
 
 ---
 
-**Trước:** [Phase 5](06-phase-5-concurrency.md) · **Tiếp theo:** Phase 7 (Google Maps resolve, xem [PLAN.md](../PLAN.md)) · **Tra cứu:** [Thuật ngữ](99-thuat-ngu.md)
+**Trước:** [Phase 5](06-phase-5-concurrency.md) · **Tiếp theo:** [Phase 7](08-phase-7-google-maps.md) · **Tra cứu:** [Thuật ngữ](99-thuat-ngu.md)
