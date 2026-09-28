@@ -14,3 +14,5 @@ gfm:
   auth.cookie-secure: false         # dev chạy http://localhost
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-0123456789abcdef}
+  # Ảnh cho dữ liệu mẫu (SeedAssetLoader), đường dẫn tính từ thư mục chạy backend
+  seed.assets-dir: ${SEED_ASSETS_DIR:./seed-assets}

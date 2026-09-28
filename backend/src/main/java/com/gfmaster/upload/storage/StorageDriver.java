@@ -10,4 +10,6 @@ public interface StorageDriver {
   byte[] get(String key);
 
   void delete(String key);
+
+  boolean exists(String key);
 }
