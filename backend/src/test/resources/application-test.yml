@@ -2,6 +2,7 @@ management.endpoint.health.show-details: always
 
 gfm:
   storage.local-dir: ${java.io.tmpdir}/gfm-test-uploads
+  storage.local-incoming-dir: ${java.io.tmpdir}/gfm-test-uploads-incoming
   rate-limit:
     auth-per-minute: 5
     api-per-minute: 1000            # test gọi API dày đặc, không muốn dính giới hạn

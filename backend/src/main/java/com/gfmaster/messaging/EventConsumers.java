@@ -1,12 +1,14 @@
 package com.gfmaster.messaging;
 
 import com.gfmaster.common.messaging.DomainEvent.EntityChanged;
+import com.gfmaster.common.messaging.DomainEvent.ImageReceived;
 import com.gfmaster.common.messaging.DomainEvent.ImageUploaded;
 import com.gfmaster.common.messaging.DomainEvent.ImportRequested;
 import com.gfmaster.common.messaging.DomainEvent.UploadsDeleted;
 import com.gfmaster.common.messaging.ProcessedMessageGuard;
 import com.gfmaster.importer.ImportService;
 import com.gfmaster.stats.StatsService;
+import com.gfmaster.upload.ImageIntakeService;
 import com.gfmaster.upload.ThumbnailService;
 import com.gfmaster.upload.storage.StorageDriver;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -29,18 +31,26 @@ public class EventConsumers {
   private final StorageDriver storage;
   private final StatsService stats;
   private final ImportService imports;
+  private final ImageIntakeService intake;
 
   public EventConsumers(
       ProcessedMessageGuard guard,
       ThumbnailService thumbnails,
       StorageDriver storage,
       StatsService stats,
-      ImportService imports) {
+      ImportService imports,
+      ImageIntakeService intake) {
     this.guard = guard;
     this.thumbnails = thumbnails;
     this.storage = storage;
     this.stats = stats;
     this.imports = imports;
+    this.intake = intake;
+  }
+
+  @RabbitListener(id = Topology.IMAGE_INTAKE, queues = Topology.IMAGE_INTAKE)
+  public void onImageReceived(ImageReceived event, @Header(name = AmqpHeaders.MESSAGE_ID, required = false) String id) {
+    guard.runOnce(id, () -> intake.process(event.uploadId()));
   }
 
   @RabbitListener(id = Topology.IMAGE_VARIANTS, queues = Topology.IMAGE_VARIANTS)

@@ -12,6 +12,7 @@ import com.gfmaster.girlfriend.dto.GirlfriendRequest;
 import com.gfmaster.girlfriend.dto.GirlfriendResponse;
 import com.gfmaster.placelink.PlaceLinkRepository;
 import com.gfmaster.placelink.PlaceLinkRepository.GirlfriendLinkCount;
+import com.gfmaster.upload.storage.ImageUrls;
 import com.gfmaster.user.UserRepository;
 import java.util.List;
 import java.util.Map;
@@ -30,18 +31,21 @@ public class GirlfriendService {
   private final UserRepository users;
   private final GirlfriendMapper mapper;
   private final DomainEventPublisher events;
+  private final ImageUrls imageUrls;
 
   public GirlfriendService(
       GirlfriendRepository girlfriends,
       PlaceLinkRepository links,
       UserRepository users,
       GirlfriendMapper mapper,
-      DomainEventPublisher events) {
+      DomainEventPublisher events,
+      ImageUrls imageUrls) {
     this.girlfriends = girlfriends;
     this.links = links;
     this.users = users;
     this.mapper = mapper;
     this.events = events;
+    this.imageUrls = imageUrls;
   }
 
   /** Danh sách kèm placeCount, tính bằng một query group by (thay cho {@code countFor()}). */
@@ -63,6 +67,7 @@ public class GirlfriendService {
   public GirlfriendResponse create(UUID userId, GirlfriendRequest request) {
     Girlfriend gf = mapper.toEntity(request);
     gf.setUser(users.getReferenceById(userId));
+    gf.setAvatarUrl(imageUrls.toStored(gf.getAvatarUrl()));
     Girlfriend saved = girlfriends.saveAndFlush(gf);
     changed(userId, saved.getId(), Action.created);
     return mapper.toResponse(saved, 0);
@@ -74,6 +79,7 @@ public class GirlfriendService {
       throw new ApiException(ErrorCode.VERSION_CONFLICT).with("current", toResponse(gf));
     }
     mapper.apply(patch, gf);
+    gf.setAvatarUrl(imageUrls.toStored(gf.getAvatarUrl()));
     Girlfriend saved = girlfriends.saveAndFlush(gf);
     changed(userId, id, Action.updated);
     return toResponse(saved);

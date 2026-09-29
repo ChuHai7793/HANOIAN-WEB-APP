@@ -26,6 +26,8 @@ hs_err_pid*
 # Runtime data
 uploads/
 backend/uploads/
+uploads-incoming/
+backend/uploads-incoming/
 
 # OS
 .DS_Store

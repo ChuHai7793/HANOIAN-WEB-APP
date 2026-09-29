@@ -1,6 +1,5 @@
-import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, input, model, signal } from '@angular/core';
-import { lastValueFrom, tap } from 'rxjs';
 import { errorMessage } from '../../core/api/api';
 import { UploadResult, UploadService } from '../../core/services/upload.service';
 import { fileToCompressedBlob, formatBytes } from '../../core/utils/image';
@@ -151,15 +150,14 @@ export class ImagePickerComponent {
     this.uploadedSize.set(null);
   }
 
-  /** Nén ở client → upload → nhận URL /uploads/... do server trả về. */
+  /** Nén ở client (tiết kiệm băng thông) → upload thẳng lên storage → nhận URL công khai. */
   private async handleFile(file: File): Promise<void> {
     this.busy.set(true);
     this.progress.set(null);
     this.error.set('');
     try {
       const blob = await fileToCompressedBlob(file, { maxSize: this.maxSize() });
-      const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
-      const result = await this.upload(blob, `image.${ext}`);
+      const result = await this.upload(blob);
       this.value.set(result.url);
       this.uploadedSize.set(result.sizeBytes);
     } catch (err) {
@@ -171,21 +169,11 @@ export class ImagePickerComponent {
     }
   }
 
-  private async upload(blob: Blob, filename: string): Promise<UploadResult> {
-    let result: UploadResult | null = null;
+  /** Upload thẳng lên storage, chờ server xử lý xong (thường chỉ 1–2 giây). */
+  private async upload(blob: Blob): Promise<UploadResult & { url: string }> {
     this.progress.set(0);
-    await lastValueFrom(
-      this.uploads.uploadImage(blob, filename).pipe(
-        tap((event) => {
-          if (event.type === HttpEventType.UploadProgress && event.total) {
-            this.progress.set(Math.round((100 * event.loaded) / event.total));
-          } else if (event.type === HttpEventType.Response && event.body) {
-            result = event.body;
-          }
-        }),
-      ),
-    );
-    if (!result) throw new Error('Server không trả về ảnh.');
-    return result;
+    const result = await this.uploads.uploadImage(blob, (percent) => this.progress.set(percent));
+    if (!result.url) throw new Error('Server không trả về ảnh.');
+    return { ...result, url: result.url };
   }
 }

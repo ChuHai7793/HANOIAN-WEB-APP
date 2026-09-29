@@ -19,6 +19,7 @@ public enum ErrorCode {
   IDEMPOTENCY_KEY_REUSED(
       HttpStatus.UNPROCESSABLE_CONTENT, "Idempotency-Key đã được dùng cho một yêu cầu khác."),
   FILE_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "File quá lớn."),
+  UPLOAD_NOT_RECEIVED(HttpStatus.CONFLICT, "Storage chưa nhận được ảnh, hãy gửi lại."),
   UNSUPPORTED_IMAGE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Chỉ nhận ảnh JPG, PNG hoặc WebP."),
   IMPORT_RUNNING(HttpStatus.LOCKED, "Đang có một lần import khác chạy."),
   IMPORT_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "Dữ liệu import quá lớn."),

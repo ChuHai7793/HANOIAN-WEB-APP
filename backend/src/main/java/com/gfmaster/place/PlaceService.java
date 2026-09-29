@@ -11,6 +11,7 @@ import com.gfmaster.maps.GmapUrlParser;
 import com.gfmaster.place.dto.PlacePatch;
 import com.gfmaster.place.dto.PlaceRequest;
 import com.gfmaster.place.dto.PlaceResponse;
+import com.gfmaster.upload.storage.ImageUrls;
 import com.gfmaster.user.UserRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -28,13 +29,19 @@ public class PlaceService {
   private final UserRepository users;
   private final PlaceMapper mapper;
   private final DomainEventPublisher events;
+  private final ImageUrls imageUrls;
 
   public PlaceService(
-      PlaceRepository places, UserRepository users, PlaceMapper mapper, DomainEventPublisher events) {
+      PlaceRepository places,
+      UserRepository users,
+      PlaceMapper mapper,
+      DomainEventPublisher events,
+      ImageUrls imageUrls) {
     this.places = places;
     this.users = users;
     this.mapper = mapper;
     this.events = events;
+    this.imageUrls = imageUrls;
   }
 
   @Transactional(readOnly = true)
@@ -56,6 +63,8 @@ public class PlaceService {
     place.setUser(users.getReferenceById(userId));
     normalizeTypeFields(place);
     fillCoordinatesFromLink(place);
+    // Client gửi lại URL công khai (có thể là CDN) → lưu dạng /uploads/<key>
+    place.setImageUrl(imageUrls.toStored(place.getImageUrl()));
     Place saved = places.saveAndFlush(place);
     changed(userId, saved.getId(), Action.created);
     return mapper.toResponse(saved);
@@ -69,6 +78,8 @@ public class PlaceService {
     mapper.apply(patch, place);
     normalizeTypeFields(place);
     fillCoordinatesFromLink(place);
+    // Client gửi lại URL công khai (có thể là CDN) → lưu dạng /uploads/<key>
+    place.setImageUrl(imageUrls.toStored(place.getImageUrl()));
     // Hibernate tăng version lúc flush; nếu có transaction khác vừa ghi thì ném OptimisticLock → 409
     Place saved = places.saveAndFlush(place);
     changed(userId, id, Action.updated);

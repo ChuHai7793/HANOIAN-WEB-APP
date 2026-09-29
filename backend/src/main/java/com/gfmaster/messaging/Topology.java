@@ -5,6 +5,7 @@ package com.gfmaster.messaging;
  *
  * <pre>
  * gfm.events (topic)
+ *   image.received           → gfm.image.intake     (xử lý ảnh gốc upload thẳng: resize, WebP, thumbnail)
  *   image.uploaded           → gfm.image.variants   (sinh thumbnail)
  *   upload.deleted           → gfm.storage.cleanup  (xoá file)
  *   place.* | girlfriend.*   → gfm.cache.evict      (xoá cache /stats)
@@ -17,6 +18,7 @@ public final class Topology {
   public static final String EVENTS = "gfm.events";
   public static final String DLX = "gfm.dlx";
 
+  public static final String IMAGE_INTAKE = "gfm.image.intake";
   public static final String IMAGE_VARIANTS = "gfm.image.variants";
   public static final String STORAGE_CLEANUP = "gfm.storage.cleanup";
   public static final String CACHE_EVICT = "gfm.cache.evict";

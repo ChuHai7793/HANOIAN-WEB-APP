@@ -5,12 +5,15 @@ import com.gfmaster.common.web.Patch;
 import com.gfmaster.place.dto.PlacePatch;
 import com.gfmaster.place.dto.PlaceRequest;
 import com.gfmaster.place.dto.PlaceResponse;
+import com.gfmaster.upload.storage.ImageUrls;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(config = MapperConfigDefaults.class)
+@Mapper(config = MapperConfigDefaults.class, uses = ImageUrls.class)
 public interface PlaceMapper {
 
+  /** Ảnh lưu dạng /uploads/<key> được đổi thành URL công khai (local hoặc CDN). */
+  @Mapping(target = "imageUrl", qualifiedByName = "publicUrl")
   PlaceResponse toResponse(Place place);
 
   @Mapping(target = "id", ignore = true)

@@ -34,10 +34,16 @@ public class Upload {
   @JoinColumn(name = "user_id", nullable = false, updatable = false)
   private User user;
 
-  @Column(nullable = false, length = 255)
+  /** Ảnh đã xử lý trong storage công khai; null khi chưa xử lý xong. */
+  @Column(length = 255)
   private String storageKey;
 
-  @Column(nullable = false, length = 1024)
+  /** Ảnh gốc trong vùng lưu riêng tư (upload thẳng); null sau khi xử lý. */
+  @Column(length = 255)
+  private String incomingKey;
+
+  /** Dạng lưu {@code /uploads/<key>} (ImageUrls); null khi chưa xử lý xong. */
+  @Column(length = 1024)
   private String url;
 
   @Column(length = 1024)
@@ -49,11 +55,9 @@ public class Upload {
   @Column(nullable = false)
   private int sizeBytes;
 
-  @Column(nullable = false)
-  private int width;
+  private Integer width;
 
-  @Column(nullable = false)
-  private int height;
+  private Integer height;
 
   @Enumerated(EnumType.STRING)
   @JdbcTypeCode(SqlTypes.VARCHAR)

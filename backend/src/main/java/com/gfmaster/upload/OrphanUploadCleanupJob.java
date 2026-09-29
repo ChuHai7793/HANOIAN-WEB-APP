@@ -3,6 +3,7 @@ package com.gfmaster.upload;
 import com.gfmaster.common.messaging.DomainEvent.UploadsDeleted;
 import com.gfmaster.common.messaging.DomainEventPublisher;
 import com.gfmaster.config.GfmProperties;
+import com.gfmaster.upload.storage.IncomingStorage;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -29,20 +30,45 @@ public class OrphanUploadCleanupJob {
   private final DomainEventPublisher events;
   private final TransactionTemplate tx;
   private final Duration olderThan;
+  private final IncomingStorage incoming;
+  static final Duration UNFINISHED_AFTER = Duration.ofDays(1);
 
   public OrphanUploadCleanupJob(
-      UploadRepository uploads, DomainEventPublisher events, TransactionTemplate tx, GfmProperties props) {
+      UploadRepository uploads,
+      DomainEventPublisher events,
+      TransactionTemplate tx,
+      GfmProperties props,
+      IncomingStorage incoming) {
     this.uploads = uploads;
     this.events = events;
     this.tx = tx;
     this.olderThan = props.jobs().orphanUploads().olderThan();
+    this.incoming = incoming;
   }
 
   @Scheduled(cron = "${gfm.jobs.orphan-uploads.cron}")
   @SchedulerLock(name = "orphan-upload-cleanup", lockAtLeastFor = "1m")
   public void run() {
     int total = cleanUp(Instant.now().minus(olderThan));
-    if (total > 0) log.info("Orphan upload cleanup removed {} uploads", total);
+    int unfinished = cleanUnfinished(Instant.now().minus(UNFINISHED_AFTER));
+    if (total + unfinished > 0) {
+      log.info("Upload cleanup removed {} orphans, {} unfinished direct uploads", total, unfinished);
+    }
+  }
+
+  /**
+   * Upload thẳng bỏ dở quá 1 ngày (người dùng đóng tab trước khi gửi ảnh, worker lỗi hết lượt retry,
+   * ảnh hỏng): xoá ảnh gốc trong vùng incoming và bản ghi. Không có file công khai nào để xoá.
+   */
+  int cleanUnfinished(Instant before) {
+    List<Upload> stale =
+        uploads.findUnfinished(
+            List.of(UploadStatus.AWAITING_UPLOAD, UploadStatus.PROCESSING, UploadStatus.FAILED), before);
+    for (Upload u : stale) {
+      if (u.getIncomingKey() != null) incoming.delete(u.getIncomingKey());
+    }
+    tx.executeWithoutResult(status -> uploads.deleteAllInBatch(stale));
+    return stale.size();
   }
 
   /** Xoá theo từng lô, mỗi lô một transaction; trả về tổng số upload đã xoá. */

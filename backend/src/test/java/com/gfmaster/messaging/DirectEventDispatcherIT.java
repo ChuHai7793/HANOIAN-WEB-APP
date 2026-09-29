@@ -14,6 +14,7 @@ import com.gfmaster.importer.ImportLock;
 import com.gfmaster.importer.ImportService;
 import com.gfmaster.stats.StatsService;
 import com.gfmaster.support.ApiTestSupport;
+import com.gfmaster.upload.ImageIntakeService;
 import com.gfmaster.upload.ThumbnailService;
 import com.gfmaster.upload.storage.StorageDriver;
 import java.time.Duration;
@@ -46,6 +47,7 @@ class DirectEventDispatcherIT extends ApiTestSupport {
   @Autowired StringRedisTemplate redis;
   @Autowired RabbitListenerEndpointRegistry listeners;
   @Autowired ImportService imports;
+  @Autowired ImageIntakeService intake;
 
   @Test
   void thumbnailGeneratedAfterCommitIsPersisted() throws Exception {
@@ -108,7 +110,7 @@ class DirectEventDispatcherIT extends ApiTestSupport {
     assertThat(TransactionSynchronizationManager.isActualTransactionActive())
         .as("không được có transaction dở dang trên luồng test")
         .isFalse();
-    DirectEventDispatcher dispatcher = new DirectEventDispatcher(thumbnails, storage, stats, imports);
+    DirectEventDispatcher dispatcher = new DirectEventDispatcher(thumbnails, storage, stats, imports, intake);
     AtomicBoolean ran = new AtomicBoolean();
     tx.executeWithoutResult(
         status ->

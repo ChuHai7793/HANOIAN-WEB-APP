@@ -3,6 +3,7 @@ package com.gfmaster.config;
 import static com.gfmaster.messaging.Topology.CACHE_EVICT;
 import static com.gfmaster.messaging.Topology.DLX;
 import static com.gfmaster.messaging.Topology.EVENTS;
+import static com.gfmaster.messaging.Topology.IMAGE_INTAKE;
 import static com.gfmaster.messaging.Topology.IMAGE_VARIANTS;
 import static com.gfmaster.messaging.Topology.IMPORT;
 import static com.gfmaster.messaging.Topology.STORAGE_CLEANUP;
@@ -76,11 +77,13 @@ public class RabbitConfig {
     DirectExchange dlx = new DirectExchange(DLX, true, false);
 
     List<Declarable> all = new ArrayList<>(List.of(events, dlx));
+    Queue intake = queueWithDlq(IMAGE_INTAKE, dlx, all);
     Queue images = queueWithDlq(IMAGE_VARIANTS, dlx, all);
     Queue cleanup = queueWithDlq(STORAGE_CLEANUP, dlx, all);
     Queue evict = queueWithDlq(CACHE_EVICT, dlx, all);
     Queue imports = queueWithDlq(IMPORT, dlx, all);
 
+    all.add(BindingBuilder.bind(intake).to(events).with("image.received"));
     all.add(BindingBuilder.bind(images).to(events).with("image.uploaded"));
     all.add(BindingBuilder.bind(cleanup).to(events).with("upload.deleted"));
     all.add(BindingBuilder.bind(evict).to(events).with("place.*"));

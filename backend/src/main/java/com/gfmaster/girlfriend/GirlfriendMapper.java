@@ -5,13 +5,15 @@ import com.gfmaster.common.web.Patch;
 import com.gfmaster.girlfriend.dto.GirlfriendPatch;
 import com.gfmaster.girlfriend.dto.GirlfriendRequest;
 import com.gfmaster.girlfriend.dto.GirlfriendResponse;
+import com.gfmaster.upload.storage.ImageUrls;
 import java.util.List;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(config = MapperConfigDefaults.class)
+@Mapper(config = MapperConfigDefaults.class, uses = ImageUrls.class)
 public interface GirlfriendMapper {
 
+  @Mapping(target = "avatarUrl", source = "girlfriend.avatarUrl", qualifiedByName = "publicUrl")
   GirlfriendResponse toResponse(Girlfriend girlfriend, long placeCount);
 
   @Mapping(target = "id", ignore = true)

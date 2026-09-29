@@ -14,11 +14,9 @@ import org.springframework.stereotype.Component;
 public class LocalStorageDriver implements StorageDriver {
 
   private final Path root;
-  private final String publicBaseUrl;
 
   public LocalStorageDriver(GfmProperties props) throws IOException {
     this.root = Path.of(props.storage().localDir()).toAbsolutePath().normalize();
-    this.publicBaseUrl = props.storage().publicBaseUrl().replaceAll("/+$", "");
     Files.createDirectories(root);
   }
 
@@ -35,7 +33,7 @@ public class LocalStorageDriver implements StorageDriver {
     } catch (IOException e) {
       throw new UncheckedIOException("Không ghi được file " + key, e);
     }
-    return publicBaseUrl + "/" + key;
+    return ImageUrls.stored(key);
   }
 
   @Override

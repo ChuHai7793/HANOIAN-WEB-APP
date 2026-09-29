@@ -21,6 +21,14 @@ public sealed interface DomainEvent {
     }
   }
 
+  /** Trình duyệt đã upload thẳng ảnh gốc vào vùng incoming, cần xử lý rồi chuyển sang storage công khai. */
+  record ImageReceived(UUID userId, UUID uploadId) implements DomainEvent {
+    @Override
+    public String routingKey() {
+      return "image.received";
+    }
+  }
+
   /** Bản ghi upload đã bị xoá khỏi DB; các file tương ứng cần xoá khỏi storage. */
   record UploadsDeleted(UUID userId, List<String> storageKeys) implements DomainEvent {
     @Override

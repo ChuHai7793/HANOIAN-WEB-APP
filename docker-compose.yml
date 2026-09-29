@@ -48,4 +48,38 @@ services:
     ports: ["27017:27017"]
     volumes: [mongo:/data/db]
 
-volumes: { mariadb: {}, redis: {}, rabbitmq: {}, mongo: {} }
+  # Storage S3-compatible để thử STORAGE_DRIVER=s3 trên máy (cùng API với Cloudflare R2 / AWS S3).
+  # Chỉ chạy khi: docker compose --profile s3 up -d   · Console: http://localhost:9001
+  minio:
+    image: minio/minio:latest
+    profiles: ["s3"]
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-gfm-minio}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-gfm-minio-secret}
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [minio:/data]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      retries: 20
+
+  # Tạo 2 bucket một lần rồi thoát: gfm-public (ai cũng đọc được) và gfm-incoming (riêng tư, tự xoá sau 1 ngày)
+  minio-init:
+    image: minio/mc:latest
+    profiles: ["s3"]
+    depends_on:
+      minio: { condition: service_healthy }
+    entrypoint:
+      - sh
+      - -c
+      - >
+        mc alias set local http://minio:9000 "$${MINIO_USER}" "$${MINIO_PASSWORD}" &&
+        mc mb --ignore-existing local/gfm-public local/gfm-incoming &&
+        mc anonymous set download local/gfm-public &&
+        (mc ilm rule add --expire-days 1 local/gfm-incoming || true)
+    environment:
+      MINIO_USER: ${S3_ACCESS_KEY:-gfm-minio}
+      MINIO_PASSWORD: ${S3_SECRET_KEY:-gfm-minio-secret}
+
+volumes: { mariadb: {}, redis: {}, rabbitmq: {}, mongo: {}, minio: {} }

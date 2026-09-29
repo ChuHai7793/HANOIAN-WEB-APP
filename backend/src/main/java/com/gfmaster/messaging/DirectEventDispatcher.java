@@ -2,11 +2,13 @@ package com.gfmaster.messaging;
 
 import com.gfmaster.common.messaging.DomainEvent;
 import com.gfmaster.common.messaging.DomainEvent.EntityChanged;
+import com.gfmaster.common.messaging.DomainEvent.ImageReceived;
 import com.gfmaster.common.messaging.DomainEvent.ImageUploaded;
 import com.gfmaster.common.messaging.DomainEvent.ImportRequested;
 import com.gfmaster.common.messaging.DomainEvent.UploadsDeleted;
 import com.gfmaster.importer.ImportService;
 import com.gfmaster.stats.StatsService;
+import com.gfmaster.upload.ImageIntakeService;
 import com.gfmaster.upload.ThumbnailService;
 import com.gfmaster.upload.storage.StorageDriver;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -26,18 +28,25 @@ public class DirectEventDispatcher {
   private final StorageDriver storage;
   private final StatsService stats;
   private final ImportService imports;
+  private final ImageIntakeService intake;
 
   public DirectEventDispatcher(
-      ThumbnailService thumbnails, StorageDriver storage, StatsService stats, ImportService imports) {
+      ThumbnailService thumbnails,
+      StorageDriver storage,
+      StatsService stats,
+      ImportService imports,
+      ImageIntakeService intake) {
     this.thumbnails = thumbnails;
     this.storage = storage;
     this.stats = stats;
     this.imports = imports;
+    this.intake = intake;
   }
 
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
   public void dispatch(DomainEvent event) {
     switch (event) {
+      case ImageReceived e -> intake.process(e.uploadId());
       case ImageUploaded e -> thumbnails.generate(e.uploadId());
       case UploadsDeleted e -> e.storageKeys().forEach(storage::delete);
       case EntityChanged e -> stats.evict(e.userId());

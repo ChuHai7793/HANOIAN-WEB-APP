@@ -41,13 +41,31 @@ public record GfmProperties(
   /** Response đã xử lý được giữ {@code ttl}; khoá "đang xử lý" tự hết hạn sau {@code inProgressTtl}. */
   public record Idempotency(@NotNull Duration ttl, @NotNull Duration inProgressTtl) {}
 
+  /**
+   * Hai vùng lưu: <b>public</b> (ảnh đã xử lý, phục vụ qua {@code publicBaseUrl}, sau CDN) và
+   * <b>incoming</b> (ảnh gốc trình duyệt upload thẳng lên, riêng tư, chưa xử lý nên có thể còn GPS
+   * hoặc không phải ảnh). Driver local: hai thư mục; chỉ {@code localDir} được phục vụ qua /uploads.
+   */
   public record Storage(
       @NotBlank @Pattern(regexp = "local|s3") String driver,
       @NotBlank String localDir,
+      @NotBlank String localIncomingDir,
       @NotBlank String publicBaseUrl,
+      @NotNull DataSize maxUploadSize,
       S3 s3) {}
 
-  public record S3(String endpoint, String bucket, String accessKey, String secretKey) {}
+  /**
+   * S3-compatible (Cloudflare R2, AWS S3, MinIO). {@code bucket}: ảnh công khai; {@code
+   * incomingBucket}: ảnh gốc, riêng tư. {@code pathStyle=true} cho MinIO. Region của R2 là "auto".
+   */
+  public record S3(
+      String endpoint,
+      String region,
+      String bucket,
+      String incomingBucket,
+      String accessKey,
+      String secretKey,
+      boolean pathStyle) {}
 
   public record Messaging(boolean enabled) {}
 

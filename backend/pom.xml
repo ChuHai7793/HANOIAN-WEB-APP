@@ -32,6 +32,7 @@
 		<scrimage.version>4.3.2</scrimage.version>
 		<bucket4j.version>8.14.0</bucket4j.version>
 		<shedlock.version>7.10.1</shedlock.version>
+		<awssdk.version>2.55.7</awssdk.version>
 		<lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
 	</properties>
 	<dependencies>
@@ -106,6 +107,12 @@
 			<groupId>net.javacrumbs.shedlock</groupId>
 			<artifactId>shedlock-provider-redis-spring</artifactId>
 			<version>${shedlock.version}</version>
+		</dependency>
+		<!-- Storage S3-compatible (Cloudflare R2, AWS S3, MinIO) + presigned URL cho upload thẳng -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+			<version>${awssdk.version}</version>
 		</dependency>
 		<!-- Xử lý ảnh: xoay theo EXIF, resize, xuất WebP (scrimage-webp đóng gói sẵn cwebp/dwebp) -->
 		<dependency>
@@ -197,6 +204,11 @@
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>testcontainers-rabbitmq</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-minio</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<!-- Chờ kết quả xử lý bất đồng bộ (consumer RabbitMQ) trong test -->
