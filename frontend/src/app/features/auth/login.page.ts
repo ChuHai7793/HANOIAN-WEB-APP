@@ -22,11 +22,13 @@ import { errorMessage } from '../../core/api/api';
           (ngSubmit)="submit()"
         >
           <div>
-            <label for="email" class="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
+            <label for="login" class="mb-1.5 block text-sm font-medium text-slate-700">
+              Tên đăng nhập hoặc email
+            </label>
             <input
-              id="email"
-              type="email"
-              formControlName="email"
+              id="login"
+              type="text"
+              formControlName="login"
               autocomplete="username"
               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
@@ -63,7 +65,8 @@ import { errorMessage } from '../../core/api/api';
 
         @if (devMode) {
           <p class="mt-4 text-center text-xs text-slate-400">
-            Dev: tài khoản demo <code>demo&#64;gfmaster.local</code> / <code>Demo&#64;12345</code>
+            Dev: <code>admin</code> / <code>admin&#64;12345</code> (thêm, sửa, xoá) ·
+            <code>guest</code> / <code>guest&#64;12345</code> (chỉ xem)
           </p>
         }
       </div>
@@ -82,20 +85,20 @@ export class LoginPage {
   protected readonly error = signal('');
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
+    login: ['', Validators.required],
     password: ['', Validators.required],
   });
 
   protected async submit(): Promise<void> {
     if (this.form.invalid) {
-      this.error.set('Nhập email và mật khẩu.');
+      this.error.set('Nhập tên đăng nhập (hoặc email) và mật khẩu.');
       return;
     }
     this.busy.set(true);
     this.error.set('');
     try {
-      const { email, password } = this.form.getRawValue();
-      await this.auth.login(email.trim(), password);
+      const { login, password } = this.form.getRawValue();
+      await this.auth.login(login.trim(), password);
       await this.router.navigateByUrl(safeReturnUrl(this.returnUrl()));
     } catch (err) {
       this.error.set(errorMessage(err));

@@ -1,6 +1,6 @@
 package com.gfmaster.placelink;
 
-import com.gfmaster.common.security.CurrentUser;
+import com.gfmaster.common.security.DataOwner;
 import com.gfmaster.common.web.PatchReader;
 import com.gfmaster.placelink.dto.PlaceLinkPatch;
 import com.gfmaster.placelink.dto.PlaceLinkRequest;
@@ -35,7 +35,7 @@ public class PlaceLinkController {
 
   @GetMapping
   public List<PlaceLinkResponse> list(
-      @CurrentUser UUID userId,
+      @DataOwner UUID userId,
       @RequestParam(required = false) UUID girlfriendId,
       @RequestParam(required = false) UUID placeId) {
     return service.list(userId, girlfriendId, placeId);
@@ -43,19 +43,19 @@ public class PlaceLinkController {
 
   @PostMapping
   public ResponseEntity<PlaceLinkResponse> create(
-      @CurrentUser UUID userId, @Valid @RequestBody PlaceLinkRequest request) {
+      @DataOwner UUID userId, @Valid @RequestBody PlaceLinkRequest request) {
     PlaceLinkResponse created = service.create(userId, request);
     return ResponseEntity.created(URI.create("/api/v1/place-links/" + created.id())).body(created);
   }
 
   @PatchMapping("/{id}")
   public PlaceLinkResponse update(
-      @CurrentUser UUID userId, @PathVariable UUID id, @RequestBody JsonNode body) {
+      @DataOwner UUID userId, @PathVariable UUID id, @RequestBody JsonNode body) {
     return service.update(userId, id, patchReader.read(body, PlaceLinkPatch.class));
   }
 
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@CurrentUser UUID userId, @PathVariable UUID id) {
+  public ResponseEntity<Void> delete(@DataOwner UUID userId, @PathVariable UUID id) {
     service.delete(userId, id);
     return ResponseEntity.noContent().build();
   }

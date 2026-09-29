@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.gfmaster.auth.JwtService;
+import com.gfmaster.user.Role;
 import com.gfmaster.user.User;
 import com.gfmaster.user.UserRepository;
 import java.awt.Color;
@@ -43,8 +44,19 @@ public abstract class ApiTestSupport {
     return users.saveAndFlush(u).getId();
   }
 
+  /** Guest xem dữ liệu của {@code owner} (như tài khoản tự đăng ký). */
+  protected UUID newGuestOf(UUID owner) {
+    User u = new User();
+    u.setEmail("g-" + UUID.randomUUID() + "@test.local");
+    u.setPasswordHash("x");
+    u.setDisplayName("Guest");
+    u.setRole(Role.GUEST);
+    u.setOwnerId(owner);
+    return users.saveAndFlush(u).getId();
+  }
+
   protected String bearer(UUID user) {
-    return "Bearer " + jwt.issueAccessToken(user, "test@local");
+    return "Bearer " + jwt.issueAccessToken(users.findById(user).orElseThrow());
   }
 
   protected ResultActions getAs(UUID user, String path) throws Exception {

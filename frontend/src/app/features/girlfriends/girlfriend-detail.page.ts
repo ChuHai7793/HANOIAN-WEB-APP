@@ -20,6 +20,7 @@ import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component
 import { ModalComponent } from '../../shared/ui/modal.component';
 import { directionsUrl, routeUrl } from '../../core/utils/gmap-url';
 import { daysSince } from '../../core/utils/id';
+import { AuthService } from '../../core/auth/auth.service';
 
 type Tab = 'info' | PlaceType;
 
@@ -104,13 +105,15 @@ interface LinkedPlace {
             >
               🎲 Gợi ý hẹn hò
             </button>
-            <button
-              type="button"
-              class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-              (click)="editOpen.set(true)"
-            >
-              ✏️ Sửa
-            </button>
+            @if (canEdit()) {
+              <button
+                type="button"
+                class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                (click)="editOpen.set(true)"
+              >
+                ✏️ Sửa
+              </button>
+            }
           </div>
         </div>
       </div>
@@ -188,13 +191,15 @@ interface LinkedPlace {
             <p class="text-sm text-slate-500">
               Danh sách {{ tabLabel() }} đã đi cùng {{ gf.nickname || gf.name }}
             </p>
-            <button
-              type="button"
-              class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
-              (click)="openLink()"
-            >
-              + Gắn {{ tabLabel() }}
-            </button>
+            @if (canEdit()) {
+              <button
+                type="button"
+                class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+                (click)="openLink()"
+              >
+                + Gắn {{ tabLabel() }}
+              </button>
+            }
           </div>
 
           @if (currentList().length === 0) {
@@ -203,13 +208,15 @@ interface LinkedPlace {
               title="Chưa gắn quán nào"
               description="Gắn những quán hai người đã đi để lần sau còn nhớ mà quay lại."
             >
-              <button
-                type="button"
-                class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
-                (click)="openLink()"
-              >
-                Gắn quán ngay
-              </button>
+              @if (canEdit()) {
+                <button
+                  type="button"
+                  class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+                  (click)="openLink()"
+                >
+                  Gắn quán ngay
+                </button>
+              }
             </app-empty-state>
           } @else {
             <div class="space-y-3">
@@ -262,22 +269,24 @@ interface LinkedPlace {
                       >
                         🧭
                       </a>
-                      <button
-                        type="button"
-                        class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
-                        (click)="editLink(row.link)"
-                        title="Sửa kỷ niệm"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        type="button"
-                        class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-rose-600 transition hover:bg-rose-50"
-                        (click)="pendingUnlink.set(row)"
-                        title="Gỡ quán"
-                      >
-                        🗑️
-                      </button>
+                      @if (canEdit()) {
+                        <button
+                          type="button"
+                          class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
+                          (click)="editLink(row.link)"
+                          title="Sửa kỷ niệm"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          type="button"
+                          class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-rose-600 transition hover:bg-rose-50"
+                          (click)="pendingUnlink.set(row)"
+                          title="Gỡ quán"
+                        >
+                          🗑️
+                        </button>
+                      }
                     </div>
                   </div>
                 </article>
@@ -386,6 +395,8 @@ export class GirlfriendDetailPage {
   private readonly service = inject(GirlfriendService);
   private readonly linkService = inject(PlaceLinkService);
   private readonly placeService = inject(PlaceService);
+  /** Guest chỉ xem: ẩn nút thêm/sửa/xoá (server cũng chặn request ghi). */
+  protected readonly canEdit = inject(AuthService).canEdit;
 
   /** Lấy từ tham số :id của route nhờ withComponentInputBinding() */
   readonly id = input.required<string>();

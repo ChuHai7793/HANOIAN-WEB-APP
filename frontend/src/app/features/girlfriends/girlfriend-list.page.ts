@@ -12,6 +12,7 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
 import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component';
 import { PlaceType } from '../../core/models/place.model';
 import { daysSince } from '../../core/utils/id';
+import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-girlfriend-list-page',
@@ -27,13 +28,15 @@ import { daysSince } from '../../core/utils/id';
           Hồ sơ từng người và những quán đã đi cùng
         </p>
       </div>
-      <button
-        type="button"
-        class="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
-        (click)="openCreate()"
-      >
-        + Thêm người yêu
-      </button>
+      @if (canEdit()) {
+        <button
+          type="button"
+          class="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+          (click)="openCreate()"
+        >
+          + Thêm người yêu
+        </button>
+      }
     </div>
 
     <div class="mb-6 flex flex-wrap items-center gap-2">
@@ -75,7 +78,7 @@ import { daysSince } from '../../core/utils/id';
             : 'Thêm hồ sơ đầu tiên để bắt đầu lưu kỷ niệm và các quán đã đi cùng.'
         "
       >
-        @if (!all().length) {
+        @if (!all().length && canEdit()) {
           <button
             type="button"
             class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
@@ -163,22 +166,24 @@ import { daysSince } from '../../core/utils/id';
               >
                 Xem chi tiết
               </a>
-              <button
-                type="button"
-                class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
-                (click)="openEdit(gf)"
-                title="Sửa"
-              >
-                ✏️
-              </button>
-              <button
-                type="button"
-                class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-rose-600 transition hover:bg-rose-50"
-                (click)="pendingDelete.set(gf)"
-                title="Xoá"
-              >
-                🗑️
-              </button>
+              @if (canEdit()) {
+                <button
+                  type="button"
+                  class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
+                  (click)="openEdit(gf)"
+                  title="Sửa"
+                >
+                  ✏️
+                </button>
+                <button
+                  type="button"
+                  class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-rose-600 transition hover:bg-rose-50"
+                  (click)="pendingDelete.set(gf)"
+                  title="Xoá"
+                >
+                  🗑️
+                </button>
+              }
             </div>
           </article>
         }
@@ -211,6 +216,8 @@ import { daysSince } from '../../core/utils/id';
 export class GirlfriendListPage {
   private readonly service = inject(GirlfriendService);
   private readonly links = inject(PlaceLinkService);
+  /** Guest chỉ xem: ẩn nút thêm/sửa/xoá (server cũng chặn request ghi). */
+  protected readonly canEdit = inject(AuthService).canEdit;
 
   protected readonly statuses = RELATIONSHIP_STATUSES;
   protected readonly statusFilter = signal('');

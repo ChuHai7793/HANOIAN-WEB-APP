@@ -100,7 +100,7 @@ class AuthControllerIT extends ApiTestSupport {
         .andExpect(status().isUnauthorized());
 
     UUID user = newUser();
-    String expired = jwt.issue(user, "x@test.local", Instant.now().minus(Duration.ofHours(1)), Duration.ofMinutes(15));
+    String expired = jwt.issue(users.findById(user).orElseThrow(), Instant.now().minus(Duration.ofHours(1)), Duration.ofMinutes(15));
     mvc.perform(get("/api/v1/places").header(HttpHeaders.AUTHORIZATION, "Bearer " + expired))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.code").value("TOKEN_EXPIRED"));
@@ -112,7 +112,7 @@ class AuthControllerIT extends ApiTestSupport {
   @Test
   void tokenSignedWithOtherKeyIsRejected() throws Exception {
     // Header + payload hợp lệ nhưng chữ ký giả
-    String good = jwt.issueAccessToken(newUser(), "x@test.local");
+    String good = jwt.issueAccessToken(users.findById(newUser()).orElseThrow());
     String forged = good.substring(0, good.lastIndexOf('.') + 1) + "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
     mvc.perform(get("/api/v1/places").header(HttpHeaders.AUTHORIZATION, "Bearer " + forged))
         .andExpect(status().isUnauthorized());

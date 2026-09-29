@@ -1,5 +1,7 @@
 package com.gfmaster.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.gfmaster.user.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -16,9 +18,11 @@ public final class AuthDtos {
       @NotBlank @Size(min = 8, max = 72, message = "Mật khẩu phải từ 8 đến 72 ký tự") String password,
       @NotBlank @Size(max = 80) String displayName) {}
 
-  public record LoginRequest(@NotBlank String email, @NotBlank String password) {}
+  /** {@code login}: email hoặc tên đăng nhập. Nhận cả field cũ {@code email} để client cũ vẫn chạy. */
+  public record LoginRequest(@NotBlank @JsonAlias("email") String login, @NotBlank String password) {}
 
-  public record UserResponse(UUID id, String email, String displayName) {}
+  /** {@code role}: ADMIN (thêm/sửa/xoá được) hoặc GUEST (chỉ xem). */
+  public record UserResponse(UUID id, String email, String username, String displayName, Role role) {}
 
   /** Refresh token không nằm trong body mà trong cookie httpOnly {@code rt}. */
   public record AuthResponse(String accessToken, long expiresIn, UserResponse user) {}

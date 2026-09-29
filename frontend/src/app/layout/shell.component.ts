@@ -59,8 +59,15 @@ interface NavItem {
                 {{ initial(user.displayName) }}
               </span>
               <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-medium text-slate-800">{{ user.displayName }}</p>
-                <p class="truncate text-[11px] text-slate-400">{{ user.email }}</p>
+                <p class="truncate text-sm font-medium text-slate-800">
+                  {{ user.displayName }}
+                  @if (user.role === 'GUEST') {
+                    <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+                      Chỉ xem
+                    </span>
+                  }
+                </p>
+                <p class="truncate text-[11px] text-slate-400">{{ user.username || user.email }}</p>
               </div>
             </div>
             <div class="mt-3 flex gap-2">

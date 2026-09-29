@@ -2,7 +2,7 @@ package com.gfmaster.importer;
 
 import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
-import com.gfmaster.common.security.CurrentUser;
+import com.gfmaster.common.security.DataOwner;
 import com.gfmaster.config.GfmProperties;
 import com.gfmaster.importer.dto.ImportJobResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,7 +34,7 @@ public class ImportController {
 
   /** Body: {@code {places, girlfriends, placeLinks}} như localStorage cũ. Trả 202 + jobId, xử lý ở nền. */
   @PostMapping(path = "/local-storage", consumes = MediaType.APPLICATION_JSON_VALUE)
-  public ResponseEntity<Map<String, UUID>> importLocalStorage(@CurrentUser UUID userId, HttpServletRequest request)
+  public ResponseEntity<Map<String, UUID>> importLocalStorage(@DataOwner UUID userId, HttpServletRequest request)
       throws IOException {
     UUID jobId = service.start(userId, readLimited(request));
     return ResponseEntity.accepted()
@@ -43,7 +43,7 @@ public class ImportController {
   }
 
   @GetMapping("/jobs/{id}")
-  public ImportJobResponse job(@CurrentUser UUID userId, @PathVariable UUID id) {
+  public ImportJobResponse job(@DataOwner UUID userId, @PathVariable UUID id) {
     return service.get(userId, id);
   }
 

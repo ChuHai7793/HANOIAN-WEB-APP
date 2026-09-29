@@ -1,6 +1,6 @@
 package com.gfmaster.place;
 
-import com.gfmaster.common.security.CurrentUser;
+import com.gfmaster.common.security.DataOwner;
 import com.gfmaster.common.web.PatchReader;
 import com.gfmaster.place.dto.PlacePatch;
 import com.gfmaster.place.dto.PlaceRequest;
@@ -35,30 +35,30 @@ public class PlaceController {
 
   @GetMapping
   public List<PlaceResponse> list(
-      @CurrentUser UUID userId, @RequestParam(required = false) PlaceType type) {
+      @DataOwner UUID userId, @RequestParam(required = false) PlaceType type) {
     return service.list(userId, type);
   }
 
   @GetMapping("/{id}")
-  public PlaceResponse get(@CurrentUser UUID userId, @PathVariable UUID id) {
+  public PlaceResponse get(@DataOwner UUID userId, @PathVariable UUID id) {
     return service.get(userId, id);
   }
 
   @PostMapping
   public ResponseEntity<PlaceResponse> create(
-      @CurrentUser UUID userId, @Valid @RequestBody PlaceRequest request) {
+      @DataOwner UUID userId, @Valid @RequestBody PlaceRequest request) {
     PlaceResponse created = service.create(userId, request);
     return ResponseEntity.created(URI.create("/api/v1/places/" + created.id())).body(created);
   }
 
   @PatchMapping("/{id}")
   public PlaceResponse update(
-      @CurrentUser UUID userId, @PathVariable UUID id, @RequestBody JsonNode body) {
+      @DataOwner UUID userId, @PathVariable UUID id, @RequestBody JsonNode body) {
     return service.update(userId, id, patchReader.read(body, PlacePatch.class));
   }
 
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@CurrentUser UUID userId, @PathVariable UUID id) {
+  public ResponseEntity<Void> delete(@DataOwner UUID userId, @PathVariable UUID id) {
     service.delete(userId, id);
     return ResponseEntity.noContent().build();
   }

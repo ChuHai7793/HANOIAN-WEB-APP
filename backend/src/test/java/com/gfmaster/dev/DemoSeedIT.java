@@ -29,7 +29,7 @@ import org.springframework.jdbc.datasource.init.ScriptUtils;
 class DemoSeedIT {
 
   private static final Path ASSETS = Path.of("seed-assets");
-  private static final String DEMO = "(select id from users where email = 'demo@gfmaster.local')";
+  private static final String DEMO = "(select id from users where username = 'admin')";
 
   @Autowired DataSource dataSource;
   @Autowired JdbcTemplate jdbc;

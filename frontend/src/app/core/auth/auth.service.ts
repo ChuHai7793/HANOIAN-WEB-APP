@@ -6,10 +6,15 @@ import { API_BASE } from '../api/api';
 import { SILENT_ERRORS, SKIP_AUTH } from '../api/http-context';
 import { DataBootstrapService } from '../services/data-bootstrap.service';
 
+/** ADMIN: thêm/sửa/xoá được. GUEST: chỉ xem dữ liệu của admin. */
+export type Role = 'ADMIN' | 'GUEST';
+
 export interface AuthUser {
   id: string;
   email: string;
+  username: string | null;
   displayName: string;
+  role: Role;
 }
 
 interface AuthResponse {
@@ -35,6 +40,11 @@ export class AuthService {
   private readonly state = signal<AuthUser | null>(null);
   readonly user = this.state.asReadonly();
   readonly isLoggedIn = computed(() => this.state() !== null);
+  /**
+   * Chỉ admin mới thấy nút Thêm/Sửa/Xoá. Đây chỉ là giao diện: server vẫn chặn mọi request ghi
+   * của guest (403) nên có sửa code frontend cũng không ghi được.
+   */
+  readonly canEdit = computed(() => this.state()?.role === 'ADMIN');
 
   private accessToken: string | null = null;
   /** Nhiều request cùng gặp 401 thì chỉ refresh một lần */
@@ -44,9 +54,10 @@ export class AuthService {
     return this.accessToken;
   }
 
-  async login(email: string, password: string): Promise<void> {
+  /** @param login tên đăng nhập (admin, guest...) hoặc email */
+  async login(login: string, password: string): Promise<void> {
     const res = await firstValueFrom(
-      this.http.post<AuthResponse>(`${API_BASE}/auth/login`, { email, password }, { context: PUBLIC() }),
+      this.http.post<AuthResponse>(`${API_BASE}/auth/login`, { login, password }, { context: PUBLIC() }),
     );
     await this.startSession(res);
   }

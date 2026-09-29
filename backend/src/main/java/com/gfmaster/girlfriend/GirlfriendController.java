@@ -1,6 +1,6 @@
 package com.gfmaster.girlfriend;
 
-import com.gfmaster.common.security.CurrentUser;
+import com.gfmaster.common.security.DataOwner;
 import com.gfmaster.common.web.PatchReader;
 import com.gfmaster.girlfriend.dto.GirlfriendPatch;
 import com.gfmaster.girlfriend.dto.GirlfriendRequest;
@@ -40,18 +40,18 @@ public class GirlfriendController {
   }
 
   @GetMapping
-  public List<GirlfriendResponse> list(@CurrentUser UUID userId) {
+  public List<GirlfriendResponse> list(@DataOwner UUID userId) {
     return service.list(userId);
   }
 
   @GetMapping("/{id}")
-  public GirlfriendResponse get(@CurrentUser UUID userId, @PathVariable UUID id) {
+  public GirlfriendResponse get(@DataOwner UUID userId, @PathVariable UUID id) {
     return service.get(userId, id);
   }
 
   @GetMapping("/{id}/links")
   public List<LinkedPlaceResponse> links(
-      @CurrentUser UUID userId,
+      @DataOwner UUID userId,
       @PathVariable UUID id,
       @RequestParam(required = false) PlaceType type) {
     return linkService.linkedPlaces(userId, id, type);
@@ -59,19 +59,19 @@ public class GirlfriendController {
 
   @PostMapping
   public ResponseEntity<GirlfriendResponse> create(
-      @CurrentUser UUID userId, @Valid @RequestBody GirlfriendRequest request) {
+      @DataOwner UUID userId, @Valid @RequestBody GirlfriendRequest request) {
     GirlfriendResponse created = service.create(userId, request);
     return ResponseEntity.created(URI.create("/api/v1/girlfriends/" + created.id())).body(created);
   }
 
   @PatchMapping("/{id}")
   public GirlfriendResponse update(
-      @CurrentUser UUID userId, @PathVariable UUID id, @RequestBody JsonNode body) {
+      @DataOwner UUID userId, @PathVariable UUID id, @RequestBody JsonNode body) {
     return service.update(userId, id, patchReader.read(body, GirlfriendPatch.class));
   }
 
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@CurrentUser UUID userId, @PathVariable UUID id) {
+  public ResponseEntity<Void> delete(@DataOwner UUID userId, @PathVariable UUID id) {
     service.delete(userId, id);
     return ResponseEntity.noContent().build();
   }

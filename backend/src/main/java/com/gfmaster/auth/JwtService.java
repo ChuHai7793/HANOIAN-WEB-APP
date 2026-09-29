@@ -2,6 +2,7 @@ package com.gfmaster.auth;
 
 import com.gfmaster.config.GfmProperties;
 import com.gfmaster.config.JwtConfig;
+import com.gfmaster.user.User;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -16,6 +17,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class JwtService {
 
+  public static final String ROLE_CLAIM = "role";
+  public static final String DATA_OWNER_CLAIM = "own";
+
   private final JwtEncoder encoder;
   private final Duration accessTtl;
 
@@ -28,18 +32,24 @@ public class JwtService {
     return accessTtl;
   }
 
-  public String issueAccessToken(UUID userId, String email) {
-    return issue(userId, email, Instant.now(), accessTtl);
+  public String issueAccessToken(User user) {
+    return issue(user, Instant.now(), accessTtl);
   }
 
-  /** Cho phép chỉ định thời điểm phát và TTL (test dùng để tạo token đã hết hạn). */
-  public String issue(UUID userId, String email, Instant issuedAt, Duration ttl) {
+  /**
+   * Claim ngoài chuẩn: {@code email}, {@code role} (ADMIN/GUEST, Spring Security đổi thành
+   * ROLE_ADMIN/ROLE_GUEST) và {@code own} (chủ dữ liệu: chính user, hoặc admin nếu là guest).
+   * Cho phép chỉ định thời điểm phát và TTL (test dùng để tạo token đã hết hạn).
+   */
+  public String issue(User user, Instant issuedAt, Duration ttl) {
     JwtClaimsSet claims =
         JwtClaimsSet.builder()
             .id(UUID.randomUUID().toString()) // jti: mỗi token là duy nhất kể cả khi phát cùng một giây
             .issuer(JwtConfig.ISSUER)
-            .subject(userId.toString())
-            .claim("email", email)
+            .subject(user.getId().toString())
+            .claim("email", user.getEmail())
+            .claim(ROLE_CLAIM, user.getRole().name())
+            .claim(DATA_OWNER_CLAIM, user.dataOwnerId().toString())
             .issuedAt(issuedAt)
             .expiresAt(issuedAt.plus(ttl))
             .build();

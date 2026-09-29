@@ -1,6 +1,8 @@
 -- R__demo_data.sql: dữ liệu mẫu, CHỈ chạy ở profile dev (xem application-dev.yml).
--- Idempotent: xoá user demo (cascade) rồi nạp lại. Đăng nhập: demo@gfmaster.local / Demo@12345
--- Flyway chạy lại file này mỗi khi nội dung thay đổi, nên sửa file sẽ reset dữ liệu của user demo.
+-- Idempotent: xoá các user mẫu (cascade) rồi nạp lại. Đăng nhập (tên hoặc email):
+--   admin / admin@12345  (admin@gfmaster.local): chủ dữ liệu, được thêm/sửa/xoá
+--   guest / guest@12345  (guest@gfmaster.local): chỉ xem dữ liệu của admin
+-- Flyway chạy lại file này mỗi khi nội dung thay đổi, nên sửa file sẽ reset dữ liệu của các user mẫu.
 --
 -- Quán là quán thật ở Hà Nội, ảnh trong backend/seed-assets/ (SeedAssetLoader nạp vào /uploads/seed/).
 -- Tên, địa chỉ, giờ mở cửa, toạ độ tra từ trang của quán và Foody/PasGo/toidicafe/dicaphekhong (09/2026);
@@ -8,13 +10,23 @@
 -- open/close là giờ mở sớm nhất và đóng muộn nhất, giờ nghỉ ghi trong note. rating, price_range,
 -- has_wifi/has_parking là đánh giá cá nhân mẫu, không phải dữ liệu của quán.
 
-DELETE FROM users WHERE email = 'demo@gfmaster.local';
+-- demo@gfmaster.local: tài khoản mẫu cũ (trước khi có phân quyền)
+DELETE FROM users
+WHERE email IN ('demo@gfmaster.local', 'admin@gfmaster.local', 'guest@gfmaster.local')
+   OR username IN ('admin', 'guest');
 
-SET @uid = '00000000-0000-4000-8000-000000000001';
+SET @uid = '00000000-0000-4000-8000-000000000001';   -- admin: mọi dữ liệu mẫu thuộc user này
+SET @guest = '00000000-0000-4000-8000-000000000002';
 SET @now = '2026-01-01 00:00:00';
 
-INSERT INTO users (id, email, password_hash, display_name, created_at, updated_at, version) VALUES
-  (@uid, 'demo@gfmaster.local', '$2a$12$y0orC.uqlK5of.r.7XJejO9tlJRlzCHb/6W05j8.OmcJZJtZEImNW', 'Demo', @now, @now, 0);
+INSERT INTO users (id, email, username, password_hash, display_name, role, owner_id, created_at, updated_at, version) VALUES
+  (@uid, 'admin@gfmaster.local', 'admin', '$2a$12$.vUBP6k5QkgBneyHn8x8jeJ9PX449AXNm74pc.ao9E3DNdOyKjmUi',
+   'Admin', 'ADMIN', NULL, @now, @now, 0),
+  (@guest, 'guest@gfmaster.local', 'guest', '$2a$12$ZZQP9FuUhJLki78RfmtTD.z3QXtnttVA9mBBBUGvEmbsAtbLVq7Gy',
+   'Khách', 'GUEST', @uid, @now, @now, 0);
+
+-- Xoá admin mẫu ở trên làm owner_id của các guest tự đăng ký thành NULL (ON DELETE SET NULL): gắn lại
+UPDATE users SET owner_id = @uid WHERE role = 'GUEST' AND owner_id IS NULL;
 
 INSERT INTO places (id, user_id, type, name, address, price_range, rating, open_time, close_time,
                     image_url, note, google_maps_url, lat, lng, has_wifi, has_parking, cuisine,

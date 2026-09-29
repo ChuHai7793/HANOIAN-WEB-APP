@@ -1,4 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
+import { AuthService } from '../../core/auth/auth.service';
 import { LegacyImportService } from '../../core/services/legacy-import.service';
 import { ModalComponent } from './modal.component';
 
@@ -108,6 +109,7 @@ import { ModalComponent } from './modal.component';
 })
 export class LegacyImportDialogComponent implements OnInit {
   protected readonly service = inject(LegacyImportService);
+  private readonly auth = inject(AuthService);
   protected readonly state = this.service.state;
 
   protected offer() {
@@ -129,6 +131,7 @@ export class LegacyImportDialogComponent implements OnInit {
   protected noop(): void {}
 
   ngOnInit(): void {
-    this.service.check();
+    // Guest chỉ xem, không import được (server trả 403): không hỏi
+    if (this.auth.canEdit()) this.service.check();
   }
 }

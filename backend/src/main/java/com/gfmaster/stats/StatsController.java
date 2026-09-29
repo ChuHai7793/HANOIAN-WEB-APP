@@ -1,6 +1,6 @@
 package com.gfmaster.stats;
 
-import com.gfmaster.common.security.CurrentUser;
+import com.gfmaster.common.security.DataOwner;
 import com.gfmaster.stats.StatsService.StatsResponse;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,7 +19,7 @@ public class StatsController {
   }
 
   @GetMapping
-  public StatsResponse stats(@CurrentUser UUID userId) {
+  public StatsResponse stats(@DataOwner UUID userId) {
     return service.stats(userId);
   }
 }

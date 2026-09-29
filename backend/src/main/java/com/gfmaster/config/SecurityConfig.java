@@ -1,9 +1,11 @@
 package com.gfmaster.config;
 
+import com.gfmaster.auth.JwtService;
 import com.gfmaster.common.security.ProblemSecurityHandlers;
 import com.gfmaster.common.web.IdempotencyFilter;
 import com.gfmaster.common.web.RateLimitFilter;
 import com.gfmaster.common.web.RateLimiter;
+import com.gfmaster.user.Role;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -13,6 +15,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
@@ -59,14 +63,20 @@ public class SecurityConfig {
                     // Ảnh hiển thị qua <img> nên không kèm được Bearer; tên file là UUID khó đoán
                     .requestMatchers(HttpMethod.GET, "/uploads/**")
                     .permitAll()
-                    .requestMatchers("/api/**")
+                    // /auth/me, /auth/logout-all: mọi người đã đăng nhập
+                    .requestMatchers("/api/v1/auth/**")
                     .authenticated()
+                    // Guest chỉ xem: mọi GET đều cho, request ghi (POST/PATCH/PUT/DELETE) chỉ admin
+                    .requestMatchers(HttpMethod.GET, "/api/**")
+                    .authenticated()
+                    .requestMatchers("/api/**")
+                    .hasRole(Role.ADMIN.name())
                     .anyRequest()
                     .denyAll())
         .oauth2ResourceServer(
             oauth ->
                 oauth
-                    .jwt(Customizer.withDefaults())
+                    .jwt(jwt -> jwt.jwtAuthenticationConverter(roleFromJwt()))
                     .authenticationEntryPoint(problems.entryPoint())
                     .accessDeniedHandler(problems.accessDenied()))
         .exceptionHandling(
@@ -75,6 +85,16 @@ public class SecurityConfig {
     http.addFilterAfter(new RateLimitFilter(limiter, problems, props), BearerTokenAuthenticationFilter.class)
         .addFilterAfter(new IdempotencyFilter(redis, json, problems, props), RateLimitFilter.class);
     return http.build();
+  }
+
+  /** Claim {@code role} của JWT (ADMIN/GUEST) → quyền ROLE_ADMIN/ROLE_GUEST cho hasRole(). */
+  private static JwtAuthenticationConverter roleFromJwt() {
+    JwtGrantedAuthoritiesConverter roles = new JwtGrantedAuthoritiesConverter();
+    roles.setAuthoritiesClaimName(JwtService.ROLE_CLAIM);
+    roles.setAuthorityPrefix("ROLE_");
+    JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+    converter.setJwtGrantedAuthoritiesConverter(roles);
+    return converter;
   }
 
   @Bean

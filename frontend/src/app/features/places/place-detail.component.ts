@@ -169,13 +169,15 @@ interface Companion {
       </div>
 
       <div modalFooter class="contents">
-        <button
-          type="button"
-          class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-          (click)="edit.emit()"
-        >
-          ✏️ Sửa quán
-        </button>
+        @if (editable()) {
+          <button
+            type="button"
+            class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+            (click)="edit.emit()"
+          >
+            ✏️ Sửa quán
+          </button>
+        }
         <a
           [href]="mapsLink()"
           target="_blank"
@@ -203,6 +205,8 @@ export class PlaceDetailComponent {
 
   readonly place = input.required<Place>();
   readonly distanceKm = input<number | null>(null);
+  /** false với guest: ẩn nút "Sửa quán" */
+  readonly editable = input(true);
 
   readonly edit = output<void>();
   readonly dismiss = output<void>();

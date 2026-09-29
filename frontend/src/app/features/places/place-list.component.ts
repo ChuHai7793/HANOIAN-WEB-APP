@@ -10,6 +10,7 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
 import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component';
 import { directionsUrl } from '../../core/utils/gmap-url';
 import { formatDistance, haversineKm, LatLng } from '../../core/utils/geo';
+import { AuthService } from '../../core/auth/auth.service';
 
 type SortKey = 'rating' | 'name' | 'distance' | 'price';
 
@@ -39,13 +40,15 @@ interface PlaceRow {
         </h1>
         <p class="mt-1 text-sm text-slate-500">{{ config().subtitle }}</p>
       </div>
-      <button
-        type="button"
-        class="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
-        (click)="openCreate()"
-      >
-        + {{ config().addLabel }}
-      </button>
+      @if (canEdit()) {
+        <button
+          type="button"
+          class="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+          (click)="openCreate()"
+        >
+          + {{ config().addLabel }}
+        </button>
+      }
     </div>
 
       <!-- Bộ lọc -->
@@ -121,7 +124,7 @@ interface PlaceRow {
         [title]="hasAny() ? 'Không tìm thấy quán phù hợp' : config().emptyTitle"
         [description]="hasAny() ? 'Thử xoá bớt bộ lọc hoặc từ khoá tìm kiếm.' : config().emptyDescription"
       >
-        @if (!hasAny()) {
+        @if (!hasAny() && canEdit()) {
           <button
             type="button"
             class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
@@ -242,22 +245,24 @@ interface PlaceRow {
                 >
                   👁️
                 </button>
-                <button
-                  type="button"
-                  class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
-                  (click)="openEdit(item.place)"
-                  title="Sửa"
-                >
-                  ✏️
-                </button>
-                <button
-                  type="button"
-                  class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-rose-600 transition hover:bg-rose-50"
-                  (click)="pendingDelete.set(item.place)"
-                  title="Xoá"
-                >
-                  🗑️
-                </button>
+                @if (canEdit()) {
+                  <button
+                    type="button"
+                    class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
+                    (click)="openEdit(item.place)"
+                    title="Sửa"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    type="button"
+                    class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-rose-600 transition hover:bg-rose-50"
+                    (click)="pendingDelete.set(item.place)"
+                    title="Xoá"
+                  >
+                    🗑️
+                  </button>
+                }
               </div>
             </div>
           </article>
@@ -281,6 +286,7 @@ interface PlaceRow {
       <app-place-detail
         [place]="row.place"
         [distanceKm]="row.distanceKm"
+        [editable]="canEdit()"
         (edit)="editFromDetail(row.place)"
         (dismiss)="detailing.set(null)"
       />
@@ -300,6 +306,8 @@ interface PlaceRow {
 export class PlaceListComponent {
   private readonly placeService = inject(PlaceService);
   private readonly linkService = inject(PlaceLinkService);
+  /** Guest chỉ xem: ẩn nút thêm/sửa/xoá (server cũng chặn request ghi). */
+  protected readonly canEdit = inject(AuthService).canEdit;
 
   readonly config = input.required<PlaceTypeConfig>();
 

@@ -6,6 +6,7 @@ import com.gfmaster.auth.dto.AuthDtos.RegisterRequest;
 import com.gfmaster.auth.dto.AuthDtos.UserResponse;
 import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
+import com.gfmaster.user.Role;
 import com.gfmaster.user.User;
 import com.gfmaster.user.UserRepository;
 import java.util.Locale;
@@ -47,6 +48,10 @@ public class AuthService {
     user.setEmail(email);
     user.setPasswordHash(passwordEncoder.encode(req.password()));
     user.setDisplayName(req.displayName().trim());
+    // Tài khoản tự đăng ký chỉ được xem: gắn vào dữ liệu của admin đầu tiên. Chưa có admin thì
+    // guest thấy danh sách trống (dataOwnerId() = chính họ) nhưng vẫn không ghi được.
+    user.setRole(Role.GUEST);
+    users.findFirstByRoleOrderByCreatedAtAsc(Role.ADMIN).ifPresent(admin -> user.setOwnerId(admin.getId()));
     // Hai request đăng ký cùng email song song: uk_users_email → 409 EMAIL_TAKEN
     users.saveAndFlush(user);
     return startSession(user, userAgent);
@@ -54,7 +59,10 @@ public class AuthService {
 
   @Transactional(readOnly = true)
   public Session login(LoginRequest req, String userAgent) {
-    Optional<User> user = users.findByEmailIgnoreCase(normalize(req.email()));
+    String login = normalize(req.login());
+    // Có "@" là email, không thì là tên đăng nhập (admin, guest...)
+    Optional<User> user =
+        login.contains("@") ? users.findByEmailIgnoreCase(login) : users.findByUsernameIgnoreCase(login);
     String hash = user.map(User::getPasswordHash).orElse(dummyHash);
     boolean ok = passwordEncoder.matches(req.password(), hash);
     if (user.isEmpty() || !ok) {
@@ -96,12 +104,12 @@ public class AuthService {
   }
 
   private AuthResponse body(User user) {
-    String token = jwt.issueAccessToken(user.getId(), user.getEmail());
+    String token = jwt.issueAccessToken(user);
     return new AuthResponse(token, jwt.accessTtl().toSeconds(), toUser(user));
   }
 
   private static UserResponse toUser(User u) {
-    return new UserResponse(u.getId(), u.getEmail(), u.getDisplayName());
+    return new UserResponse(u.getId(), u.getEmail(), u.getUsername(), u.getDisplayName(), u.getRole());
   }
 
   private static String normalize(String email) {
