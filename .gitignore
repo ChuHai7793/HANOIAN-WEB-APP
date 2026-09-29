@@ -30,3 +30,6 @@ backend/uploads/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local docs (not committed)
+docs/**/*.md
