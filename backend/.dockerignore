@@ -1,0 +1,5 @@
+target/
+uploads/
+uploads-incoming/
+seed-assets/
+*.log
