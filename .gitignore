@@ -33,5 +33,6 @@ backend/uploads-incoming/
 .DS_Store
 Thumbs.db
 
-# Local docs (not committed)
-docs/**/*.md
+# Tài liệu Markdown chỉ giữ trên máy (không commit), trừ README.md ở gốc repo
+*.md
+!/README.md
