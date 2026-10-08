@@ -69,7 +69,7 @@ public record GfmProperties(
 
   public record Messaging(boolean enabled) {}
 
-  /** Import dữ liệu localStorage cũ. {@code maxSize} phải nhỏ hơn max_allowed_packet của MariaDB (16MB). */
+  /** Import dữ liệu localStorage cũ. {@code maxSize} giới hạn kích thước payload lưu trong cột text của import_jobs. */
   public record Importer(@NotNull DataSize maxSize, @NotNull Duration lockTtl) {}
 
   /** Job định kỳ. {@code cron} theo cú pháp Spring (giây phút giờ ngày tháng thứ). */

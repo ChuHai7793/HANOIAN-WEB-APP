@@ -47,7 +47,7 @@ class UploadMessagingIT extends ApiTestSupport {
 
     await().atMost(WAIT).until(() -> "READY".equals(statusOf(id)));
 
-    String thumbUrl = jdbc.queryForObject("select thumb_url from uploads where id = ?", String.class, id);
+    String thumbUrl = jdbc.queryForObject("select thumb_url from uploads where id = ?::uuid", String.class, id);
     assertThat(thumbUrl).isEqualTo(res.get("url").asString().replace(".webp", "-320.webp"));
     byte[] thumb = mvc.perform(get(thumbUrl)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
     ImmutableImage image = ImmutableImage.loader().fromBytes(thumb);
@@ -103,8 +103,8 @@ class UploadMessagingIT extends ApiTestSupport {
     await().atMost(WAIT).until(() -> "READY".equals(statusOf(id)));
 
     // Giả lập: upload lại cần thumbnail nhưng file gốc không còn trên storage
-    jdbc.update("update uploads set status = 'THUMB_PENDING', thumb_url = null where id = ?", id);
-    storage.delete(jdbc.queryForObject("select storage_key from uploads where id = ?", String.class, id));
+    jdbc.update("update uploads set status = 'THUMB_PENDING', thumb_url = null where id = ?::uuid", id);
+    storage.delete(jdbc.queryForObject("select storage_key from uploads where id = ?::uuid", String.class, id));
 
     String dlq = Topology.dlq(Topology.IMAGE_VARIANTS);
     long before = queueDepth(dlq);
@@ -145,7 +145,7 @@ class UploadMessagingIT extends ApiTestSupport {
     String orphanUrl = urlOf(orphan);
     Instant eightDaysAgo = Instant.now().minus(Duration.ofDays(8));
     jdbc.update(
-        "update uploads set created_at = ? where id in (?, ?)",
+        "update uploads set created_at = ? where id in (?::uuid, ?::uuid)",
         Timestamp.from(eightDaysAgo), orphan, used);
 
     int removed = orphanJob.cleanUp(Instant.now().minus(Duration.ofDays(7)));
@@ -167,13 +167,13 @@ class UploadMessagingIT extends ApiTestSupport {
   }
 
   private String statusOf(String id) {
-    return jdbc.queryForList("select status from uploads where id = ?", String.class, id).stream()
+    return jdbc.queryForList("select status from uploads where id = ?::uuid", String.class, id).stream()
         .findFirst()
         .orElse(null);
   }
 
   private String urlOf(String id) {
-    return jdbc.queryForObject("select url from uploads where id = ?", String.class, id);
+    return jdbc.queryForObject("select url from uploads where id = ?::uuid", String.class, id);
   }
 
   private long queueDepth(String queue) {

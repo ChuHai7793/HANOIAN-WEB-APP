@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.RequestBuilder;
 import tools.jackson.databind.JsonNode;
 
 /**
- * Nhiều luồng bắn cùng lúc vào API thật (MariaDB + Redis thật). Mỗi luồng chờ ở cùng một
+ * Nhiều luồng bắn cùng lúc vào API thật (PostgreSQL + Redis thật). Mỗi luồng chờ ở cùng một
  * CountDownLatch rồi được thả ra đồng thời để tăng khả năng chạm nhau.
  */
 class ConcurrencyIT extends ApiTestSupport {
@@ -113,7 +113,7 @@ class ConcurrencyIT extends ApiTestSupport {
     assertThat(statuses(results)).containsExactlyInAnyOrder(201, 409);
     MockHttpServletResponse conflict = results.stream().filter(r -> r.getStatus() == 409).findFirst().orElseThrow();
     assertThat(body(conflict).get("code").asString()).isEqualTo("LINK_ALREADY_EXISTS");
-    assertThat(jdbc.queryForObject("select count(*) from place_links where girlfriend_id = ?", Integer.class, gf))
+    assertThat(jdbc.queryForObject("select count(*) from place_links where girlfriend_id = ?::uuid", Integer.class, gf))
         .isEqualTo(1);
   }
 
@@ -140,7 +140,7 @@ class ConcurrencyIT extends ApiTestSupport {
       assertThat(statuses(results)).containsExactlyInAnyOrder(202, 423);
       MockHttpServletResponse locked = results.stream().filter(r -> r.getStatus() == 423).findFirst().orElseThrow();
       assertThat(body(locked).get("code").asString()).isEqualTo("IMPORT_RUNNING");
-      assertThat(jdbc.queryForObject("select count(*) from import_jobs where user_id = ?", Integer.class, user.toString()))
+      assertThat(jdbc.queryForObject("select count(*) from import_jobs where user_id = ?::uuid", Integer.class, user.toString()))
           .isEqualTo(1);
     } finally {
       consumer.start();
@@ -188,6 +188,6 @@ class ConcurrencyIT extends ApiTestSupport {
   }
 
   private int countPlaces(UUID user) {
-    return jdbc.queryForObject("select count(*) from places where user_id = ?", Integer.class, user.toString());
+    return jdbc.queryForObject("select count(*) from places where user_id = ?::uuid", Integer.class, user.toString());
   }
 }

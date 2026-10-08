@@ -66,7 +66,7 @@ class RoleIT extends ApiTestSupport {
     getAs(admin, "/api/v1/places/" + placeId)
         .andExpect(jsonPath("$.name").value("Của admin"))
         .andExpect(jsonPath("$.version").value(0));
-    assertThat(jdbc.queryForObject("select count(*) from girlfriends where user_id = ?", Integer.class, admin.toString()))
+    assertThat(jdbc.queryForObject("select count(*) from girlfriends where user_id = ?::uuid", Integer.class, admin.toString()))
         .isEqualTo(1);
   }
 
@@ -104,7 +104,7 @@ class RoleIT extends ApiTestSupport {
                 .andExpect(jsonPath("$.user.role").value("GUEST")));
 
     UUID id = UUID.fromString(body.get("user").get("id").asString());
-    assertThat(jdbc.queryForObject("select owner_id from users where id = ?", String.class, id.toString()))
+    assertThat(jdbc.queryForObject("select owner_id from users where id = ?::uuid", String.class, id.toString()))
         .isEqualTo(firstAdmin);
     String token = "Bearer " + body.get("accessToken").asString();
     mvc.perform(post("/api/v1/places").header(HttpHeaders.AUTHORIZATION, token).contentType(MediaType.APPLICATION_JSON).content("{}"))

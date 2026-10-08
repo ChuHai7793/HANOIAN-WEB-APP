@@ -22,7 +22,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 
 /**
- * Dữ liệu mẫu của profile dev: chạy thẳng R__demo_data.sql trên MariaDB của test (không cần bật app
+ * Dữ liệu mẫu của profile dev: chạy thẳng R__demo_data.sql trên PostgreSQL của test (không cần bật app
  * dev) và kiểm tra mọi ảnh mà seed trỏ tới đều có trong {@code seed-assets/}.
  */
 @IntegrationTest

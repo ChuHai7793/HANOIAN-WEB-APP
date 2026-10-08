@@ -5,8 +5,8 @@
 -- size_bytes: lúc đầu là kích thước trình duyệt khai, sau khi xử lý là kích thước file WebP.
 
 ALTER TABLE uploads
-  MODIFY storage_key VARCHAR(255)  NULL,
-  MODIFY url         VARCHAR(1024) NULL,
-  MODIFY width       INT           NULL,
-  MODIFY height      INT           NULL,
-  ADD COLUMN incoming_key VARCHAR(255) NULL AFTER storage_key;
+  ALTER COLUMN storage_key DROP NOT NULL,
+  ALTER COLUMN url         DROP NOT NULL,
+  ALTER COLUMN width       DROP NOT NULL,
+  ALTER COLUMN height      DROP NOT NULL,
+  ADD COLUMN incoming_key VARCHAR(255) NULL;

@@ -46,10 +46,10 @@ class PlaceControllerIT extends ApiTestSupport {
   void timeColumnsAreNotShiftedByJvmTimezone() throws Exception {
     UUID user = newUser();
     String id = createPlace(user, "cafe", "Giờ mở cửa").get("id").asString();
-    assertThat(jdbc.queryForObject("select cast(open_time as char) from places where id = ?", String.class, id))
+    assertThat(jdbc.queryForObject("select cast(open_time as text) from places where id = ?::uuid", String.class, id))
         .isEqualTo("08:00:00");
 
-    jdbc.update("update places set open_time = '06:45:00' where id = ?", id);
+    jdbc.update("update places set open_time = '06:45:00' where id = ?::uuid", id);
     getAs(user, "/api/v1/places/" + id).andExpect(jsonPath("$.openTime").value("06:45"));
   }
 

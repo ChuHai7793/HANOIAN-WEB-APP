@@ -34,7 +34,7 @@ public class PlaceLink extends BaseEntity {
   @OnDelete(action = OnDeleteAction.CASCADE)
   private Place place;
 
-  @JdbcTypeCode(SqlTypes.TINYINT)
+  @JdbcTypeCode(SqlTypes.SMALLINT)
   @Column(nullable = false)
   private int herRating;
 

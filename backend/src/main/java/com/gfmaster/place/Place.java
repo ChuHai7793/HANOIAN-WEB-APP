@@ -19,7 +19,7 @@ import org.hibernate.type.SqlTypes;
 @Setter
 public class Place extends OwnedEntity {
 
-  // VARCHAR + CHECK trong DB, không dùng kiểu ENUM native của MariaDB
+  // VARCHAR + CHECK trong DB, không dùng kiểu ENUM native của DB
   @Enumerated(EnumType.STRING)
   @JdbcTypeCode(SqlTypes.VARCHAR)
   @Column(nullable = false, length = 20)
@@ -36,7 +36,7 @@ public class Place extends OwnedEntity {
   @Column(nullable = false, length = 20)
   private PriceRange priceRange;
 
-  @JdbcTypeCode(SqlTypes.TINYINT)
+  @JdbcTypeCode(SqlTypes.SMALLINT)
   @Column(nullable = false)
   private int rating;
 

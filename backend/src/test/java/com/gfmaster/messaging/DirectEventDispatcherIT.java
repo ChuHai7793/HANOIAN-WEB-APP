@@ -63,7 +63,7 @@ class DirectEventDispatcherIT extends ApiTestSupport {
 
       // REQUIRES_NEW trong ThumbnailService: thay đổi phải được lưu dù chạy trong AFTER_COMMIT
       assertThat(statusOf(id)).isEqualTo("READY");
-      assertThat(jdbc.queryForObject("select thumb_url from uploads where id = ?", String.class, id))
+      assertThat(jdbc.queryForObject("select thumb_url from uploads where id = ?::uuid", String.class, id))
           .isEqualTo(res.get("url").asString().replace(".webp", "-320.webp"));
     } finally {
       consumer.start();
@@ -95,9 +95,9 @@ class DirectEventDispatcherIT extends ApiTestSupport {
       dispatchAfterCommit(new ImportRequested(user, jobId, token));
 
       // Dùng REQUIRES_NEW: dữ liệu và trạng thái DONE phải được lưu dù chạy trong AFTER_COMMIT
-      assertThat(jdbc.queryForObject("select status from import_jobs where id = ?", String.class, jobId.toString()))
+      assertThat(jdbc.queryForObject("select status from import_jobs where id = ?::uuid", String.class, jobId.toString()))
           .isEqualTo("DONE");
-      assertThat(jdbc.queryForObject("select count(*) from girlfriends where user_id = ?", Integer.class, user.toString()))
+      assertThat(jdbc.queryForObject("select count(*) from girlfriends where user_id = ?::uuid", Integer.class, user.toString()))
           .isEqualTo(1);
       assertThat(redis.hasKey(ImportLock.key(user))).isFalse();
     } finally {
@@ -126,6 +126,6 @@ class DirectEventDispatcherIT extends ApiTestSupport {
   }
 
   private String statusOf(String id) {
-    return jdbc.queryForObject("select status from uploads where id = ?", String.class, id);
+    return jdbc.queryForObject("select status from uploads where id = ?::uuid", String.class, id);
   }
 }

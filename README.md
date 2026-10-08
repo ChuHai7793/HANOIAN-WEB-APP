@@ -4,7 +4,7 @@ Sổ tay hẹn hò: lưu quán cafe, bar, quán ăn đã đi; lưu người yêu
 
 - **Frontend:** Angular (http://localhost:4200)
 - **Backend:** Spring Boot (http://localhost:8080)
-- **Hạ tầng:** MariaDB, Redis và RabbitMQ, chạy bằng Docker
+- **Hạ tầng:** PostgreSQL, Redis và RabbitMQ, chạy bằng Docker
 
 Kế hoạch tổng thể nằm ở [PLAN.md](PLAN.md). Tài liệu từng bước nằm trong [docs/](docs/README.md).
 
@@ -46,7 +46,7 @@ Không cần cài Maven: dự án dùng Maven Wrapper (`mvnw.cmd`). Hướng d�
 ```powershell
 cd D:\GF_Master
 docker compose up -d
-docker compose ps        # chờ tới khi mariadb, redis, rabbitmq, adminer đều báo "healthy"
+docker compose ps        # chờ tới khi postgres, redis, rabbitmq đều báo "healthy"
 ```
 
 ### 3. Chạy backend (terminal 1)
@@ -82,7 +82,6 @@ Tài khoản tự đăng ký ở `/register` là **guest**. Xem [docs/10-phan-qu
 |---|---|
 | http://localhost:4200 | Ứng dụng |
 | http://localhost:8080/api/docs | Swagger: xem và gọi thử API |
-| http://localhost:8081 | Adminer: xem DB. System *MySQL*, Server `mariadb`, User `gfm`, Pass `gfm`, DB `gfmaster` |
 | http://localhost:15672 | RabbitMQ UI (`gfm` / `gfm`): xem queue và DLQ |
 
 ### 6. Tắt
@@ -98,7 +97,7 @@ docker compose down -v   # CHỈ khi muốn xoá sạch dữ liệu để làm l
 
 ## Chạy test
 
-Docker phải đang chạy, vì test tích hợp tự bật MariaDB, Redis và RabbitMQ riêng bằng Testcontainers.
+Docker phải đang chạy, vì test tích hợp tự bật PostgreSQL, Redis và RabbitMQ riêng bằng Testcontainers.
 
 ```powershell
 cd D:\GF_Master\backend;  .\mvnw.cmd clean verify      # 132 test
@@ -127,8 +126,8 @@ Các phần dưới đây mới có test tự động, chưa được thử trê
 | Triệu chứng | Cách xử lý |
 |---|---|
 | Backend báo không kết nối được DB, Redis hoặc RabbitMQ | Mở Docker Desktop, chạy `docker compose up -d`, rồi chờ các dịch vụ báo `healthy` |
-| `Port ... already in use` (3306, 6379, 5672, 8080, 4200) | Tắt ứng dụng khác đang dùng cổng đó, hoặc đổi cổng trong `docker-compose.yml` |
+| `Port ... already in use` (5432, 6379, 5672, 8080, 4200) | Tắt ứng dụng khác đang dùng cổng đó, hoặc đổi cổng trong `docker-compose.yml` |
 | Test báo `Unresolved compilation problems` hoặc thiếu `...MapperImpl` | Extension Java của VS Code vừa ghi đè `backend/target/`. Chạy lại bằng `.\mvnw.cmd clean verify` |
 | Lần đầu `npm start` rất chậm | Windows Defender đang quét `node_modules`. Thêm `D:\GF_Master\frontend` vào *Windows Security → Exclusions* |
 | Quán mẫu không có ảnh | Backend không được chạy từ thư mục `backend`, nên không tìm thấy `seed-assets/`. Xem log có dòng `Seed assets dir ... not found` |
-| Đổi mật khẩu trong `.env` nhưng DB không nhận | Biến `MARIADB_*` chỉ có tác dụng khi volume còn trống. Xem [docs/00 §4.5](docs/00-cong-cu-va-moi-truong.md#45-đọc-hiểu-một-service-trong-docker-composeyml) |
+| Đổi mật khẩu trong `.env` nhưng DB không nhận | Biến `DB_USER`/`DB_PASSWORD` chỉ tạo user khi volume `postgres` còn trống: xoá volume (`docker compose down -v`, mất dữ liệu local) để tạo lại. Xem [docs/00 §4.5](docs/00-cong-cu-va-moi-truong.md#45-đọc-hiểu-một-service-trong-docker-composeyml) |

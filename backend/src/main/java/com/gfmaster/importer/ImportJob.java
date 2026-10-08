@@ -44,11 +44,11 @@ public class ImportJob {
   private String payloadKey;
 
   /** JSON gốc từ localStorage. Xoá (null) khi import xong; job lỗi giữ lại vài ngày để xem. */
-  @Column(columnDefinition = "longtext")
+  @Column(columnDefinition = "text")
   private String payload;
 
-  /** JSON dạng {"places":12,"girlfriends":3,...}. Kiểu JSON của MariaDB thực chất là LONGTEXT. */
-  @Column(columnDefinition = "longtext")
+  /** JSON dạng {"places":12,"girlfriends":3,...}, lưu dạng chuỗi trong cột text. */
+  @Column(columnDefinition = "text")
   private String stats;
 
   @Column(columnDefinition = "text")

@@ -10,7 +10,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
-/** Spring context đầy đủ + MariaDB/Redis/RabbitMQ thật qua Testcontainers. */
+/** Spring context đầy đủ + PostgreSQL/Redis/RabbitMQ thật qua Testcontainers. */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @SpringBootTest

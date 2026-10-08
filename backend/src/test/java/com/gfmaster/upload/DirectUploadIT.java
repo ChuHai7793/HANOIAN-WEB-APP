@@ -46,7 +46,7 @@ class DirectUploadIT extends ApiTestSupport {
     getAs(user, "/api/v1/uploads/" + id).andExpect(jsonPath("$.status").value("AWAITING_UPLOAD"));
 
     putContent(user, uploadUrl, raw).andExpect(status().isNoContent());
-    String incomingKey = jdbc.queryForObject("select incoming_key from uploads where id = ?", String.class, id);
+    String incomingKey = jdbc.queryForObject("select incoming_key from uploads where id = ?::uuid", String.class, id);
     assertThat(incoming.size(incomingKey)).hasValue(raw.length);
 
     postAs(user, "/api/v1/uploads/" + id + "/complete", "").andExpect(status().isAccepted());
@@ -82,7 +82,7 @@ class DirectUploadIT extends ApiTestSupport {
     byte[] notAnImage = "<script>alert(1)</script>".getBytes();
     String id = body(begin(user, "image/jpeg", notAnImage.length)).get("id").asString();
     putContent(user, "/api/v1/uploads/" + id + "/content", notAnImage).andExpect(status().isNoContent());
-    String incomingKey = jdbc.queryForObject("select incoming_key from uploads where id = ?", String.class, id);
+    String incomingKey = jdbc.queryForObject("select incoming_key from uploads where id = ?::uuid", String.class, id);
 
     postAs(user, "/api/v1/uploads/" + id + "/complete", "").andExpect(status().isAccepted());
 
@@ -127,12 +127,12 @@ class DirectUploadIT extends ApiTestSupport {
     UUID user = newUser();
     String id = body(begin(user, "image/png", 100)).get("id").asString();
     putContent(user, "/api/v1/uploads/" + id + "/content", png(10, 10));
-    String incomingKey = jdbc.queryForObject("select incoming_key from uploads where id = ?", String.class, id);
+    String incomingKey = jdbc.queryForObject("select incoming_key from uploads where id = ?::uuid", String.class, id);
 
     // Người dùng đóng tab, không bao giờ gọi complete: quá 1 ngày thì bị dọn
     job.cleanUnfinished(Instant.now().plusSeconds(1));
 
-    assertThat(jdbc.queryForObject("select count(*) from uploads where id = ?", Integer.class, id)).isZero();
+    assertThat(jdbc.queryForObject("select count(*) from uploads where id = ?::uuid", Integer.class, id)).isZero();
     assertThat(incoming.size(incomingKey)).isEmpty();
   }
 

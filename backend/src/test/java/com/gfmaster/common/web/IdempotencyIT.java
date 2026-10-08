@@ -137,6 +137,6 @@ class IdempotencyIT extends ApiTestSupport {
   }
 
   private int countPlaces(UUID user) {
-    return jdbc.queryForObject("select count(*) from places where user_id = ?", Integer.class, user.toString());
+    return jdbc.queryForObject("select count(*) from places where user_id = ?::uuid", Integer.class, user.toString());
   }
 }

@@ -3,5 +3,5 @@
 -- payload bị xoá (NULL) khi import xong; payload_key giữ lại cho driver S3 sau này nhưng không bắt buộc.
 
 ALTER TABLE import_jobs
-  ADD COLUMN payload LONGTEXT NULL AFTER payload_key,
-  MODIFY payload_key VARCHAR(255) NULL;
+  ADD COLUMN payload TEXT NULL,
+  ALTER COLUMN payload_key DROP NOT NULL;

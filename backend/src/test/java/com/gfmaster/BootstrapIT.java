@@ -22,7 +22,7 @@ class BootstrapIT {
   void flywayCreatesAllTables() {
     var tables =
         jdbc.queryForList(
-            "select table_name from information_schema.tables where table_schema = database()",
+            "select table_name from information_schema.tables where table_schema = current_schema()",
             String.class);
     assertThat(tables)
         .contains(

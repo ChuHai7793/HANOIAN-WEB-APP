@@ -1,17 +1,15 @@
 # Dev: chỉ hạ tầng. Backend chạy bằng ./mvnw, frontend bằng npm start.
 services:
-  mariadb:
-    image: mariadb:11.4
+  postgres:                                 # cùng phiên bản chính với Supabase (Postgres 17)
+    image: postgres:17-alpine
     environment:
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root}
-      MARIADB_DATABASE: gfmaster
-      MARIADB_USER: ${DB_USER:-gfm}
-      MARIADB_PASSWORD: ${DB_PASSWORD:-gfm}
-    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_uca1400_ai_ci"]
-    ports: ["3306:3306"]
-    volumes: [mariadb:/var/lib/mysql]
+      POSTGRES_DB: gfmaster
+      POSTGRES_USER: ${DB_USER:-gfm}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-gfm}
+    ports: ["5432:5432"]
+    volumes: [postgres:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       retries: 20
 
@@ -36,11 +34,6 @@ services:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       retries: 20
-
-  adminer:                                  # xem DB: http://localhost:8081
-    image: adminer
-    ports: ["8081:8080"]
-    depends_on: [mariadb]
 
   mongo:                                    # chỉ chạy khi: docker compose --profile mongo up
     image: mongo:8
@@ -82,4 +75,4 @@ services:
       MINIO_USER: ${S3_ACCESS_KEY:-gfm-minio}
       MINIO_PASSWORD: ${S3_SECRET_KEY:-gfm-minio-secret}
 
-volumes: { mariadb: {}, redis: {}, rabbitmq: {}, mongo: {}, minio: {} }
+volumes: { postgres: {}, redis: {}, rabbitmq: {}, mongo: {}, minio: {} }

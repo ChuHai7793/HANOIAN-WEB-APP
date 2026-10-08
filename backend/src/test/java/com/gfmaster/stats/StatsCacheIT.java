@@ -32,7 +32,7 @@ class StatsCacheIT extends ApiTestSupport {
     assertThat(redis.opsForValue().get(cacheKey)).contains("\"cafes\":1").doesNotContain("@class");
 
     // Sửa thẳng DB, không qua service (không có event): /stats vẫn trả số cũ từ cache
-    jdbc.update("update places set type = 'bar' where id = ?", placeId);
+    jdbc.update("update places set type = 'bar' where id = ?::uuid", placeId);
     getAs(user, "/api/v1/stats").andExpect(jsonPath("$.cafes").value(1)).andExpect(jsonPath("$.bars").value(0));
 
     // Sửa qua API: place.updated → queue gfm.cache.evict → cache bị xoá → số mới

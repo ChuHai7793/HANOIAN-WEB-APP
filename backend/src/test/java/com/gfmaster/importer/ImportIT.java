@@ -102,7 +102,7 @@ class ImportIT extends ApiTestSupport {
 
     // Xong thì nhả khoá và bỏ payload
     assertThat(redis.hasKey(ImportLock.key(user))).isFalse();
-    assertThat(jdbc.queryForObject("select payload from import_jobs where id = ?", String.class, jobId)).isNull();
+    assertThat(jdbc.queryForObject("select payload from import_jobs where id = ?::uuid", String.class, jobId)).isNull();
   }
 
   @Test
@@ -139,7 +139,7 @@ class ImportIT extends ApiTestSupport {
 
     // Bị từ chối trước khi lấy khoá: không để lại khoá nào
     assertThat(redis.hasKey(ImportLock.key(user))).isFalse();
-    assertThat(jdbc.queryForObject("select count(*) from import_jobs where user_id = ?", Integer.class, user.toString()))
+    assertThat(jdbc.queryForObject("select count(*) from import_jobs where user_id = ?::uuid", Integer.class, user.toString()))
         .isZero();
   }
 
