@@ -12,6 +12,7 @@ function user(role: AuthUser['role']): AuthUser {
     username: role.toLowerCase(),
     displayName: role,
     role,
+    avatarUrl: null,
   };
 }
 

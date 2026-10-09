@@ -11,6 +11,10 @@ export const authGuard: CanMatchFn = (_route, segments) => {
   });
 };
 
+/** Trang chỉ dành cho admin (danh sách người dùng): người khác về trang chính. */
+export const adminGuard: CanMatchFn = () =>
+  inject(AuthService).user()?.role === 'ADMIN' ? true : inject(Router).createUrlTree(['/']);
+
 /** Trang login/register: đã đăng nhập thì vào thẳng app. */
 export const guestGuard: CanMatchFn = () =>
   inject(AuthService).isLoggedIn() ? inject(Router).createUrlTree(['/']) : true;

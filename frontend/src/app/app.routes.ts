@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { ShellComponent } from './layout/shell.component';
-import { authGuard, guestGuard } from './core/auth/auth.guard';
+import { adminGuard, authGuard, guestGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
   {
@@ -14,6 +14,12 @@ export const routes: Routes = [
     title: 'Đăng ký · Dating Master',
     canMatch: [guestGuard],
     loadComponent: () => import('./features/auth/register.page').then((m) => m.RegisterPage),
+  },
+  {
+    path: 'onboarding',
+    title: 'Hoàn thiện hồ sơ · Dating Master',
+    canMatch: [authGuard],
+    loadComponent: () => import('./features/profile/onboarding.page').then((m) => m.OnboardingPage),
   },
   {
     path: '',
@@ -50,6 +56,17 @@ export const routes: Routes = [
           import('./features/girlfriends/girlfriend-detail.page').then(
             (m) => m.GirlfriendDetailPage,
           ),
+      },
+      {
+        path: 'profile',
+        title: 'Hồ sơ của tôi · Dating Master',
+        loadComponent: () => import('./features/profile/profile.page').then((m) => m.ProfilePage),
+      },
+      {
+        path: 'admin/users',
+        title: 'Người dùng · Dating Master',
+        canMatch: [adminGuard],
+        loadComponent: () => import('./features/admin/user-list.page').then((m) => m.UserListPage),
       },
     ],
   },

@@ -6,6 +6,7 @@ import com.gfmaster.auth.dto.AuthDtos.RegisterRequest;
 import com.gfmaster.auth.dto.AuthDtos.UserResponse;
 import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
+import com.gfmaster.profile.ProfileService;
 import com.gfmaster.user.Role;
 import com.gfmaster.user.User;
 import com.gfmaster.user.UserRepository;
@@ -23,15 +24,21 @@ public class AuthService {
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwt;
   private final RefreshTokenStore refreshTokens;
+  private final ProfileService profiles;
   /** So mật khẩu với hash giả khi email không tồn tại, để thời gian phản hồi không lộ email nào có thật. */
   private final String dummyHash;
 
   public AuthService(
-      UserRepository users, PasswordEncoder passwordEncoder, JwtService jwt, RefreshTokenStore refreshTokens) {
+      UserRepository users,
+      PasswordEncoder passwordEncoder,
+      JwtService jwt,
+      RefreshTokenStore refreshTokens,
+      ProfileService profiles) {
     this.users = users;
     this.passwordEncoder = passwordEncoder;
     this.jwt = jwt;
     this.refreshTokens = refreshTokens;
+    this.profiles = profiles;
     this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
   }
 
@@ -96,7 +103,7 @@ public class AuthService {
 
   @Transactional(readOnly = true)
   public UserResponse me(UUID userId) {
-    return users.findById(userId).map(AuthService::toUser).orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED));
+    return users.findById(userId).map(this::toUser).orElseThrow(() -> new ApiException(ErrorCode.UNAUTHORIZED));
   }
 
   private Session startSession(User user, String userAgent) {
@@ -108,8 +115,9 @@ public class AuthService {
     return new AuthResponse(token, jwt.accessTtl().toSeconds(), toUser(user));
   }
 
-  private static UserResponse toUser(User u) {
-    return new UserResponse(u.getId(), u.getEmail(), u.getUsername(), u.getDisplayName(), u.getRole());
+  private UserResponse toUser(User u) {
+    return new UserResponse(
+        u.getId(), u.getEmail(), u.getUsername(), u.getDisplayName(), u.getRole(), profiles.avatarUrl(u.getId()));
   }
 
   private static String normalize(String email) {

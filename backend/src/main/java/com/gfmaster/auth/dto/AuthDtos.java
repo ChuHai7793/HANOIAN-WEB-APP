@@ -22,7 +22,9 @@ public final class AuthDtos {
   public record LoginRequest(@NotBlank @JsonAlias("email") String login, @NotBlank String password) {}
 
   /** {@code role}: ADMIN (thêm/sửa/xoá được) hoặc GUEST (chỉ xem). */
-  public record UserResponse(UUID id, String email, String username, String displayName, Role role) {}
+  /** {@code avatarUrl}: ảnh đại diện trong hồ sơ (URL công khai), null nếu chưa có. */
+  public record UserResponse(
+      UUID id, String email, String username, String displayName, Role role, String avatarUrl) {}
 
   /** Refresh token không nằm trong body mà trong cookie httpOnly {@code rt}. */
   public record AuthResponse(String accessToken, long expiresIn, UserResponse user) {}

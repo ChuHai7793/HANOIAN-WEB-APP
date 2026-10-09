@@ -15,6 +15,8 @@ export interface AuthUser {
   username: string | null;
   displayName: string;
   role: Role;
+  /** Ảnh đại diện trong hồ sơ (URL công khai), null nếu chưa có. */
+  avatarUrl: string | null;
 }
 
 interface AuthResponse {
@@ -112,6 +114,11 @@ export class AuthService {
       this.endSession();
       await this.router.navigate(['/login']);
     }
+  }
+
+  /** Sau khi lưu hồ sơ: cập nhật tên và ảnh hiện ở thanh menu, không cần đăng nhập lại. */
+  updateProfile(displayName: string, avatarUrl: string | null): void {
+    this.state.update((u) => (u ? { ...u, displayName, avatarUrl } : u));
   }
 
   /** Interceptor gọi khi refresh thất bại giữa chừng: về trang đăng nhập, giữ lại trang đang xem. */

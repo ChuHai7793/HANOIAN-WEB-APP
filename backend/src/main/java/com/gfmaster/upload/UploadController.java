@@ -1,5 +1,6 @@
 package com.gfmaster.upload;
 
+import com.gfmaster.common.security.CurrentUser;
 import com.gfmaster.common.security.DataOwner;
 import com.gfmaster.upload.dto.DirectUploadResponse;
 import com.gfmaster.upload.dto.UploadResponse;
@@ -36,6 +37,9 @@ import org.springframework.web.multipart.MultipartFile;
  *   <li>{@code GET /uploads/{id}} tới khi {@code status} là READY (có {@code url}) hoặc FAILED
  * </ol>
  *
+ * <p>Bốn bước trên gắn upload với người đang đăng nhập ({@code @CurrentUser}): guest cũng upload
+ * được ảnh đại diện của mình. Với admin, người đăng nhập chính là chủ dữ liệu nên không đổi gì.
+ *
  * <p>{@code POST /uploads/image} (multipart, xử lý ngay trong request) vẫn giữ cho client cũ.
  */
 @RestController
@@ -52,14 +56,14 @@ public class UploadController {
 
   @PostMapping("/direct")
   public ResponseEntity<DirectUploadResponse> beginDirect(
-      @DataOwner UUID userId, @Valid @RequestBody DirectUploadRequest request) {
+      @CurrentUser UUID userId, @Valid @RequestBody DirectUploadRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(service.beginDirect(userId, request.contentType(), request.sizeBytes()));
   }
 
   /** Chỉ dùng với driver local (thay cho presigned URL của S3). */
   @PutMapping("/{id}/content")
-  public ResponseEntity<Void> content(@DataOwner UUID userId, @PathVariable UUID id, HttpServletRequest request)
+  public ResponseEntity<Void> content(@CurrentUser UUID userId, @PathVariable UUID id, HttpServletRequest request)
       throws IOException {
     try (InputStream in = request.getInputStream()) {
       // Đọc tối đa giới hạn + 1 byte: đủ để biết file lớn hơn giới hạn (service báo 413) mà không đọc hết
@@ -69,12 +73,12 @@ public class UploadController {
   }
 
   @PostMapping("/{id}/complete")
-  public ResponseEntity<UploadResponse> complete(@DataOwner UUID userId, @PathVariable UUID id) {
+  public ResponseEntity<UploadResponse> complete(@CurrentUser UUID userId, @PathVariable UUID id) {
     return ResponseEntity.status(HttpStatus.ACCEPTED).body(service.completeDirect(userId, id));
   }
 
   @GetMapping("/{id}")
-  public UploadResponse get(@DataOwner UUID userId, @PathVariable UUID id) {
+  public UploadResponse get(@CurrentUser UUID userId, @PathVariable UUID id) {
     return service.get(userId, id);
   }
 

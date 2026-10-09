@@ -66,6 +66,17 @@ public class SecurityConfig {
                     // /auth/me, /auth/logout-all: mọi người đã đăng nhập
                     .requestMatchers("/api/v1/auth/**")
                     .authenticated()
+                    // Danh sách người dùng và hồ sơ của họ: chỉ admin, kể cả GET
+                    .requestMatchers("/api/v1/admin/**")
+                    .hasRole(Role.ADMIN.name())
+                    // Hồ sơ của chính mình, và upload ảnh (đại diện): guest cũng được ghi.
+                    // Upload gắn với @CurrentUser nên guest chỉ đụng tới upload của chính mình.
+                    .requestMatchers("/api/v1/me/**")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/uploads/direct", "/api/v1/uploads/*/complete")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.PUT, "/api/v1/uploads/*/content")
+                    .authenticated()
                     // Guest chỉ xem: mọi GET đều cho, request ghi (POST/PATCH/PUT/DELETE) chỉ admin
                     .requestMatchers(HttpMethod.GET, "/api/**")
                     .authenticated()

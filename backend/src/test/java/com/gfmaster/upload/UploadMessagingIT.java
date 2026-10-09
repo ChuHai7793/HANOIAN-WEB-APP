@@ -158,6 +158,22 @@ class UploadMessagingIT extends ApiTestSupport {
     mvc.perform(get(usedUrl)).andExpect(status().isOk());
   }
 
+  @Test
+  void orphanJobKeepsAvatarsUsedByProfiles() throws Exception {
+    UUID user = newUser();
+    String avatar = uploadReady(user);
+    jdbc.update(
+        "insert into user_profiles (user_id, avatar_url, created_at, updated_at) values (?::uuid, ?, now(), now())",
+        user.toString(), urlOf(avatar));
+    jdbc.update(
+        "update uploads set created_at = ? where id = ?::uuid",
+        Timestamp.from(Instant.now().minus(Duration.ofDays(8))), avatar);
+
+    orphanJob.cleanUp(Instant.now().minus(Duration.ofDays(7)));
+
+    assertThat(statusOf(avatar)).isNotNull();
+  }
+
   // ---- Helpers ----
 
   private String uploadReady(UUID user) throws Exception {

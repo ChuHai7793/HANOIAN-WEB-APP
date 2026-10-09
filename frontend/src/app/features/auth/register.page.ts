@@ -24,7 +24,7 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
         <div class="mb-6 text-center">
           <p class="text-4xl">💘</p>
           <h1 class="mt-2 text-2xl font-bold text-slate-900">Tạo tài khoản</h1>
-          <p class="mt-1 text-sm text-slate-500">Dữ liệu của bạn chỉ mình bạn xem được</p>
+          <p class="mt-1 text-sm text-slate-500">Đăng ký để xem sổ tay hẹn hò</p>
         </div>
 
         <form
@@ -135,7 +135,8 @@ export class RegisterPage {
     try {
       const { email, password, displayName } = this.form.getRawValue();
       await this.auth.register(email.trim(), password, displayName.trim());
-      await this.router.navigateByUrl('/');
+      // Mời nhập hồ sơ ngay sau khi đăng ký (có nút "Để sau")
+      await this.router.navigateByUrl('/onboarding');
     } catch (err) {
       this.error.set(errorMessage(err));
     } finally {

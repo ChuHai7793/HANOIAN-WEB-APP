@@ -22,7 +22,10 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import tools.jackson.databind.JsonNode;
 
-/** Phân quyền: admin được ghi; guest xem dữ liệu của admin, mọi request ghi bị 403. */
+/**
+ * Phân quyền: admin được ghi; guest xem dữ liệu của admin, mọi request ghi dữ liệu bị 403. Ngoại lệ:
+ * hồ sơ và upload ảnh của chính guest (ProfileIT, DirectUploadIT).
+ */
 class RoleIT extends ApiTestSupport {
 
   @Autowired JdbcTemplate jdbc;

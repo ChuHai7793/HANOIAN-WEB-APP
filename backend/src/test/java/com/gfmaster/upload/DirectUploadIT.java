@@ -118,8 +118,13 @@ class DirectUploadIT extends ApiTestSupport {
     getAs(other, "/api/v1/uploads/" + id).andExpect(status().isNotFound());
     putContent(other, "/api/v1/uploads/" + id + "/content", png(10, 10)).andExpect(status().isNotFound());
     postAs(other, "/api/v1/uploads/" + id + "/complete", "").andExpect(status().isNotFound());
-    // Guest (chỉ xem) không bắt đầu upload được
-    begin(newGuestOf(owner), "image/png", 100).andExpect(status().isForbidden());
+    // Guest upload được (ảnh đại diện), nhưng upload thuộc về chính guest chứ không phải admin của
+    // họ, và guest không đụng được upload của admin
+    UUID guest = newGuestOf(owner);
+    String guestUpload = body(begin(guest, "image/png", 100).andExpect(status().isCreated())).get("id").asString();
+    assertThat(jdbc.queryForObject("select user_id from uploads where id = ?::uuid", String.class, guestUpload))
+        .isEqualTo(guest.toString());
+    getAs(guest, "/api/v1/uploads/" + id).andExpect(status().isNotFound());
   }
 
   @Test

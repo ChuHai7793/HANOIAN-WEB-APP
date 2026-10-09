@@ -10,7 +10,7 @@ interface NavItem {
   path: string;
   label: string;
   icon: string;
-  badge: () => number;
+  badge?: () => number;
 }
 
 @Component({
@@ -41,23 +41,45 @@ interface NavItem {
             >
               <span class="text-lg">{{ item.icon }}</span>
               <span class="flex-1">{{ item.label }}</span>
-              <span
-                class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
-              >
-                {{ item.badge() }}
-              </span>
+              @if (item.badge) {
+                <span
+                  class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
+                >
+                  {{ item.badge() }}
+                </span>
+              }
+            </a>
+          }
+          @if (auth.user()?.role === 'ADMIN') {
+            <a
+              routerLink="/admin/users"
+              routerLinkActive="bg-brand-50 text-brand-700 font-semibold"
+              class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-50"
+              (click)="menuOpen.set(false)"
+            >
+              <span class="text-lg">👥</span>
+              <span class="flex-1">Người dùng</span>
             </a>
           }
         </nav>
 
         <div class="absolute bottom-0 w-full border-t border-slate-100 p-4">
           @if (auth.user(); as user) {
-            <div class="flex items-center gap-3">
-              <span
-                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700"
-              >
-                {{ initial(user.displayName) }}
-              </span>
+            <a
+              routerLink="/profile"
+              class="-m-1.5 flex items-center gap-3 rounded-lg p-1.5 transition hover:bg-slate-50"
+              title="Hồ sơ của tôi"
+              (click)="menuOpen.set(false)"
+            >
+              @if (user.avatarUrl) {
+                <img [src]="user.avatarUrl" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover" />
+              } @else {
+                <span
+                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700"
+                >
+                  {{ initial(user.displayName) }}
+                </span>
+              }
               <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-medium text-slate-800">
                   {{ user.displayName }}
@@ -69,7 +91,7 @@ interface NavItem {
                 </p>
                 <p class="truncate text-[11px] text-slate-400">{{ user.username || user.email }}</p>
               </div>
-            </div>
+            </a>
             <div class="mt-3 flex gap-2">
               <button
                 type="button"
