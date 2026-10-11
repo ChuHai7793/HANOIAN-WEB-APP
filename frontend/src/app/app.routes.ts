@@ -73,6 +73,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/profile/profile.page').then((m) => m.ProfilePage),
       },
       {
+        path: 'admin/dating',
+        title: 'Quản trị Tìm đối tượng · Dating Master',
+        canMatch: [adminGuard],
+        loadComponent: () => import('./features/admin/dating-admin.page').then((m) => m.DatingAdminPage),
+      },
+      {
         path: 'admin/users',
         title: 'Người dùng · Dating Master',
         canMatch: [adminGuard],

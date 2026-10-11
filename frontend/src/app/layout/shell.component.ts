@@ -219,7 +219,15 @@ export class ShellComponent {
       ],
     },
     ...(this.auth.user()?.role === 'ADMIN'
-      ? [{ title: 'Quản trị', items: [{ path: '/admin/users', label: 'Người dùng', icon: '👥' }] }]
+      ? [
+          {
+            title: 'Quản trị',
+            items: [
+              { path: '/admin/users', label: 'Người dùng', icon: '👥' },
+              { path: '/admin/dating', label: 'Tìm đối tượng', icon: '💘' },
+            ],
+          },
+        ]
       : []),
   ]);
 }

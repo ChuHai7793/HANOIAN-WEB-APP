@@ -5,6 +5,7 @@ import com.gfmaster.profile.Gender;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +20,8 @@ public final class DatingDtos {
    */
   public record DatingSettings(
       boolean enabled,
+      /** Admin đã khoá khỏi mục này */
+      boolean banned,
       DatingInterest interestedIn,
       int ageMin,
       int ageMax,
@@ -53,4 +56,10 @@ public final class DatingDtos {
 
   /** Người vừa được hoàn tác, để giao diện đưa thẻ trở lại. */
   public record UndoResult(Candidate restored) {}
+
+  public record BlockRequest(@NotNull UUID userId) {}
+
+  /** {@code block}: báo cáo xong thì chặn luôn người này. */
+  public record ReportRequest(
+      @NotNull UUID userId, @NotNull ReportReason reason, @Size(max = 1000) String note, boolean block) {}
 }

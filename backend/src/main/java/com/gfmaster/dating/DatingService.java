@@ -46,6 +46,9 @@ public class DatingService {
   }
 
   public DatingSettings saveSettings(UUID me, DatingSettingsRequest req) {
+    if (req.enabled() && profiles.findById(me).map(UserProfile::isDatingBanned).orElse(false)) {
+      throw new ApiException(ErrorCode.DATING_BANNED);
+    }
     if (req.ageMin() > req.ageMax()) {
       throw new ApiException(ErrorCode.VALIDATION_FAILED, "Tuổi nhỏ nhất phải không lớn hơn tuổi lớn nhất.");
     }
@@ -73,7 +76,7 @@ public class DatingService {
 
   public SwipeResult swipe(UUID me, UUID target, boolean liked) {
     requireEnabled(me);
-    if (me.equals(target) || !dating.isVisible(target)) throw ApiException.notFound();
+    if (me.equals(target) || !dating.isVisibleTo(me, target)) throw ApiException.notFound();
     if (!dating.insertSwipe(me, target, liked)) throw new ApiException(ErrorCode.ALREADY_SWIPED);
     if (!liked || !dating.liked(target, me)) return new SwipeResult(false, null);
     MatchRow match = dating.upsertMatch(me, target);
@@ -96,14 +99,33 @@ public class DatingService {
         .toList();
   }
 
+  /** Bỏ match: hai người vẫn không hiện lại với nhau (lượt quẹt được giữ). */
+  public void unmatch(UUID me, UUID matchId) {
+    if (!dating.deleteMatch(me, matchId)) throw ApiException.notFound();
+  }
+
+  /** Chặn: không còn thấy nhau trên thẻ, match giữa hai người bị xoá. */
+  public void block(UUID me, UUID other) {
+    if (me.equals(other) || !dating.userExists(other)) throw ApiException.notFound();
+    dating.block(me, other);
+    dating.deleteMatchBetween(me, other);
+  }
+
+  /** Báo cáo gửi về admin; có thể chặn luôn. */
+  public void report(UUID me, UUID other, ReportReason reason, String note, boolean alsoBlock) {
+    if (me.equals(other) || !dating.userExists(other)) throw ApiException.notFound();
+    dating.insertReport(me, other, reason.name(), note == null ? "" : note.trim());
+    if (alsoBlock) block(me, other);
+  }
+
   private Candidate card(UUID userId) {
     return dating.card(userId).orElseThrow(ApiException::notFound);
   }
 
   private void requireEnabled(UUID me) {
-    if (!profiles.findById(me).map(UserProfile::isDatingEnabled).orElse(false)) {
-      throw new ApiException(ErrorCode.DATING_NOT_ENABLED);
-    }
+    UserProfile p = profiles.findById(me).orElse(null);
+    if (p != null && p.isDatingBanned()) throw new ApiException(ErrorCode.DATING_BANNED);
+    if (p == null || !p.isDatingEnabled()) throw new ApiException(ErrorCode.DATING_NOT_ENABLED);
   }
 
   /** Những gì còn thiếu để bật "Tìm đối tượng". */
@@ -119,9 +141,11 @@ public class DatingService {
 
   private static DatingSettings toSettings(UserProfile p) {
     if (p == null) {
-      return new DatingSettings(false, DatingInterest.all, MIN_AGE, 99, false, missing(null));
+      return new DatingSettings(false, false, DatingInterest.all, MIN_AGE, 99, false, missing(null));
     }
     return new DatingSettings(
-        p.isDatingEnabled(), p.getInterestedIn(), p.getAgeMin(), p.getAgeMax(), p.isSameCityOnly(), missing(p));
+        p.isDatingEnabled(),
+        p.isDatingBanned(),
+        p.getInterestedIn(), p.getAgeMin(), p.getAgeMax(), p.isSameCityOnly(), missing(p));
   }
 }

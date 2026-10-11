@@ -1,18 +1,23 @@
 package com.gfmaster.dating;
 
 import com.gfmaster.common.security.CurrentUser;
+import com.gfmaster.dating.DatingDtos.BlockRequest;
 import com.gfmaster.dating.DatingDtos.Candidate;
 import com.gfmaster.dating.DatingDtos.DatingSettings;
 import com.gfmaster.dating.DatingDtos.DatingSettingsRequest;
 import com.gfmaster.dating.DatingDtos.MatchView;
+import com.gfmaster.dating.DatingDtos.ReportRequest;
 import com.gfmaster.dating.DatingDtos.SwipeRequest;
 import com.gfmaster.dating.DatingDtos.SwipeResult;
 import com.gfmaster.dating.DatingDtos.UndoResult;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -58,5 +63,23 @@ public class DatingController {
   @GetMapping("/matches")
   public List<MatchView> matches(@CurrentUser UUID me) {
     return service.matches(me);
+  }
+
+  @DeleteMapping("/matches/{id}")
+  public ResponseEntity<Void> unmatch(@CurrentUser UUID me, @PathVariable UUID id) {
+    service.unmatch(me, id);
+    return ResponseEntity.noContent().build();
+  }
+
+  @PostMapping("/blocks")
+  public ResponseEntity<Void> block(@CurrentUser UUID me, @Valid @RequestBody BlockRequest request) {
+    service.block(me, request.userId());
+    return ResponseEntity.noContent().build();
+  }
+
+  @PostMapping("/reports")
+  public ResponseEntity<Void> report(@CurrentUser UUID me, @Valid @RequestBody ReportRequest request) {
+    service.report(me, request.userId(), request.reason(), request.note(), request.block());
+    return ResponseEntity.status(HttpStatus.CREATED).build();
   }
 }

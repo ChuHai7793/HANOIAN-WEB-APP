@@ -79,6 +79,10 @@ public class UserProfile {
   @Column(nullable = false)
   private boolean sameCityOnly;
 
+  /** Admin khoá khỏi "Tìm đối tượng": không hiện với ai, không quẹt được. */
+  @Column(nullable = false)
+  private boolean datingBanned;
+
   /** Ảnh thêm (ngoài ảnh đại diện), tối đa 6, dạng lưu /uploads/<key> */
   @ElementCollection
   @CollectionTable(name = "profile_photos", joinColumns = @JoinColumn(name = "user_id"))

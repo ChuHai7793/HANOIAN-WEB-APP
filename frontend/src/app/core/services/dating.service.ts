@@ -5,9 +5,14 @@ import { API_BASE } from '../api/api';
 import { SILENT_CODES } from '../api/http-context';
 import {
   Candidate,
+  DatingActivity,
+  DatingReport,
   DatingSettings,
   DatingSettingsRequest,
+  DatingStats,
+  DatingUserRow,
   Match,
+  ReportReason,
   SwipeResult,
 } from '../models/dating.model';
 
@@ -51,5 +56,43 @@ export class DatingService {
 
   matches(): Promise<Match[]> {
     return firstValueFrom(this.http.get<Match[]>(`${this.base}/matches`));
+  }
+
+  unmatch(matchId: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.base}/matches/${matchId}`));
+  }
+
+  block(userId: string): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.base}/blocks`, { userId }));
+  }
+
+  report(userId: string, reason: ReportReason, note: string, block: boolean): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${this.base}/reports`, { userId, reason, note, block }));
+  }
+
+  // ---- Quản trị (chỉ admin) ----
+
+  adminStats(): Promise<DatingStats> {
+    return firstValueFrom(this.http.get<DatingStats>(`${API_BASE}/admin/dating/stats`));
+  }
+
+  adminReports(status: 'OPEN' | 'RESOLVED'): Promise<DatingReport[]> {
+    return firstValueFrom(this.http.get<DatingReport[]>(`${API_BASE}/admin/dating/reports`, { params: { status } }));
+  }
+
+  resolveReport(id: string, status: 'OPEN' | 'RESOLVED'): Promise<void> {
+    return firstValueFrom(this.http.put<void>(`${API_BASE}/admin/dating/reports/${id}`, { status }));
+  }
+
+  adminUsers(): Promise<DatingUserRow[]> {
+    return firstValueFrom(this.http.get<DatingUserRow[]>(`${API_BASE}/admin/dating/users`));
+  }
+
+  adminActivity(userId: string): Promise<DatingActivity> {
+    return firstValueFrom(this.http.get<DatingActivity>(`${API_BASE}/admin/dating/users/${userId}`));
+  }
+
+  ban(userId: string, banned: boolean): Promise<void> {
+    return firstValueFrom(this.http.put<void>(`${API_BASE}/admin/dating/users/${userId}/ban`, { banned }));
   }
 }

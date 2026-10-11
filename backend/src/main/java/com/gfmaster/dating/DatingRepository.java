@@ -31,11 +31,18 @@ public class DatingRepository {
       date_part('year', age(p.birthday))::int AS age
       """;
 
-  /** Người được xem đủ điều kiện hiện: đã bật, có ảnh, đủ 18 tuổi. */
+  /** Người được xem đủ điều kiện hiện: đã bật, không bị khoá, có ảnh, đủ 18 tuổi. */
   private static final String VISIBLE =
       """
-      p.dating_enabled AND p.avatar_url IS NOT NULL AND p.birthday IS NOT NULL
+      p.dating_enabled AND NOT p.dating_banned AND p.avatar_url IS NOT NULL AND p.birthday IS NOT NULL
       AND p.birthday <= current_date - interval '18 years'
+      """;
+
+  /** Không có chặn giữa :me và người {@code u.id}, theo cả hai chiều. */
+  private static final String NOT_BLOCKED =
+      """
+      NOT EXISTS (SELECT 1 FROM blocks b
+                  WHERE (b.blocker_id = :me AND b.blocked_id = u.id) OR (b.blocker_id = u.id AND b.blocked_id = :me))
       """;
 
   private final NamedParameterJdbcTemplate jdbc;
@@ -63,6 +70,11 @@ public class DatingRepository {
             + VISIBLE
             + """
               AND NOT EXISTS (SELECT 1 FROM swipes s WHERE s.swiper_id = :me AND s.target_id = u.id)
+            """
+            // Text block bỏ khoảng trắng cuối dòng: ghép " AND " tường minh, không để "AND" dính "NOT"
+            + " AND "
+            + NOT_BLOCKED
+            + """
               AND (me.interested_in = 'all' OR p.gender = me.interested_in)
               AND (p.interested_in = 'all' OR me.gender = p.interested_in)
               AND date_part('year', age(p.birthday)) BETWEEN me.age_min AND me.age_max
@@ -83,10 +95,49 @@ public class DatingRepository {
     return withPhotosAndInterests(jdbc.query(sql, Map.of("id", userId), this::mapCard)).stream().findFirst();
   }
 
-  /** Người này có đang hiện trong "Tìm đối tượng" không (đích của một lượt quẹt). */
-  public boolean isVisible(UUID userId) {
-    String sql = "SELECT count(*) FROM user_profiles p WHERE p.user_id = :id AND " + VISIBLE;
-    return jdbc.queryForObject(sql, Map.of("id", userId), Long.class) > 0;
+  /** Người này có hiện với :me không (đích của một lượt quẹt): hiện được và không chặn nhau. */
+  public boolean isVisibleTo(UUID me, UUID userId) {
+    String sql =
+        "SELECT count(*) FROM users u JOIN user_profiles p ON p.user_id = u.id WHERE u.id = :id AND "
+            + VISIBLE
+            + " AND "
+            + NOT_BLOCKED;
+    return jdbc.queryForObject(sql, Map.of("id", userId, "me", me), Long.class) > 0;
+  }
+
+  // ---- Bỏ match, chặn, báo cáo ----
+
+  /** Xoá match nếu :me là một trong hai người; false nếu không có. */
+  public boolean deleteMatch(UUID me, UUID matchId) {
+    return jdbc.update("DELETE FROM matches WHERE id = :id AND (user_a = :me OR user_b = :me)", Map.of("id", matchId, "me", me)) > 0;
+  }
+
+  public void deleteMatchBetween(UUID x, UUID y) {
+    jdbc.update(
+        "DELETE FROM matches WHERE (user_a = :x AND user_b = :y) OR (user_a = :y AND user_b = :x)",
+        Map.of("x", x, "y", y));
+  }
+
+  public void block(UUID blocker, UUID blocked) {
+    jdbc.update(
+        """
+        INSERT INTO blocks (blocker_id, blocked_id, created_at) VALUES (:blocker, :blocked, now())
+        ON CONFLICT (blocker_id, blocked_id) DO NOTHING
+        """,
+        Map.of("blocker", blocker, "blocked", blocked));
+  }
+
+  public boolean userExists(UUID id) {
+    return jdbc.queryForObject("SELECT count(*) FROM users WHERE id = :id", Map.of("id", id), Long.class) > 0;
+  }
+
+  public void insertReport(UUID reporter, UUID reported, String reason, String note) {
+    jdbc.update(
+        """
+        INSERT INTO reports (id, reporter_id, reported_id, reason, note, status, created_at)
+        VALUES (:id, :reporter, :reported, :reason, :note, 'OPEN', now())
+        """,
+        Map.of("id", UUID.randomUUID(), "reporter", reporter, "reported", reported, "reason", reason, "note", note));
   }
 
   /** false nếu đã quẹt người này rồi. */

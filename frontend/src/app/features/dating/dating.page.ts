@@ -11,6 +11,8 @@ import {
 import { DatingService } from '../../core/services/dating.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SwipeCardComponent } from './swipe-card.component';
+import { ReportDialogComponent, ReportInput } from './report-dialog.component';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component';
 
 type Tab = 'swipe' | 'matches';
 
@@ -20,7 +22,7 @@ type Tab = 'swipe' | 'matches';
  */
 @Component({
   selector: 'app-dating-page',
-  imports: [DatePipe, RouterLink, SwipeCardComponent],
+  imports: [DatePipe, RouterLink, SwipeCardComponent, ReportDialogComponent, ConfirmDialogComponent],
   template: `
     <div class="p-4 sm:p-6 lg:p-8">
       <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -62,6 +64,12 @@ type Tab = 'swipe' | 'matches';
 
       @if (!settings()) {
         <p class="text-sm text-slate-500">Đang tải…</p>
+      } @else if (settings()!.banned) {
+        <div class="mx-auto max-w-md rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center text-sm text-rose-800">
+          <p class="text-4xl">🚫</p>
+          <p class="mt-2 font-semibold">Bạn đã bị quản trị viên khoá khỏi Tìm đối tượng.</p>
+          <p class="mt-1">Hồ sơ của bạn không hiện với người khác. Liên hệ quản trị viên nếu có nhầm lẫn.</p>
+        </div>
       } @else if (!settings()!.enabled) {
         <!-- Chưa bật: giới thiệu, điều kiện, thông báo quyền của admin -->
         <div class="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
@@ -120,6 +128,11 @@ type Tab = 'swipe' | 'matches';
             <button type="button" class="flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl shadow-md hover:scale-105 disabled:opacity-40" title="Bỏ qua" [disabled]="!deck().length || busy()" (click)="card()?.fling(false)">✖️</button>
             <button type="button" class="flex h-16 w-16 items-center justify-center rounded-full bg-white text-3xl shadow-md hover:scale-105 disabled:opacity-40" title="Thích" [disabled]="!deck().length || busy()" (click)="card()?.fling(true)">❤️</button>
           </div>
+          @if (deck()[0]; as top) {
+            <button type="button" class="mt-4 text-xs text-slate-400 hover:text-rose-600" (click)="reporting.set({ userId: top.userId, name: top.displayName })">
+              🚩 Báo cáo / chặn {{ top.displayName }}
+            </button>
+          }
         </div>
       } @else {
         <!-- Tab Match -->
@@ -139,6 +152,11 @@ type Tab = 'swipe' | 'matches';
                   <p class="text-xs text-slate-500">
                     {{ m.user.city || '' }} · match {{ m.matchedAt | date: 'dd/MM/yyyy' }}
                   </p>
+                  <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                    <button type="button" class="text-slate-500 hover:text-slate-800" (click)="pending.set({ kind: 'unmatch', match: m })">💔 Bỏ match</button>
+                    <button type="button" class="text-slate-500 hover:text-slate-800" (click)="pending.set({ kind: 'block', match: m })">⛔ Chặn</button>
+                    <button type="button" class="text-slate-500 hover:text-rose-600" (click)="reporting.set({ userId: m.user.userId, name: m.user.displayName })">🚩 Báo cáo</button>
+                  </div>
                 </div>
               </div>
             }
@@ -146,6 +164,22 @@ type Tab = 'swipe' | 'matches';
         }
       }
     </div>
+
+    @if (reporting(); as target) {
+      <app-report-dialog [name]="target.name" (send)="sendReport(target.userId, $event)" (cancel)="reporting.set(null)" />
+    }
+
+    @if (pending(); as p) {
+      <app-confirm-dialog
+        [title]="p.kind === 'unmatch' ? 'Bỏ match?' : 'Chặn ' + p.match.user.displayName + '?'"
+        [message]="p.kind === 'unmatch'
+          ? 'Hai bạn sẽ không còn trong danh sách match của nhau và không hiện lại với nhau.'
+          : 'Hai bạn sẽ không còn thấy nhau trong Tìm đối tượng, match cũng bị xoá.'"
+        [confirmLabel]="p.kind === 'unmatch' ? 'Bỏ match' : 'Chặn'"
+        (confirm)="confirmPending()"
+        (cancel)="pending.set(null)"
+      />
+    }
 
     @if (filters(); as f) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" (click)="filters.set(null)">
@@ -233,6 +267,10 @@ export class DatingPage implements OnInit {
   /** Bộ lọc đang sửa (null = đóng hộp) */
   protected readonly filters = signal<DatingSettingsRequest | null>(null);
   protected readonly filterError = signal('');
+  /** Người đang được báo cáo (null = đóng hộp) */
+  protected readonly reporting = signal<{ userId: string; name: string } | null>(null);
+  /** Bỏ match hoặc chặn đang chờ xác nhận */
+  protected readonly pending = signal<{ kind: 'unmatch' | 'block'; match: Match } | null>(null);
 
   async ngOnInit(): Promise<void> {
     const s = await this.dating.settings();
@@ -258,6 +296,33 @@ export class DatingPage implements OnInit {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  protected async sendReport(userId: string, input: ReportInput): Promise<void> {
+    this.reporting.set(null);
+    await this.dating.report(userId, input.reason, input.note, input.block);
+    // Chặn thì người đó biến khỏi thẻ và danh sách match
+    if (input.block) this.removePerson(userId);
+    this.toast.success(input.block ? 'Đã gửi báo cáo và chặn người này.' : 'Đã gửi báo cáo tới quản trị viên.');
+  }
+
+  protected async confirmPending(): Promise<void> {
+    const p = this.pending();
+    if (!p) return;
+    this.pending.set(null);
+    if (p.kind === 'unmatch') {
+      await this.dating.unmatch(p.match.id);
+      this.toast.success(`Đã bỏ match với ${p.match.user.displayName}.`);
+    } else {
+      await this.dating.block(p.match.user.userId);
+      this.toast.success(`Đã chặn ${p.match.user.displayName}.`);
+    }
+    this.removePerson(p.match.user.userId);
+  }
+
+  private removePerson(userId: string): void {
+    this.deck.update((list) => list.filter((c) => c.userId !== userId));
+    this.matches.update((list) => list.filter((m) => m.user.userId !== userId));
   }
 
   protected openFilters(): void {
