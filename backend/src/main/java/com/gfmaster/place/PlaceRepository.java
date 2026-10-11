@@ -1,5 +1,6 @@
 package com.gfmaster.place;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,6 +15,10 @@ public interface PlaceRepository extends JpaRepository<Place, UUID> {
   List<Place> findAllByUserIdAndTypeOrderByCreatedAtDesc(UUID userId, PlaceType type);
 
   Optional<Place> findByIdAndUserId(UUID id, UUID userId);
+
+  /** Trong các quán của danh mục {@code catalogIds}, những quán đã có trong sổ tay của {@code userId}. */
+  @Query("select p.catalogId from Place p where p.user.id = :userId and p.catalogId in :catalogIds")
+  List<UUID> findCatalogIdsInNotebook(UUID userId, Collection<UUID> catalogIds);
 
   long deleteByIdAndUserId(UUID id, UUID userId);
 

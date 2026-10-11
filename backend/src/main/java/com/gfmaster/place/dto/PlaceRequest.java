@@ -13,6 +13,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalTime;
+import java.util.UUID;
 
 /** Body POST /places. Field chỉ đọc (id, version, createdAt...) bị bỏ qua nếu client gửi kèm. */
 @JsonIgnoreProperties({"id", "version", "createdAt", "updatedAt"})
@@ -32,7 +33,9 @@ public record PlaceRequest(
     @DecimalMin("-180") @DecimalMax("180") BigDecimal lng,
     Boolean hasWifi,
     Boolean hasParking,
-    @Size(max = 50) String cuisine) {
+    @Size(max = 50) String cuisine,
+    /** Chỉ khi thêm từ "Khám phá quán": id trong place_catalog. */
+    UUID catalogId) {
 
   /** Chặn data URL (base64): ảnh phải upload qua /uploads/image. */
   public static final String IMAGE_URL = "^$|^(https?://|/uploads/).*";

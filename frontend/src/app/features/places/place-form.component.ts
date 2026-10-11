@@ -243,6 +243,8 @@ export class PlaceFormComponent {
   readonly config = input.required<PlaceTypeConfig>();
   /** null = thêm mới */
   readonly place = input<Place | null>(null);
+  /** Thêm mới nhưng điền sẵn (từ "Khám phá quán"): tên, địa chỉ, toạ độ, link Maps… */
+  readonly draft = input<Partial<Place> | null>(null);
 
   readonly save = output<Place>();
   readonly cancel = output<void>();
@@ -285,7 +287,10 @@ export class PlaceFormComponent {
 
   private patchFromInput(): void {
     const existing = this.place();
-    if (!existing) return;
+    if (!existing) {
+      this.patchFromDraft();
+      return;
+    }
 
     this.form.patchValue({
       name: existing.name,
@@ -308,6 +313,22 @@ export class PlaceFormComponent {
     if (existing.lat !== null && existing.lng !== null) {
       this.coords.set({ lat: existing.lat, lng: existing.lng });
     }
+  }
+
+  private patchFromDraft(): void {
+    const d = this.draft();
+    if (!d) return;
+    this.form.patchValue({
+      name: d.name ?? '',
+      address: d.address ?? '',
+      openTime: d.openTime ?? this.form.value.openTime,
+      closeTime: d.closeTime ?? this.form.value.closeTime,
+      googleMapsUrl: d.googleMapsUrl ?? '',
+      coordinates: d.lat != null && d.lng != null ? `${d.lat}, ${d.lng}` : '',
+      ...(d.cuisine ? { cuisine: d.cuisine } : {}),
+      ...(d.hasWifi != null ? { hasWifi: d.hasWifi } : {}),
+    });
+    if (d.lat != null && d.lng != null) this.coords.set({ lat: d.lat, lng: d.lng });
   }
 
   protected invalid(control: string): boolean {

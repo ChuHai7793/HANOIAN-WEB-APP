@@ -111,4 +111,13 @@ gfm:
     orphan-uploads:
       cron: "0 0 3 * * *"           # 03:00 hằng ngày
       older-than: 7d                # chừa thời gian cho form đang mở dở
+  # "Khám phá quán": nhập từ OpenStreetMap qua Overpass API (miễn phí, hay quá tải nên có dự phòng)
+  catalog:
+    overpass-urls:
+      - https://overpass-api.de/api/interpreter
+      - https://maps.mail.ru/osm/tools/overpass/api/interpreter
+    request-timeout: 90s
+    delay-between-cells: 2s
+    retry-delay: 5s
+    stale-after: 1h
   mongo.enabled: false

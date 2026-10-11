@@ -51,15 +51,20 @@ interface NavItem {
             </a>
           }
           @if (auth.user()?.role === 'ADMIN') {
-            <a
-              routerLink="/admin/users"
-              routerLinkActive="bg-brand-50 text-brand-700 font-semibold"
-              class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-50"
-              (click)="menuOpen.set(false)"
-            >
-              <span class="text-lg">👥</span>
-              <span class="flex-1">Người dùng</span>
-            </a>
+            <p class="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Quản trị
+            </p>
+            @for (item of adminItems; track item.path) {
+              <a
+                [routerLink]="item.path"
+                routerLinkActive="bg-brand-50 text-brand-700 font-semibold"
+                class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-50"
+                (click)="menuOpen.set(false)"
+              >
+                <span class="text-lg">{{ item.icon }}</span>
+                <span class="flex-1">{{ item.label }}</span>
+              </a>
+            }
           }
         </nav>
 
@@ -210,5 +215,11 @@ export class ShellComponent {
       icon: '👩',
       badge: () => this.girlfriends.count(),
     },
+    { path: '/explore', label: 'Khám phá quán', icon: '🔎' },
+  ];
+
+  protected readonly adminItems: NavItem[] = [
+    { path: '/admin/users', label: 'Người dùng', icon: '👥' },
+    { path: '/admin/catalog', label: 'Nguồn dữ liệu quán', icon: '🗺️' },
   ];
 }

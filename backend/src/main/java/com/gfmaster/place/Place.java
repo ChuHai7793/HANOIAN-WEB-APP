@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import java.util.UUID;
 
 @Entity
 @Table(name = "places")
@@ -67,4 +68,8 @@ public class Place extends OwnedEntity {
 
   @Column(length = 50)
   private String cuisine;
+
+  /** Quán được thêm từ "Khám phá quán" (null nếu tự nhập): để danh mục hiện "Đã có trong sổ tay". */
+  @Column(name = "catalog_id")
+  private UUID catalogId;
 }
