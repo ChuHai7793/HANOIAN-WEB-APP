@@ -91,6 +91,23 @@
 			<artifactId>mapstruct</artifactId>
 			<version>${mapstruct.version}</version>
 		</dependency>
+		<!-- Processor đã khai ở annotationProcessorPaths (maven-compiler-plugin). Khai thêm ở đây (provided,
+		     không vào jar) chỉ để `dependency:go-offline` tải sẵn trong lớp cache của Docker: không thì bước
+		     build tải lại từ Maven Central mỗi lần deploy và dễ bị 429 Too Many Requests trên Render. -->
+		<dependency>
+			<groupId>org.mapstruct</groupId>
+			<artifactId>mapstruct-processor</artifactId>
+			<version>${mapstruct.version}</version>
+			<scope>provided</scope>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok-mapstruct-binding</artifactId>
+			<version>${lombok-mapstruct-binding.version}</version>
+			<scope>provided</scope>
+			<optional>true</optional>
+		</dependency>
 		<!-- Rate limit token bucket, trạng thái lưu trong Redis (dùng chung giữa các instance) -->
 		<dependency>
 			<groupId>com.bucket4j</groupId>
