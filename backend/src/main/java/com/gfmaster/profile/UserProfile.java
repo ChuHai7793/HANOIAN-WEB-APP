@@ -52,6 +52,27 @@ public class UserProfile {
 
   private Instant completedAt;
 
+  /** "Tìm đối tượng": hiện hồ sơ cho người khác quẹt. Chỉ bật được khi có ảnh và đủ 18 tuổi. */
+  @Column(nullable = false)
+  private boolean datingEnabled;
+
+  /** Bộ lọc khi quẹt: muốn gặp ai */
+  @Enumerated(EnumType.STRING)
+  @JdbcTypeCode(SqlTypes.VARCHAR)
+  @Column(nullable = false, length = 10)
+  private DatingInterest interestedIn = DatingInterest.all;
+
+  @JdbcTypeCode(SqlTypes.SMALLINT)
+  @Column(nullable = false)
+  private int ageMin = 18;
+
+  @JdbcTypeCode(SqlTypes.SMALLINT)
+  @Column(nullable = false)
+  private int ageMax = 99;
+
+  @Column(nullable = false)
+  private boolean sameCityOnly;
+
   @CreationTimestamp
   @Column(nullable = false, updatable = false)
   private Instant createdAt;

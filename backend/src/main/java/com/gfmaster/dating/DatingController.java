@@ -1,0 +1,62 @@
+package com.gfmaster.dating;
+
+import com.gfmaster.common.security.CurrentUser;
+import com.gfmaster.dating.DatingDtos.Candidate;
+import com.gfmaster.dating.DatingDtos.DatingSettings;
+import com.gfmaster.dating.DatingDtos.DatingSettingsRequest;
+import com.gfmaster.dating.DatingDtos.MatchView;
+import com.gfmaster.dating.DatingDtos.SwipeRequest;
+import com.gfmaster.dating.DatingDtos.SwipeResult;
+import com.gfmaster.dating.DatingDtos.UndoResult;
+import jakarta.validation.Valid;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/** "Tìm đối tượng" của người đang đăng nhập (guest cũng dùng được; SecurityConfig mở /dating/**). */
+@RestController
+@RequestMapping("/api/v1/dating")
+public class DatingController {
+
+  private final DatingService service;
+
+  public DatingController(DatingService service) {
+    this.service = service;
+  }
+
+  @GetMapping("/settings")
+  public DatingSettings settings(@CurrentUser UUID me) {
+    return service.settings(me);
+  }
+
+  @PutMapping("/settings")
+  public DatingSettings saveSettings(@CurrentUser UUID me, @Valid @RequestBody DatingSettingsRequest request) {
+    return service.saveSettings(me, request);
+  }
+
+  @GetMapping("/deck")
+  public List<Candidate> deck(@CurrentUser UUID me) {
+    return service.deck(me);
+  }
+
+  @PostMapping("/swipes")
+  public SwipeResult swipe(@CurrentUser UUID me, @Valid @RequestBody SwipeRequest request) {
+    return service.swipe(me, request.targetId(), request.liked());
+  }
+
+  @DeleteMapping("/swipes/last")
+  public UndoResult undo(@CurrentUser UUID me) {
+    return service.undo(me);
+  }
+
+  @GetMapping("/matches")
+  public List<MatchView> matches(@CurrentUser UUID me) {
+    return service.matches(me);
+  }
+}

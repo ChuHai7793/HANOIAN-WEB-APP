@@ -14,6 +14,11 @@ public enum ErrorCode {
   VERSION_CONFLICT(HttpStatus.CONFLICT, "Dữ liệu đã bị thay đổi ở thiết bị khác."),
   LINK_ALREADY_EXISTS(HttpStatus.CONFLICT, "Quán này đã được gắn cho người này."),
   ALREADY_IN_MY_PLACE(HttpStatus.CONFLICT, "Quán này đã có trong My place."),
+  DATING_NOT_ENABLED(HttpStatus.CONFLICT, "Bạn cần bật Tìm đối tượng trước."),
+  DATING_PROFILE_INCOMPLETE(
+      HttpStatus.BAD_REQUEST, "Cần ảnh đại diện và ngày sinh (đủ 18 tuổi) để bật Tìm đối tượng."),
+  ALREADY_SWIPED(HttpStatus.CONFLICT, "Bạn đã quẹt người này rồi."),
+  CANNOT_UNDO_MATCH(HttpStatus.CONFLICT, "Không hoàn tác được: hai bạn đã match."),
   EMAIL_TAKEN(HttpStatus.CONFLICT, "Email đã được sử dụng."),
   DATA_CONFLICT(HttpStatus.CONFLICT, "Dữ liệu bị trùng hoặc vi phạm ràng buộc."),
   IDEMPOTENCY_IN_PROGRESS(HttpStatus.CONFLICT, "Yêu cầu đang được xử lý."),

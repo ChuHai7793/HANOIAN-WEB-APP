@@ -194,7 +194,10 @@ export class ShellComponent {
   protected readonly sections = computed<NavSection[]>(() => [
     {
       title: '',
-      items: [{ path: '/explore', label: 'Khám phá quán', icon: '🔎' }],
+      items: [
+        { path: '/explore', label: 'Khám phá quán', icon: '🔎' },
+        { path: '/dating', label: 'Tìm đối tượng', icon: '💘' },
+      ],
     },
     {
       title: 'My place',
