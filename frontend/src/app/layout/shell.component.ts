@@ -29,10 +29,10 @@ interface NavItem {
     <div class="flex min-h-screen">
       <!-- Sidebar -->
       <aside
-        class="fixed inset-y-0 left-0 z-40 w-64 border-r border-slate-200 bg-white transition-transform lg:translate-x-0"
+        class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform lg:translate-x-0"
         [class.-translate-x-full]="!menuOpen()"
       >
-        <div class="flex h-16 items-center gap-2.5 border-b border-slate-100 px-5">
+        <div class="flex h-16 shrink-0 items-center gap-2.5 border-b border-slate-100 px-5">
           <span class="text-2xl">💘</span>
           <div>
             <p class="text-sm font-bold leading-tight text-slate-900">Dating Master</p>
@@ -40,7 +40,8 @@ interface NavItem {
           </div>
         </div>
 
-        <nav class="space-y-1 p-3">
+        <!-- Menu dài hơn màn hình thì cuộn trong phần này, không chui xuống dưới khối tài khoản -->
+        <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
           @for (section of sections(); track section.title) {
             @if (section.title) {
               <p class="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -71,7 +72,7 @@ interface NavItem {
           }
         </nav>
 
-        <div class="absolute bottom-0 w-full border-t border-slate-100 p-4">
+        <div class="shrink-0 border-t border-slate-100 bg-white p-4">
           @if (auth.user(); as user) {
             <a
               routerLink="/profile"
