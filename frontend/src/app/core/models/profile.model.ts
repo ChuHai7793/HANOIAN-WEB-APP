@@ -17,6 +17,10 @@ export interface Profile {
   phone: string | null;
   city: string | null;
   bio: string;
+  /** Ảnh thêm ngoài ảnh đại diện (tối đa 6), hiện trên thẻ "Tìm đối tượng" */
+  photos: string[];
+  /** Sở thích dạng thẻ (tối đa 10) */
+  interests: string[];
   completedAt: string | null;
   version: number | null;
 }

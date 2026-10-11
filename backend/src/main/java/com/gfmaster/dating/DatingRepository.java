@@ -7,6 +7,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -72,13 +74,13 @@ public class DatingRepository {
                      p.updated_at DESC, u.id
             LIMIT :limit
             """;
-    return jdbc.query(sql, Map.of("me", me, "limit", limit), this::mapCard);
+    return withPhotosAndInterests(jdbc.query(sql, Map.of("me", me, "limit", limit), this::mapCard));
   }
 
   /** Thẻ của một người bất kỳ (không xét điều kiện hiện), dùng cho match và hoàn tác. */
   public Optional<Candidate> card(UUID userId) {
     String sql = "SELECT " + CARD_COLUMNS + " FROM users u JOIN user_profiles p ON p.user_id = u.id WHERE u.id = :id";
-    return jdbc.query(sql, Map.of("id", userId), this::mapCard).stream().findFirst();
+    return withPhotosAndInterests(jdbc.query(sql, Map.of("id", userId), this::mapCard)).stream().findFirst();
   }
 
   /** Người này có đang hiện trong "Tìm đối tượng" không (đích của một lượt quẹt). */
@@ -162,6 +164,42 @@ public class DatingRepository {
   }
 
   public record MatchListRow(UUID id, UUID otherUserId, Instant createdAt) {}
+
+  /** Gắn ảnh thêm và sở thích (hai truy vấn cho cả danh sách, không N+1). */
+  private List<Candidate> withPhotosAndInterests(List<Candidate> cards) {
+    if (cards.isEmpty()) return cards;
+    Map<String, Object> ids = Map.of("ids", cards.stream().map(Candidate::userId).toList());
+    Map<UUID, List<String>> photos = new HashMap<>();
+    jdbc.query(
+        "SELECT user_id, url FROM profile_photos WHERE user_id IN (:ids) ORDER BY user_id, position",
+        ids,
+        (ResultSet rs) -> {
+          photos.computeIfAbsent(rs.getObject("user_id", UUID.class), k -> new ArrayList<>())
+              .add(imageUrls.toPublic(rs.getString("url")));
+        });
+    Map<UUID, List<String>> interests = new HashMap<>();
+    jdbc.query(
+        "SELECT user_id, interest FROM profile_interests WHERE user_id IN (:ids) ORDER BY user_id, position",
+        ids,
+        (ResultSet rs) -> {
+          interests.computeIfAbsent(rs.getObject("user_id", UUID.class), k -> new ArrayList<>())
+              .add(rs.getString("interest"));
+        });
+    return cards.stream()
+        .map(
+            c ->
+                new Candidate(
+                    c.userId(),
+                    c.displayName(),
+                    c.age(),
+                    c.gender(),
+                    c.city(),
+                    c.bio(),
+                    c.avatarUrl(),
+                    photos.getOrDefault(c.userId(), List.of()),
+                    interests.getOrDefault(c.userId(), List.of())))
+        .toList();
+  }
 
   private Candidate mapCard(ResultSet rs, int row) throws SQLException {
     String gender = rs.getString("gender");

@@ -22,6 +22,7 @@ public interface UploadRepository extends JpaRepository<Upload, UUID> {
             AND NOT EXISTS (SELECT 1 FROM places p WHERE p.image_url = u.url)
             AND NOT EXISTS (SELECT 1 FROM girlfriends g WHERE g.avatar_url = u.url)
             AND NOT EXISTS (SELECT 1 FROM user_profiles up WHERE up.avatar_url = u.url)
+            AND NOT EXISTS (SELECT 1 FROM profile_photos pp WHERE pp.url = u.url)
           ORDER BY u.created_at
           LIMIT :limit
           """,

@@ -134,6 +134,20 @@ class DatingIT extends ApiTestSupport {
     assertThat(ids(getAs(me, "/api/v1/dating/deck"))).doesNotContain(woman.toString());
   }
 
+  @Test
+  void cardShowsExtraPhotosAndInterests() throws Exception {
+    UUID me = enabled("female", 25, "Hà Nội", "all");
+    UUID other = enabled("male", 27, "Hà Nội", "all");
+    jdbc.update("insert into profile_photos (user_id, position, url) values (?, 0, '/uploads/p1.webp'), (?, 1, '/uploads/p2.webp')", other, other);
+    jdbc.update("insert into profile_interests (user_id, position, interest) values (?, 0, 'cafe'), (?, 1, 'phim')", other, other);
+
+    JsonNode card = null;
+    for (JsonNode c : body(getAs(me, "/api/v1/dating/deck"))) if (c.get("userId").asString().equals(other.toString())) card = c;
+    assertThat(card).isNotNull();
+    assertThat(card.get("photos").get(1).asString()).isEqualTo("/uploads/p2.webp");
+    assertThat(card.get("interests").get(0).asString()).isEqualTo("cafe");
+  }
+
   // ---- Helpers ----
 
   private UUID enabled(String gender, int age, String city, String interestedIn) {

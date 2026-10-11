@@ -83,6 +83,27 @@ class ProfileIT extends ApiTestSupport {
   }
 
   @Test
+  void photosAndInterestsAreSavedInOrderWithoutDuplicates() throws Exception {
+    UUID user = newUser();
+    putAs(
+            user,
+            """
+            {"displayName": "Mai", "photos": ["/uploads/u/2.webp", "/uploads/u/1.webp", "/uploads/u/2.webp"],
+             "interests": ["cafe", " phim ", "cafe"], "version": null}
+            """)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.photos[0]").value("/uploads/u/2.webp"))
+        .andExpect(jsonPath("$.photos[1]").value("/uploads/u/1.webp"))
+        .andExpect(jsonPath("$.photos.length()").value(2))
+        .andExpect(jsonPath("$.interests[1]").value("phim"))
+        .andExpect(jsonPath("$.interests.length()").value(2));
+
+    String seven = "[" + "\"/uploads/u/x.webp\",".repeat(6) + "\"/uploads/u/y.webp\"]";
+    putAs(user, "{\"displayName\": \"Mai\", \"photos\": " + seven + ", \"version\": 0}")
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
   void invalidProfileIsRejected() throws Exception {
     UUID user = newUser();
     putAs(user, profileJson("", null, null, null, null)).andExpect(status().isBadRequest());

@@ -57,6 +57,11 @@ public class ProfileService {
     profile.setPhone(blankToNull(req.phone()));
     profile.setCity(blankToNull(req.city()));
     profile.setBio(req.bio() == null ? "" : req.bio().trim());
+    // Thay toàn bộ danh sách (giữ thứ tự người dùng sắp xếp); bỏ phần tử trùng
+    replace(profile.getPhotos(), req.photos() == null ? List.of() : req.photos().stream().map(imageUrls::toStored).distinct().toList());
+    replace(
+        profile.getInterests(),
+        req.interests() == null ? List.of() : req.interests().stream().map(String::trim).distinct().toList());
     if (profile.getCompletedAt() == null) profile.setCompletedAt(Instant.now());
     UserProfile saved = profiles.saveAndFlush(profile);
     return toResponse(user, saved);
@@ -91,7 +96,8 @@ public class ProfileService {
 
   private ProfileResponse toResponse(User user, UserProfile p) {
     if (p == null) {
-      return new ProfileResponse(user.getDisplayName(), null, null, null, null, null, "", null, null);
+      return new ProfileResponse(
+          user.getDisplayName(), null, null, null, null, null, "", List.of(), List.of(), null, null);
     }
     return new ProfileResponse(
         user.getDisplayName(),
@@ -101,8 +107,15 @@ public class ProfileService {
         p.getPhone(),
         p.getCity(),
         p.getBio(),
+        p.getPhotos().stream().map(imageUrls::toPublic).toList(),
+        List.copyOf(p.getInterests()),
         p.getCompletedAt(),
         p.getVersion());
+  }
+
+  private static void replace(List<String> target, List<String> values) {
+    target.clear();
+    target.addAll(values);
   }
 
   private static String blankToNull(String s) {

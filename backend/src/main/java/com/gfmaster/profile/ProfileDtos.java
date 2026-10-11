@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 public final class ProfileDtos {
@@ -27,6 +28,9 @@ public final class ProfileDtos {
       @Pattern(regexp = "^$|^[0-9]{9,11}$", message = "Số điện thoại 9–11 chữ số") String phone,
       @Size(max = 80) String city,
       @Size(max = 500) String bio,
+      @Size(max = 6, message = "Tối đa 6 ảnh")
+          List<@NotBlank @Size(max = 1024) @Pattern(regexp = PlaceRequest.IMAGE_URL) String> photos,
+      @Size(max = 10, message = "Tối đa 10 sở thích") List<@NotBlank @Size(max = 30) String> interests,
       Long version) {}
 
   /** {@code version == null}: chưa lưu hồ sơ lần nào. avatarUrl đã là URL công khai. */
@@ -38,6 +42,8 @@ public final class ProfileDtos {
       String phone,
       String city,
       String bio,
+      List<String> photos,
+      List<String> interests,
       Instant completedAt,
       Long version) {}
 

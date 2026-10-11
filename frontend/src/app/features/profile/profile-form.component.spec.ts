@@ -16,6 +16,8 @@ const EMPTY: Profile = {
   phone: null,
   city: null,
   bio: '',
+  photos: [],
+  interests: [],
   completedAt: null,
   version: null,
 };
@@ -67,6 +69,8 @@ describe('ProfileFormComponent', () => {
       phone: null,
       city: 'Hà Nội',
       bio: '',
+      photos: [],
+      interests: [],
       version: null,
     });
     req.flush({ ...EMPTY, city: 'Hà Nội', version: 0, completedAt: '2026-10-09T00:00:00Z' });

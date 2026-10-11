@@ -2,7 +2,12 @@ import { DatePipe } from '@angular/common';
 import { Component, inject, OnInit, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { errorCode } from '../../core/api/api';
-import { Candidate, DatingSettings, Match } from '../../core/models/dating.model';
+import {
+  Candidate,
+  DatingSettings,
+  DatingSettingsRequest,
+  Match,
+} from '../../core/models/dating.model';
 import { DatingService } from '../../core/services/dating.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SwipeCardComponent } from './swipe-card.component';
@@ -24,6 +29,15 @@ type Tab = 'swipe' | 'matches';
           <p class="mt-1 text-sm text-slate-500">Quẹt phải để thích, quẹt trái để bỏ qua. Hai bên cùng thích là match.</p>
         </div>
         @if (settings()?.enabled) {
+          <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            title="Bộ lọc"
+            (click)="openFilters()"
+          >
+            ⚙️ Bộ lọc
+          </button>
           <div class="flex rounded-lg bg-slate-100 p-1 text-sm">
             <button
               type="button"
@@ -41,6 +55,7 @@ type Tab = 'swipe' | 'matches';
             >
               💞 Match
             </button>
+          </div>
           </div>
         }
       </div>
@@ -132,6 +147,60 @@ type Tab = 'swipe' | 'matches';
       }
     </div>
 
+    @if (filters(); as f) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" (click)="filters.set(null)">
+        <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl" (click)="$event.stopPropagation()">
+          <h2 class="mb-4 text-lg font-bold text-slate-900">⚙️ Bộ lọc</h2>
+          <label class="mb-1 block text-sm font-medium text-slate-700">Muốn gặp</label>
+          <select
+            class="mb-4 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+            [value]="f.interestedIn"
+            (change)="filters.set({ ...f, interestedIn: $any($event.target).value })"
+          >
+            <option value="all">Tất cả</option>
+            <option value="female">Nữ</option>
+            <option value="male">Nam</option>
+          </select>
+          <label class="mb-1 block text-sm font-medium text-slate-700">Tuổi</label>
+          <div class="mb-4 flex items-center gap-2">
+            <input
+              type="number" min="18" max="99"
+              class="w-20 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              [value]="f.ageMin"
+              (input)="filters.set({ ...f, ageMin: +$any($event.target).value })"
+            />
+            <span class="text-slate-400">–</span>
+            <input
+              type="number" min="18" max="99"
+              class="w-20 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              [value]="f.ageMax"
+              (input)="filters.set({ ...f, ageMax: +$any($event.target).value })"
+            />
+          </div>
+          <label class="mb-5 flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              class="h-4 w-4 accent-brand-600"
+              [checked]="f.sameCityOnly"
+              (change)="filters.set({ ...f, sameCityOnly: $any($event.target).checked })"
+            />
+            Chỉ người cùng thành phố với tôi
+          </label>
+          @if (filterError()) {
+            <p class="mb-3 text-xs text-rose-600">{{ filterError() }}</p>
+          }
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="text-xs font-medium text-rose-600 hover:underline" (click)="disable()">
+              Tắt Tìm đối tượng
+            </button>
+            <span class="flex-1"></span>
+            <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600" (click)="filters.set(null)">Huỷ</button>
+            <button type="button" class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700" (click)="saveFilters()">Lưu</button>
+          </div>
+        </div>
+      </div>
+    }
+
     @if (justMatched(); as m) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-brand-600/95 to-rose-500/95 p-6 text-center text-white">
         <div class="max-w-sm">
@@ -161,6 +230,9 @@ export class DatingPage implements OnInit {
   protected readonly justMatched = signal<Match | null>(null);
   protected readonly loading = signal(false);
   protected readonly busy = signal(false);
+  /** Bộ lọc đang sửa (null = đóng hộp) */
+  protected readonly filters = signal<DatingSettingsRequest | null>(null);
+  protected readonly filterError = signal('');
 
   async ngOnInit(): Promise<void> {
     const s = await this.dating.settings();
@@ -186,6 +258,44 @@ export class DatingPage implements OnInit {
     } finally {
       this.busy.set(false);
     }
+  }
+
+  protected openFilters(): void {
+    const s = this.settings();
+    if (!s) return;
+    this.filterError.set('');
+    this.filters.set({
+      enabled: s.enabled,
+      interestedIn: s.interestedIn,
+      ageMin: s.ageMin,
+      ageMax: s.ageMax,
+      sameCityOnly: s.sameCityOnly,
+    });
+  }
+
+  /** Lưu bộ lọc rồi lấy lại chồng thẻ theo bộ lọc mới */
+  protected async saveFilters(): Promise<void> {
+    const f = this.filters();
+    if (!f) return;
+    if (f.ageMin < 18 || f.ageMax > 99 || f.ageMin > f.ageMax) {
+      this.filterError.set('Tuổi từ 18 đến 99, tuổi nhỏ nhất không lớn hơn tuổi lớn nhất.');
+      return;
+    }
+    this.settings.set(await this.dating.saveSettings(f));
+    this.filters.set(null);
+    this.deck.set([]);
+    await this.loadDeck();
+  }
+
+  /** Ẩn hồ sơ khỏi mục này; quay về màn hình giới thiệu */
+  protected async disable(): Promise<void> {
+    const f = this.filters();
+    if (!f) return;
+    this.settings.set(await this.dating.saveSettings({ ...f, enabled: false }));
+    this.filters.set(null);
+    this.deck.set([]);
+    this.tab.set('swipe');
+    this.toast.success('Đã tắt Tìm đối tượng. Hồ sơ của bạn không còn hiện cho người khác.');
   }
 
   protected async openMatches(): Promise<void> {

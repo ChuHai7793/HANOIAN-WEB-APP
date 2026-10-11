@@ -101,6 +101,62 @@ import { todayIso } from '../../core/utils/id';
           </div>
         </div>
 
+        <!-- Ảnh thêm (tối đa 6) -->
+        <div>
+          <label class="mb-1.5 block text-sm font-medium text-slate-700">
+            Ảnh khác <span class="font-normal text-slate-400">({{ photos().length }}/{{ maxPhotos }}, hiện trên thẻ Tìm đối tượng)</span>
+          </label>
+          <div class="grid grid-cols-3 gap-2 sm:grid-cols-6">
+            @for (url of photos(); track url; let i = $index) {
+              <div class="relative aspect-square overflow-hidden rounded-lg bg-slate-100">
+                <img [src]="url" alt="" class="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  class="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 text-xs text-white"
+                  (click)="removePhoto(i)"
+                  aria-label="Bỏ ảnh"
+                >
+                  ✕
+                </button>
+              </div>
+            }
+          </div>
+          @if (photos().length < maxPhotos) {
+            <div class="mt-2">
+              <app-image-picker label="Thêm ảnh" [value]="newPhoto()" (valueChange)="addPhoto($event)" [maxSize]="1200" />
+            </div>
+          }
+        </div>
+
+        <!-- Sở thích -->
+        <div>
+          <label class="mb-1.5 block text-sm font-medium text-slate-700">Sở thích</label>
+          <div class="flex flex-wrap gap-2">
+            @for (item of interests(); track item; let i = $index) {
+              <span class="flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-sm text-brand-700">
+                {{ item }}
+                <button type="button" class="text-brand-400 hover:text-brand-700" (click)="removeInterest(i)" aria-label="Bỏ sở thích">×</button>
+              </span>
+            }
+          </div>
+          @if (interests().length < maxInterests) {
+            <div class="mt-2 flex gap-2">
+              <input
+                type="text"
+                maxlength="30"
+                [value]="interestDraft()"
+                (input)="interestDraft.set($any($event.target).value)"
+                (keydown.enter)="$event.preventDefault(); addInterest()"
+                class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                placeholder="VD: cafe, phim, du lịch… rồi Enter"
+              />
+              <button type="button" class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50" (click)="addInterest()">
+                Thêm
+              </button>
+            </div>
+          }
+        </div>
+
         <p class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
           Thông tin hồ sơ được lưu trong hệ thống và quản trị viên có thể xem. Chỉ điền những gì bạn
           muốn chia sẻ.
@@ -143,6 +199,13 @@ export class ProfileFormComponent implements OnInit {
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly avatarUrl = signal('');
+  protected readonly maxPhotos = 6;
+  protected readonly maxInterests = 10;
+  protected readonly photos = signal<string[]>([]);
+  /** Giá trị của ô "Thêm ảnh": về rỗng sau mỗi ảnh vừa thêm */
+  protected readonly newPhoto = signal('');
+  protected readonly interests = signal<string[]>([]);
+  protected readonly interestDraft = signal('');
   private version: number | null = null;
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
@@ -160,6 +223,31 @@ export class ProfileFormComponent implements OnInit {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  protected addPhoto(url: string): void {
+    if (url && !this.photos().includes(url) && this.photos().length < this.maxPhotos) {
+      this.photos.update((list) => [...list, url]);
+    }
+    // Đặt lại ô thêm ảnh (qua giá trị trung gian để signal chắc chắn đổi)
+    this.newPhoto.set(url);
+    setTimeout(() => this.newPhoto.set(''));
+  }
+
+  protected removePhoto(index: number): void {
+    this.photos.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  protected addInterest(): void {
+    const value = this.interestDraft().trim().slice(0, 30);
+    if (value && !this.interests().includes(value) && this.interests().length < this.maxInterests) {
+      this.interests.update((list) => [...list, value]);
+    }
+    this.interestDraft.set('');
+  }
+
+  protected removeInterest(index: number): void {
+    this.interests.update((list) => list.filter((_, i) => i !== index));
   }
 
   protected invalid(control: 'displayName' | 'phone'): boolean {
@@ -181,6 +269,8 @@ export class ProfileFormComponent implements OnInit {
         phone: v.phone.trim() || null,
         city: v.city.trim() || null,
         bio: v.bio.trim(),
+        photos: this.photos(),
+        interests: this.interests(),
         version: this.version,
       });
       this.apply(saved);
@@ -203,6 +293,8 @@ export class ProfileFormComponent implements OnInit {
   private apply(p: Profile): void {
     this.version = p.version;
     this.avatarUrl.set(p.avatarUrl ?? '');
+    this.photos.set(p.photos ?? []);
+    this.interests.set(p.interests ?? []);
     this.form.reset({
       displayName: p.displayName,
       gender: p.gender ?? '',
