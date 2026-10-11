@@ -8,7 +8,10 @@ import {
   DatingSettingsRequest,
   Match,
 } from '../../core/models/dating.model';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatingService } from '../../core/services/dating.service';
+import { MatchInboxService } from '../../core/services/match-inbox.service';
+import { RealtimeService } from '../../core/services/realtime.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SwipeCardComponent } from './swipe-card.component';
 import { ReportDialogComponent, ReportInput } from './report-dialog.component';
@@ -274,12 +277,23 @@ export class DatingPage implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly inbox = inject(MatchInboxService);
+
+  constructor() {
+    // Người kia vừa thích lại mình: báo ngay
+    inject(RealtimeService)
+      .events.pipe(takeUntilDestroyed())
+      .subscribe((e) => {
+        if (e.type === 'match') this.toast.success(`💞 Bạn và ${e.data.user.displayName} vừa match! Vào tab Match để nhắn tin.`);
+      });
+  }
 
   protected readonly card = viewChild<SwipeCardComponent>('card');
   protected readonly tab = signal<Tab>('swipe');
   protected readonly settings = signal<DatingSettings | null>(null);
   protected readonly deck = signal<Candidate[]>([]);
-  protected readonly matches = signal<Match[]>([]);
+  /** Danh sách match dùng chung, tự cập nhật khi có tin / match mới */
+  protected readonly matches = this.inbox.matches;
   protected readonly justMatched = signal<Match | null>(null);
   protected readonly loading = signal(false);
   protected readonly busy = signal(false);
@@ -348,7 +362,7 @@ export class DatingPage implements OnInit {
 
   private removePerson(userId: string): void {
     this.deck.update((list) => list.filter((c) => c.userId !== userId));
-    this.matches.update((list) => list.filter((m) => m.user.userId !== userId));
+    this.inbox.removeUser(userId);
   }
 
   protected openFilters(): void {
@@ -391,7 +405,7 @@ export class DatingPage implements OnInit {
 
   protected async openMatches(): Promise<void> {
     this.tab.set('matches');
-    this.matches.set(await this.dating.matches());
+    await this.inbox.refresh();
   }
 
   /** Thẻ đã bay ra: bỏ khỏi chồng thẻ ngay, gọi API sau (lỗi thì báo) */

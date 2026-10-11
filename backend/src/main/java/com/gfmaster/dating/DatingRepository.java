@@ -114,10 +114,12 @@ public class DatingRepository {
     return jdbc.update("DELETE FROM matches WHERE id = :id AND (user_a = :me OR user_b = :me)", Map.of("id", matchId, "me", me)) > 0;
   }
 
-  public void deleteMatchBetween(UUID x, UUID y) {
-    jdbc.update(
-        "DELETE FROM matches WHERE (user_a = :x AND user_b = :y) OR (user_a = :y AND user_b = :x)",
-        Map.of("x", x, "y", y));
+  /** Trả về id các match đã xoá (để báo cho người kia). */
+  public List<UUID> deleteMatchBetween(UUID x, UUID y) {
+    return jdbc.queryForList(
+        "DELETE FROM matches WHERE (user_a = :x AND user_b = :y) OR (user_a = :y AND user_b = :x) RETURNING id",
+        Map.of("x", x, "y", y),
+        UUID.class);
   }
 
   public void block(UUID blocker, UUID blocked) {

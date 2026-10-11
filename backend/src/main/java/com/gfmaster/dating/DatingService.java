@@ -6,14 +6,18 @@ import com.gfmaster.dating.DatingDtos.Candidate;
 import com.gfmaster.dating.DatingDtos.DatingSettings;
 import com.gfmaster.dating.DatingDtos.DatingSettingsRequest;
 import com.gfmaster.dating.DatingDtos.MatchView;
+import com.gfmaster.dating.DatingDtos.MessageEvent;
 import com.gfmaster.dating.DatingDtos.MessageView;
+import com.gfmaster.dating.DatingDtos.ReadEvent;
 import com.gfmaster.dating.DatingDtos.SwipeResult;
 import com.gfmaster.dating.DatingDtos.UndoResult;
+import com.gfmaster.dating.DatingDtos.UnmatchEvent;
 import com.gfmaster.dating.DatingRepository.LastSwipe;
 import com.gfmaster.dating.DatingRepository.MatchRow;
 import com.gfmaster.profile.DatingInterest;
 import com.gfmaster.profile.UserProfile;
 import com.gfmaster.profile.UserProfileRepository;
+import com.gfmaster.realtime.RealtimeEvents;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;
@@ -36,10 +40,12 @@ public class DatingService {
 
   private final UserProfileRepository profiles;
   private final DatingRepository dating;
+  private final RealtimeEvents events;
 
-  public DatingService(UserProfileRepository profiles, DatingRepository dating) {
+  public DatingService(UserProfileRepository profiles, DatingRepository dating, RealtimeEvents events) {
     this.profiles = profiles;
     this.dating = dating;
+    this.events = events;
   }
 
   @Transactional(readOnly = true)
@@ -82,6 +88,8 @@ public class DatingService {
     if (!dating.insertSwipe(me, target, liked)) throw new ApiException(ErrorCode.ALREADY_SWIPED);
     if (!liked || !dating.liked(target, me)) return new SwipeResult(false, null);
     MatchRow match = dating.upsertMatch(me, target);
+    // Người kia thấy match mới ngay (mình thì nhận trong response)
+    dating.card(me).ifPresent(c -> events.send(target, "match", new MatchView(match.id(), c, match.createdAt(), null, 0)));
     return new SwipeResult(true, new MatchView(match.id(), card(target), match.createdAt(), null, 0));
   }
 
@@ -112,35 +120,46 @@ public class DatingService {
   }
 
   public MessageView send(UUID me, UUID matchId, String body) {
-    requireParticipant(me, matchId);
+    UUID other = requireParticipant(me, matchId);
     if (profiles.findById(me).map(UserProfile::isDatingBanned).orElse(false)) {
       throw new ApiException(ErrorCode.DATING_BANNED);
     }
-    return dating.insertMessage(matchId, me, body.strip());
+    MessageView sent = dating.insertMessage(matchId, me, body.strip());
+    events.send(other, "message", new MessageEvent(matchId, sent.forOther()));
+    // Các tab khác của chính mình
+    events.send(me, "message", new MessageEvent(matchId, sent));
+    return sent;
   }
 
   /** Mở cuộc trò chuyện: đánh dấu đã xem các tin người kia gửi. */
   public void markRead(UUID me, UUID matchId) {
-    requireParticipant(me, matchId);
-    dating.markRead(matchId, me);
+    UUID other = requireParticipant(me, matchId);
+    if (dating.markRead(matchId, me) > 0) events.send(other, "read", new ReadEvent(matchId, Instant.now()));
   }
 
-  /** Không phải người trong match (hoặc match không còn) → 404, không lộ match có tồn tại hay không. */
-  private void requireParticipant(UUID me, UUID matchId) {
+  /**
+   * Không phải người trong match (hoặc match không còn) → 404, không lộ match có tồn tại hay không.
+   * Trả về người còn lại.
+   */
+  private UUID requireParticipant(UUID me, UUID matchId) {
     UUID[] pair = dating.participants(matchId).orElseThrow(ApiException::notFound);
-    if (!me.equals(pair[0]) && !me.equals(pair[1])) throw ApiException.notFound();
+    if (me.equals(pair[0])) return pair[1];
+    if (me.equals(pair[1])) return pair[0];
+    throw ApiException.notFound();
   }
 
   /** Bỏ match: hai người vẫn không hiện lại với nhau (lượt quẹt được giữ). */
   public void unmatch(UUID me, UUID matchId) {
+    UUID other = requireParticipant(me, matchId);
     if (!dating.deleteMatch(me, matchId)) throw ApiException.notFound();
+    events.send(other, "unmatch", new UnmatchEvent(matchId));
   }
 
   /** Chặn: không còn thấy nhau trên thẻ, match giữa hai người bị xoá. */
   public void block(UUID me, UUID other) {
     if (me.equals(other) || !dating.userExists(other)) throw ApiException.notFound();
     dating.block(me, other);
-    dating.deleteMatchBetween(me, other);
+    for (UUID matchId : dating.deleteMatchBetween(me, other)) events.send(other, "unmatch", new UnmatchEvent(matchId));
   }
 
   /** Báo cáo gửi về admin; có thể chặn luôn. */

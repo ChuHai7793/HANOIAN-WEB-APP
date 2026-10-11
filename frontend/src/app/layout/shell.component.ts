@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { PlaceService } from '../core/services/place.service';
 import { GirlfriendService } from '../core/services/girlfriend.service';
+import { MatchInboxService } from '../core/services/match-inbox.service';
 import { DataBootstrapService } from '../core/services/data-bootstrap.service';
 import { AuthService } from '../core/auth/auth.service';
 import { LegacyImportDialogComponent } from '../shared/ui/legacy-import-dialog.component';
@@ -17,6 +18,8 @@ interface NavItem {
   label: string;
   icon: string;
   badge?: () => number;
+  /** Số cần chú ý (tin chưa đọc): nền đỏ, ẩn khi bằng 0 */
+  alert?: () => number;
 }
 
 @Component({
@@ -53,6 +56,9 @@ interface NavItem {
               >
                 <span class="text-lg">{{ item.icon }}</span>
                 <span class="flex-1">{{ item.label }}</span>
+                @if (item.alert && item.alert() > 0) {
+                  <span class="rounded-full bg-rose-600 px-2 py-0.5 text-xs font-bold text-white">{{ item.alert() }}</span>
+                }
                 @if (item.badge) {
                   <span
                     class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
@@ -178,6 +184,8 @@ interface NavItem {
 export class ShellComponent {
   private readonly places = inject(PlaceService);
   private readonly girlfriends = inject(GirlfriendService);
+  /** Mở kết nối realtime khi vào app và giữ số tin chưa đọc cho menu */
+  private readonly inbox = inject(MatchInboxService);
 
   protected readonly menuOpen = signal(false);
   protected readonly bootstrap = inject(DataBootstrapService);
@@ -196,7 +204,7 @@ export class ShellComponent {
       title: '',
       items: [
         { path: '/explore', label: 'Khám phá quán', icon: '🔎' },
-        { path: '/dating', label: 'Tìm đối tượng', icon: '💘' },
+        { path: '/dating', label: 'Tìm đối tượng', icon: '💘', alert: () => this.inbox.unread() },
       ],
     },
     {

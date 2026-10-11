@@ -1,9 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Subject } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { ChatMessage, Match } from '../../core/models/dating.model';
 import { DatingService } from '../../core/services/dating.service';
+import { MatchInboxService } from '../../core/services/match-inbox.service';
+import { RealtimeEvent, RealtimeService } from '../../core/services/realtime.service';
 import { ChatPage, mergeMessages } from './chat.page';
 
 const msg = (id: string, at: string, mine: boolean, readAt: string | null = null): ChatMessage => ({
@@ -34,9 +38,14 @@ function fakeDating(first: ChatMessage[] | HttpErrorResponse) {
   };
 }
 
-async function open(dating: ReturnType<typeof fakeDating>) {
+async function open(dating: ReturnType<typeof fakeDating>, events = new Subject<RealtimeEvent>()) {
   TestBed.configureTestingModule({
-    providers: [provideRouter([{ path: 'dating/matches/:id', component: ChatPage }]), { provide: DatingService, useValue: dating }],
+    providers: [
+      provideRouter([{ path: 'dating/matches/:id', component: ChatPage }]),
+      { provide: DatingService, useValue: dating },
+      { provide: RealtimeService, useValue: { events, connected: signal(true) } },
+      { provide: MatchInboxService, useValue: { refreshSoon: vi.fn() } },
+    ],
   });
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl('/dating/matches/m1');
@@ -85,5 +94,33 @@ describe('ChatPage', () => {
     const harness = await open(fakeDating(notFound));
     expect(harness.routeNativeElement!.textContent).toContain('không còn');
     expect(harness.routeNativeElement!.querySelector('textarea')).toBeNull();
+  });
+
+  it('nhận tin, "Đã xem" và bỏ match ngay qua realtime', async () => {
+    const dating = fakeDating([msg('1', '2026-10-02T09:00:00Z', true)]);
+    const events = new Subject<RealtimeEvent>();
+    const harness = await open(dating, events);
+    const el = harness.routeNativeElement!;
+    const flush = async () => {
+      await new Promise((r) => setTimeout(r));
+      harness.detectChanges();
+    };
+
+    // Tin của chính mình đã được xem
+    events.next({ type: 'read', data: { matchId: 'm1', readAt: '2026-10-02T09:05:00Z' } });
+    await flush();
+    expect(el.textContent).toContain('Đã xem');
+
+    // Tin của match khác không hiện ở đây
+    events.next({ type: 'message', data: { matchId: 'khac', message: msg('x', '2026-10-02T09:06:00Z', false) } });
+    events.next({ type: 'message', data: { matchId: 'm1', message: msg('2', '2026-10-02T09:07:00Z', false) } });
+    await flush();
+    expect(el.textContent).toContain('tin 2');
+    expect(el.textContent).not.toContain('tin x');
+    expect(dating.markRead).toHaveBeenCalledWith('m1');
+
+    events.next({ type: 'unmatch', data: { matchId: 'm1' } });
+    await flush();
+    expect(el.textContent).toContain('không còn');
   });
 });

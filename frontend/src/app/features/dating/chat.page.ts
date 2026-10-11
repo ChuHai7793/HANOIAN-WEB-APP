@@ -1,12 +1,19 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, HostListener, inject, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { errorCode } from '../../core/api/api';
 import { ChatMessage, Match, MESSAGE_MAX } from '../../core/models/dating.model';
 import { DatingService } from '../../core/services/dating.service';
+import { MatchInboxService } from '../../core/services/match-inbox.service';
+import { RealtimeEvent, RealtimeService } from '../../core/services/realtime.service';
 
-/** Mỗi 3 giây hỏi tin mới khi đang mở cuộc trò chuyện (tab bị ẩn thì bỏ qua). */
+/**
+ * Tin mới tới ngay qua SSE ({@link RealtimeService}). Hỏi server chỉ để dự phòng: 3 giây/lần khi chưa có
+ * kết nối SSE, 30 giây/lần khi đã có (tab bị ẩn thì bỏ qua).
+ */
 export const POLL_MS = 3000;
+export const POLL_CONNECTED_MS = 30_000;
 const PAGE = 50;
 
 /** Gộp tin mới vào danh sách: bỏ trùng theo id (tin vừa gửi có thể về lại qua lần hỏi định kỳ), cũ trước mới sau. */
@@ -17,7 +24,7 @@ export function mergeMessages(list: ChatMessage[], incoming: ChatMessage[]): Cha
 }
 
 /**
- * Nhắn tin với một người đã match. Hỏi tin mới định kỳ, đánh dấu đã xem khi có tin người kia gửi,
+ * Nhắn tin với một người đã match. Tin mới, "Đã xem", bỏ match tới ngay qua SSE; đánh dấu đã xem khi có tin người kia gửi,
  * "Xem tin cũ hơn" để cuộn lên. Match bị bỏ / chặn thì báo cuộc trò chuyện không còn.
  */
 @Component({
@@ -99,6 +106,12 @@ export function mergeMessages(list: ChatMessage[], incoming: ChatMessage[]): Cha
 })
 export class ChatPage implements OnInit, OnDestroy {
   private readonly dating = inject(DatingService);
+  private readonly realtime = inject(RealtimeService);
+  private readonly inbox = inject(MatchInboxService);
+  private readonly destroyRef = inject(DestroyRef);
+  private lastPoll = 0;
+  /** Có tin người kia gửi tới lúc tab đang ẩn: đánh dấu đã xem khi quay lại */
+  private unseen = false;
   private readonly matchId = inject(ActivatedRoute).snapshot.paramMap.get('id')!;
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
   private timer: ReturnType<typeof setInterval> | undefined;
@@ -128,7 +141,42 @@ export class ChatPage implements OnInit, OnDestroy {
     this.loaded.set(true);
     await this.markReadIfNeeded(first);
     this.scrollToBottom();
-    this.timer = setInterval(() => void this.poll(), POLL_MS);
+    this.lastPoll = Date.now();
+    this.realtime.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((e) => void this.onEvent(e));
+    this.timer = setInterval(() => {
+      if (!this.realtime.connected() || Date.now() - this.lastPoll >= POLL_CONNECTED_MS) void this.poll();
+    }, POLL_MS);
+  }
+
+  @HostListener('document:visibilitychange')
+  protected onVisible(): void {
+    if (document.hidden || !this.unseen) return;
+    this.unseen = false;
+    void this.markReadIfNeeded(this.messages());
+  }
+
+  private async onEvent(e: RealtimeEvent): Promise<void> {
+    if (this.gone()) return;
+    switch (e.type) {
+      case 'ready': // vừa nối lại: lấy bù tin bị lỡ
+        await this.poll();
+        break;
+      case 'message':
+        if (e.data.matchId !== this.matchId) return;
+        this.messages.update((list) => mergeMessages(list, [e.data.message]));
+        this.scrollToBottom();
+        await this.markReadIfNeeded([e.data.message]);
+        break;
+      case 'read':
+        if (e.data.matchId !== this.matchId) return;
+        this.messages.update((list) =>
+          list.map((m) => (m.mine && !m.readAt && m.createdAt <= e.data.readAt ? { ...m, readAt: e.data.readAt } : m)),
+        );
+        break;
+      case 'unmatch':
+        if (e.data.matchId === this.matchId) this.stop();
+        break;
+    }
   }
 
   ngOnDestroy(): void {
@@ -138,6 +186,7 @@ export class ChatPage implements OnInit, OnDestroy {
   protected async poll(): Promise<void> {
     if (this.polling || this.gone() || (typeof document !== 'undefined' && document.hidden)) return;
     this.polling = true;
+    this.lastPoll = Date.now();
     try {
       // Lấy cả tin mới lẫn trạng thái "đã xem" của tin mình: hỏi lại từ tin cuối người kia chưa xem
       const after = this.oldestUnseenMine() ?? this.messages().at(-1)?.createdAt;
@@ -199,7 +248,13 @@ export class ChatPage implements OnInit, OnDestroy {
   }
 
   private async markReadIfNeeded(list: ChatMessage[]): Promise<void> {
-    if (list.some((m) => !m.mine && !m.readAt)) await this.dating.markRead(this.matchId).catch(() => undefined);
+    if (!list.some((m) => !m.mine && !m.readAt)) return;
+    if (typeof document !== 'undefined' && document.hidden) {
+      this.unseen = true;
+      return;
+    }
+    await this.dating.markRead(this.matchId).catch(() => undefined);
+    this.inbox.refreshSoon(); // số tin chưa đọc trên menu
   }
 
   /** Chạy một lần đọc; match không còn (404) thì dừng và báo. */

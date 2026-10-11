@@ -2,7 +2,7 @@ import { HttpClient, HttpContext } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE } from '../api/api';
-import { SILENT_CODES } from '../api/http-context';
+import { SILENT_CODES, SILENT_ERRORS } from '../api/http-context';
 import {
   Candidate,
   ChatMessage,
@@ -55,8 +55,11 @@ export class DatingService {
     );
   }
 
-  matches(): Promise<Match[]> {
-    return firstValueFrom(this.http.get<Match[]>(`${this.base}/matches`));
+  /** {@code silent}: tải nền, lỗi thì không hiện thông báo. */
+  matches(silent = false): Promise<Match[]> {
+    return firstValueFrom(
+      this.http.get<Match[]>(`${this.base}/matches`, { context: new HttpContext().set(SILENT_ERRORS, silent) }),
+    );
   }
 
   /** {@code after}: chỉ tin mới hơn (hỏi định kỳ); {@code before}: tin cũ hơn. Không có: 50 tin gần nhất. */

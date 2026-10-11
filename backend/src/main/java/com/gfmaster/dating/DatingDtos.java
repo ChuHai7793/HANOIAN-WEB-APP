@@ -59,7 +59,23 @@ public final class DatingDtos {
   public record LastMessage(String body, boolean mine, Instant at) {}
 
   /** Một tin nhắn. {@code mine}: do người đang xem gửi. {@code readAt}: người nhận đã xem lúc nào. */
-  public record MessageView(UUID id, UUID senderId, boolean mine, String body, Instant createdAt, Instant readAt) {}
+  public record MessageView(UUID id, UUID senderId, boolean mine, String body, Instant createdAt, Instant readAt) {
+    /** Cùng tin, nhìn từ phía người kia. */
+    public MessageView forOther() {
+      return new MessageView(id, senderId, !mine, body, createdAt, readAt);
+    }
+  }
+
+  // ---- Sự kiện realtime (SSE): message, read, match, unmatch ----
+
+  /** Tin mới trong một match ({@code message.mine} tính theo người nhận sự kiện). */
+  public record MessageEvent(UUID matchId, MessageView message) {}
+
+  /** Người kia đã xem các tin mình gửi trong match. */
+  public record ReadEvent(UUID matchId, Instant readAt) {}
+
+  /** Match không còn (người kia bỏ match hoặc chặn). */
+  public record UnmatchEvent(UUID matchId) {}
 
   public record SendMessageRequest(@NotBlank @Size(max = 2000) String body) {}
 

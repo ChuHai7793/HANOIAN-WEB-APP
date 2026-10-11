@@ -13,8 +13,7 @@ import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component
 import { PlaceType } from '../../core/models/place.model';
 import { daysSince } from '../../core/utils/id';
 import { AuthService } from '../../core/auth/auth.service';
-import { DatingService } from '../../core/services/dating.service';
-import { Match } from '../../core/models/dating.model';
+import { MatchInboxService } from '../../core/services/match-inbox.service';
 
 @Component({
   selector: 'app-girlfriend-list-page',
@@ -259,7 +258,7 @@ import { Match } from '../../core/models/dating.model';
 })
 export class GirlfriendListPage implements OnInit {
   private readonly service = inject(GirlfriendService);
-  private readonly dating = inject(DatingService);
+  private readonly inbox = inject(MatchInboxService);
   private readonly links = inject(PlaceLinkService);
   /** Guest chỉ xem: ẩn nút thêm/sửa/xoá (server cũng chặn request ghi). */
   protected readonly canEdit = inject(AuthService).canEdit;
@@ -270,15 +269,14 @@ export class GirlfriendListPage implements OnInit {
   protected readonly editing = signal<Girlfriend | null>(null);
   protected readonly pendingDelete = signal<Girlfriend | null>(null);
   protected readonly saving = signal(false);
-  /** Match của người đang đăng nhập (không phải hồ sơ người yêu, chỉ hiện kèm để nhắn tin nhanh) */
-  protected readonly matches = signal<Match[]>([]);
+  /**
+   * Match của người đang đăng nhập (không phải hồ sơ người yêu, chỉ hiện kèm để nhắn tin nhanh); tự cập
+   * nhật khi có tin / match mới.
+   */
+  protected readonly matches = this.inbox.matches;
 
-  async ngOnInit(): Promise<void> {
-    try {
-      this.matches.set(await this.dating.matches());
-    } catch {
-      // không có match thì thôi, trang vẫn dùng bình thường
-    }
+  ngOnInit(): void {
+    void this.inbox.refresh();
   }
 
   protected readonly all = computed(() => this.service.items());

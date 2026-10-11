@@ -12,11 +12,15 @@ import com.gfmaster.dating.DatingDtos.SendMessageRequest;
 import com.gfmaster.dating.DatingDtos.SwipeRequest;
 import com.gfmaster.dating.DatingDtos.SwipeResult;
 import com.gfmaster.dating.DatingDtos.UndoResult;
+import com.gfmaster.realtime.SseHub;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,6 +31,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /** "Tìm đối tượng" của người đang đăng nhập (guest cũng dùng được; SecurityConfig mở /dating/**). */
 @RestController
@@ -34,9 +39,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class DatingController {
 
   private final DatingService service;
+  private final SseHub hub;
 
-  public DatingController(DatingService service) {
+  public DatingController(DatingService service, SseHub hub) {
     this.service = service;
+    this.hub = hub;
   }
 
   @GetMapping("/settings")
@@ -73,6 +80,18 @@ public class DatingController {
   public ResponseEntity<Void> unmatch(@CurrentUser UUID me, @PathVariable UUID id) {
     service.unmatch(me, id);
     return ResponseEntity.noContent().build();
+  }
+
+  /**
+   * Kết nối SSE: tin nhắn, đã xem, match mới, bỏ match được đẩy xuống ngay. Ngắt thì trình duyệt tự nối
+   * lại và lấy bù qua các API thường.
+   */
+  @GetMapping(path = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+  public SseEmitter stream(@CurrentUser UUID me, HttpServletResponse response) {
+    response.setHeader(HttpHeaders.CACHE_CONTROL, "no-cache");
+    // Proxy (nginx…) không gom dữ liệu lại, đẩy từng sự kiện đi ngay
+    response.setHeader("X-Accel-Buffering", "no");
+    return hub.connect(me);
   }
 
   /** {@code after}: chỉ tin mới hơn (hỏi định kỳ); {@code before}: tin cũ hơn (cuộn lên). */

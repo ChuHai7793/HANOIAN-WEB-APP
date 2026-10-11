@@ -3,6 +3,13 @@ import { HttpErrorResponse } from '@angular/common/http';
 /** Cùng origin với frontend: dev đi qua proxy.conf.json, prod qua Caddy. */
 export const API_BASE = '/api/v1';
 
+/**
+ * Địa chỉ backend cho kết nối SSE, truyền lúc build: `ng build --define "STREAM_ORIGIN='https://…'"`.
+ * Không truyền (local, test) thì đi cùng domain qua proxy / rewrite như mọi API khác.
+ */
+declare const STREAM_ORIGIN: string | undefined;
+export const STREAM_BASE = (typeof STREAM_ORIGIN === 'string' ? STREAM_ORIGIN : '') + API_BASE;
+
 /** Lỗi server trả về theo chuẩn ProblemDetail (RFC 9457). */
 export interface ApiProblem {
   status: number;
