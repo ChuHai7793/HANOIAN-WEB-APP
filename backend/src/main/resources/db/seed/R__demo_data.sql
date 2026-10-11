@@ -10,6 +10,14 @@
 -- open/close là giờ mở sớm nhất và đóng muộn nhất, giờ nghỉ ghi trong note. rating, price_range,
 -- has_wifi/has_parking là đánh giá cá nhân mẫu, không phải dữ liệu của quán.
 
+-- Mục "Khám phá quán" của quán mẫu (id 4000...) và mục do V8 tạo từ quán mẫu: xoá trước khi xoá user
+-- (xoá user thì quán trong My place mất theo, không còn biết mục nào của quán mẫu)
+DELETE FROM place_catalog
+WHERE id::text LIKE '40000000-0000-4000-8000-%'
+   OR id IN (SELECT p.catalog_id FROM places p JOIN users u ON u.id = p.user_id
+             WHERE u.email IN ('demo@gfmaster.local', 'admin@gfmaster.local', 'guest@gfmaster.local')
+                OR u.username IN ('admin', 'guest'));
+
 -- demo@gfmaster.local: tài khoản mẫu cũ (trước khi có phân quyền)
 DELETE FROM users
 WHERE email IN ('demo@gfmaster.local', 'admin@gfmaster.local', 'guest@gfmaster.local')
@@ -96,6 +104,27 @@ INSERT INTO places (id, user_id, type, name, address, price_range, rating, open_
    'medium', 4, '10:30', '21:00', '/uploads/seed/vi-quang.webp',
    'Món xứ Quảng: nem lụi, mì Quảng, bánh khọt; tường vàng, đèn lồng kiểu Hội An. Nghỉ trưa 14:00–17:30.',
    'https://www.google.com/maps/@21.0203,105.8543,17z', 21.0203, 105.8543, NULL, NULL, 'Món Việt', '2026-01-01 00:00:00', '2026-01-01 00:00:00', 0);
+
+-- "Khám phá quán" chứa mọi quán: mỗi quán mẫu có một mục trong danh mục (id 4000...NN, cùng số với
+-- quán 1000...NN), khu vực lấy từ tên quận cuối địa chỉ; quán trong My place của admin trỏ về đó.
+INSERT INTO place_catalog (id, type, district, name, address, price_range, rating, open_time, close_time,
+                           image_url, note, google_maps_url, lat, lng, has_wifi, has_parking, cuisine,
+                           created_at, updated_at, version)
+SELECT ('4' || substr(p.id::text, 2))::uuid, p.type,
+       CASE
+         WHEN p.address LIKE '%Ba Đình'      THEN 'BA_DINH'
+         WHEN p.address LIKE '%Cầu Giấy'     THEN 'CAU_GIAY'
+         WHEN p.address LIKE '%Đống Đa'      THEN 'DONG_DA'
+         WHEN p.address LIKE '%Hai Bà Trưng' THEN 'HAI_BA_TRUNG'
+         ELSE 'HOAN_KIEM'
+       END,
+       p.name, p.address, p.price_range, p.rating, p.open_time, p.close_time, p.image_url, p.note,
+       p.google_maps_url, p.lat, p.lng, p.has_wifi, p.has_parking, p.cuisine, p.created_at, p.updated_at, 0
+FROM places p
+WHERE p.user_id = '00000000-0000-4000-8000-000000000001';
+
+UPDATE places SET catalog_id = ('4' || substr(id::text, 2))::uuid
+WHERE user_id = '00000000-0000-4000-8000-000000000001';
 
 INSERT INTO girlfriends (id, user_id, name, nickname, avatar_url, birthday, phone, status, started_date, note,
                          created_at, updated_at, version) VALUES

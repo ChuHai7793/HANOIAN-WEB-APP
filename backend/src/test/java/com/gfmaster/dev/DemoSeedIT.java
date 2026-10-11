@@ -51,9 +51,16 @@ class DemoSeedIT {
     assertThat(count("select count(*) from place_links l join girlfriends g on g.id = l.girlfriend_id where g.user_id = " + DEMO))
         .isEqualTo(4);
 
+    // Khám phá quán chứa mọi quán mẫu, khu vực theo địa chỉ, quán của admin trỏ về đó
+    assertThat(count("select count(*) from place_catalog where id::text like '40000000-0000-4000-8000-%'")).isEqualTo(16);
+    assertThat(countPlaces("and catalog_id is null")).isZero();
+    assertThat(count("select count(*) from place_catalog where name = 'Tiny Post Cafe' and district = 'DONG_DA'")).isEqualTo(1);
+    assertThat(count("select count(*) from place_catalog where name = 'Vị Quảng' and district = 'HOAN_KIEM'")).isEqualTo(1);
+
     // Chạy lại lần nữa vẫn ra đúng số đó (script idempotent)
     runSeed();
     assertThat(countPlaces("")).isEqualTo(16);
+    assertThat(count("select count(*) from place_catalog where id::text like '40000000-0000-4000-8000-%'")).isEqualTo(16);
   }
 
   @Test
