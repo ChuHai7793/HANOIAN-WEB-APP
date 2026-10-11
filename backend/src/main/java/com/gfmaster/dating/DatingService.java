@@ -6,6 +6,7 @@ import com.gfmaster.dating.DatingDtos.Candidate;
 import com.gfmaster.dating.DatingDtos.DatingSettings;
 import com.gfmaster.dating.DatingDtos.DatingSettingsRequest;
 import com.gfmaster.dating.DatingDtos.MatchView;
+import com.gfmaster.dating.DatingDtos.MessageView;
 import com.gfmaster.dating.DatingDtos.SwipeResult;
 import com.gfmaster.dating.DatingDtos.UndoResult;
 import com.gfmaster.dating.DatingRepository.LastSwipe;
@@ -13,6 +14,7 @@ import com.gfmaster.dating.DatingRepository.MatchRow;
 import com.gfmaster.profile.DatingInterest;
 import com.gfmaster.profile.UserProfile;
 import com.gfmaster.profile.UserProfileRepository;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
@@ -80,7 +82,7 @@ public class DatingService {
     if (!dating.insertSwipe(me, target, liked)) throw new ApiException(ErrorCode.ALREADY_SWIPED);
     if (!liked || !dating.liked(target, me)) return new SwipeResult(false, null);
     MatchRow match = dating.upsertMatch(me, target);
-    return new SwipeResult(true, new MatchView(match.id(), card(target), match.createdAt()));
+    return new SwipeResult(true, new MatchView(match.id(), card(target), match.createdAt(), null, 0));
   }
 
   /** Bỏ lượt quẹt gần nhất. Lượt thích đã tạo match thì không hoàn tác được. */
@@ -95,8 +97,38 @@ public class DatingService {
   @Transactional(readOnly = true)
   public List<MatchView> matches(UUID me) {
     return dating.matchesOf(me).stream()
-        .map(m -> new MatchView(m.id(), card(m.otherUserId()), m.createdAt()))
+        .map(m -> new MatchView(m.id(), card(m.otherUserId()), m.createdAt(), m.lastMessage(), m.unread()))
         .toList();
+  }
+
+  // ---- Nhắn tin (chỉ hai người trong match; bỏ match / chặn thì cuộc trò chuyện mất theo) ----
+
+  static final int MESSAGE_PAGE = 50;
+
+  @Transactional(readOnly = true)
+  public List<MessageView> messages(UUID me, UUID matchId, Instant after, Instant before) {
+    requireParticipant(me, matchId);
+    return dating.messages(matchId, me, after, before, MESSAGE_PAGE);
+  }
+
+  public MessageView send(UUID me, UUID matchId, String body) {
+    requireParticipant(me, matchId);
+    if (profiles.findById(me).map(UserProfile::isDatingBanned).orElse(false)) {
+      throw new ApiException(ErrorCode.DATING_BANNED);
+    }
+    return dating.insertMessage(matchId, me, body.strip());
+  }
+
+  /** Mở cuộc trò chuyện: đánh dấu đã xem các tin người kia gửi. */
+  public void markRead(UUID me, UUID matchId) {
+    requireParticipant(me, matchId);
+    dating.markRead(matchId, me);
+  }
+
+  /** Không phải người trong match (hoặc match không còn) → 404, không lộ match có tồn tại hay không. */
+  private void requireParticipant(UUID me, UUID matchId) {
+    UUID[] pair = dating.participants(matchId).orElseThrow(ApiException::notFound);
+    if (!me.equals(pair[0]) && !me.equals(pair[1])) throw ApiException.notFound();
   }
 
   /** Bỏ match: hai người vẫn không hiện lại với nhau (lượt quẹt được giữ). */

@@ -1,6 +1,8 @@
 package com.gfmaster.dating;
 
 import com.gfmaster.dating.DatingDtos.Candidate;
+import com.gfmaster.dating.DatingDtos.LastMessage;
+import com.gfmaster.dating.DatingDtos.MessageView;
 import com.gfmaster.profile.Gender;
 import com.gfmaster.upload.storage.ImageUrls;
 import java.sql.ResultSet;
@@ -161,7 +163,9 @@ public class DatingRepository {
 
   /** Tạo match cho cặp (thứ tự a < b), có rồi thì giữ nguyên. Trả về id và thời điểm match. */
   public MatchRow upsertMatch(UUID x, UUID y) {
-    UUID a = x.compareTo(y) < 0 ? x : y;
+    // So chuỗi hex, không dùng UUID.compareTo: Java so theo số có dấu, Postgres theo byte không dấu → CHECK
+    // (user_a < user_b) có thể từ chối.
+    UUID a = x.toString().compareTo(y.toString()) < 0 ? x : y;
     UUID b = a.equals(x) ? y : x;
     var params = Map.of("id", UUID.randomUUID(), "a", a, "b", b);
     jdbc.update(
@@ -199,22 +203,106 @@ public class DatingRepository {
     jdbc.update("DELETE FROM swipes WHERE swiper_id = :swiper AND target_id = :target", Map.of("swiper", swiper, "target", target));
   }
 
-  /** Match của {@code me}, mới nhất trước: id match, người kia, thời điểm. */
+  /**
+   * Match của {@code me} kèm tin nhắn gần nhất và số tin chưa đọc; cuộc trò chuyện có hoạt động gần nhất
+   * đứng trước (chưa nhắn thì tính theo lúc match).
+   */
   public List<MatchListRow> matchesOf(UUID me) {
     return jdbc.query(
         """
-        SELECT id, created_at, CASE WHEN user_a = :me THEN user_b ELSE user_a END AS other
-        FROM matches WHERE user_a = :me OR user_b = :me ORDER BY created_at DESC
+        SELECT m.id, m.created_at, CASE WHEN m.user_a = :me THEN m.user_b ELSE m.user_a END AS other,
+               last.body AS last_body, last.sender_id AS last_sender, last.created_at AS last_at,
+               (SELECT count(*) FROM messages u
+                WHERE u.match_id = m.id AND u.sender_id <> :me AND u.read_at IS NULL) AS unread
+        FROM matches m
+        LEFT JOIN LATERAL (SELECT body, sender_id, created_at FROM messages x
+                           WHERE x.match_id = m.id ORDER BY x.created_at DESC LIMIT 1) last ON true
+        WHERE m.user_a = :me OR m.user_b = :me
+        ORDER BY coalesce(last.created_at, m.created_at) DESC
         """,
         Map.of("me", me),
-        (rs, i) ->
-            new MatchListRow(
-                rs.getObject("id", UUID.class),
-                rs.getObject("other", UUID.class),
-                toInstant(rs.getTimestamp("created_at"))));
+        (rs, i) -> {
+          String body = rs.getString("last_body");
+          LastMessage last =
+              body == null
+                  ? null
+                  : new LastMessage(body, me.equals(rs.getObject("last_sender", UUID.class)), toInstant(rs.getTimestamp("last_at")));
+          return new MatchListRow(
+              rs.getObject("id", UUID.class),
+              rs.getObject("other", UUID.class),
+              toInstant(rs.getTimestamp("created_at")),
+              last,
+              rs.getInt("unread"));
+        });
   }
 
-  public record MatchListRow(UUID id, UUID otherUserId, Instant createdAt) {}
+  public record MatchListRow(UUID id, UUID otherUserId, Instant createdAt, LastMessage lastMessage, int unread) {}
+
+  // ---- Tin nhắn ----
+
+  /** Hai người của một match: [user_a, user_b]; rỗng nếu không có match. */
+  public Optional<UUID[]> participants(UUID matchId) {
+    return jdbc.query(
+            "SELECT user_a, user_b FROM matches WHERE id = :id",
+            Map.of("id", matchId),
+            (rs, i) -> new UUID[] {rs.getObject("user_a", UUID.class), rs.getObject("user_b", UUID.class)})
+        .stream()
+        .findFirst();
+  }
+
+  public MessageView insertMessage(UUID matchId, UUID sender, String body) {
+    UUID id = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO messages (id, match_id, sender_id, body, created_at) VALUES (:id, :match, :sender, :body, now())",
+        Map.of("id", id, "match", matchId, "sender", sender, "body", body));
+    return queryMessages(matchId, sender, "id = :mid", Map.of("mid", id), "ASC", 1).getFirst();
+  }
+
+  /**
+   * Tin nhắn của một match, cũ trước mới sau. {@code after}: chỉ lấy tin mới hơn (hỏi định kỳ khi đang mở
+   * cuộc trò chuyện); {@code before}: tin cũ hơn (cuộn lên). Không có cả hai: {@code limit} tin gần nhất.
+   */
+  public List<MessageView> messages(UUID matchId, UUID viewer, Instant after, Instant before, int limit) {
+    if (after != null) {
+      return queryMessages(matchId, viewer, "created_at > :after", Map.of("after", Timestamp.from(after)), "ASC", limit);
+    }
+    String where = before == null ? "true" : "created_at < :before";
+    Map<String, Object> extra = before == null ? Map.of() : Map.of("before", Timestamp.from(before));
+    return queryMessages(matchId, viewer, where, extra, "DESC", limit).reversed();
+  }
+
+  private List<MessageView> queryMessages(
+      UUID matchId, UUID viewer, String where, Map<String, Object> extra, String order, int limit) {
+    Map<String, Object> params = new HashMap<>(extra);
+    params.put("match", matchId);
+    params.put("limit", limit);
+    return jdbc.query(
+        "SELECT id, sender_id, body, created_at, read_at FROM messages WHERE match_id = :match AND "
+            + where
+            + " ORDER BY created_at "
+            + order
+            + ", id "
+            + order
+            + " LIMIT :limit",
+        params,
+        (rs, i) -> {
+          UUID sender = rs.getObject("sender_id", UUID.class);
+          return new MessageView(
+              rs.getObject("id", UUID.class),
+              sender,
+              viewer != null && viewer.equals(sender),
+              rs.getString("body"),
+              toInstant(rs.getTimestamp("created_at")),
+              toInstant(rs.getTimestamp("read_at")));
+        });
+  }
+
+  /** Đánh dấu đã xem mọi tin người kia gửi trong match. */
+  public int markRead(UUID matchId, UUID reader) {
+    return jdbc.update(
+        "UPDATE messages SET read_at = now() WHERE match_id = :match AND sender_id <> :reader AND read_at IS NULL",
+        Map.of("match", matchId, "reader", reader));
+  }
 
   /** Gắn ảnh thêm và sở thích (hai truy vấn cho cả danh sách, không N+1). */
   private List<Candidate> withPhotosAndInterests(List<Candidate> cards) {

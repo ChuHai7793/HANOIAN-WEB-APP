@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { GirlfriendService } from '../../core/services/girlfriend.service';
 import { PlaceLinkService } from '../../core/services/place-link.service';
@@ -13,6 +13,8 @@ import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component
 import { PlaceType } from '../../core/models/place.model';
 import { daysSince } from '../../core/utils/id';
 import { AuthService } from '../../core/auth/auth.service';
+import { DatingService } from '../../core/services/dating.service';
+import { Match } from '../../core/models/dating.model';
 
 @Component({
   selector: 'app-girlfriend-list-page',
@@ -38,6 +40,48 @@ import { AuthService } from '../../core/auth/auth.service';
         </button>
       }
     </div>
+
+    <!-- Những người đã match với mình trong "Tìm đối tượng" (của riêng từng người dùng) -->
+    @if (matches().length) {
+      <section class="mb-8">
+        <div class="mb-3 flex items-center justify-between gap-2">
+          <h2 class="text-base font-semibold text-slate-900">💞 Match từ Tìm đối tượng ({{ matches().length }})</h2>
+          <a routerLink="/dating" [queryParams]="{ tab: 'matches' }" class="text-xs font-medium text-brand-700 hover:underline">Xem tất cả</a>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          @for (m of matches(); track m.id) {
+            <div class="flex items-center gap-3 rounded-xl border border-rose-100 bg-rose-50/40 p-3">
+              <div class="relative shrink-0">
+                @if (m.user.avatarUrl) {
+                  <img [src]="m.user.avatarUrl" alt="" class="h-14 w-14 rounded-full object-cover ring-2 ring-rose-200" loading="lazy" />
+                } @else {
+                  <div class="flex h-14 w-14 items-center justify-center rounded-full bg-rose-100 text-xl">👤</div>
+                }
+                @if (m.unread > 0) {
+                  <span class="absolute -right-1 -top-1 rounded-full bg-rose-600 px-1.5 text-[11px] font-bold text-white">{{ m.unread }}</span>
+                }
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="truncate font-semibold text-slate-900">{{ m.user.displayName }}, {{ m.user.age }}</p>
+                <p class="truncate text-xs" [class]="m.unread > 0 ? 'font-semibold text-slate-800' : 'text-slate-500'">
+                  @if (m.lastMessage; as last) {
+                    {{ last.mine ? 'Bạn: ' : '' }}{{ last.body }}
+                  } @else {
+                    {{ m.user.city || 'Mới match' }}
+                  }
+                </p>
+              </div>
+              <a
+                [routerLink]="['/dating/matches', m.id]"
+                class="shrink-0 rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-700"
+              >
+                💬 Nhắn tin
+              </a>
+            </div>
+          }
+        </div>
+      </section>
+    }
 
     <div class="mb-6 flex flex-wrap items-center gap-2">
       <button
@@ -213,8 +257,9 @@ import { AuthService } from '../../core/auth/auth.service';
     </div>
   `,
 })
-export class GirlfriendListPage {
+export class GirlfriendListPage implements OnInit {
   private readonly service = inject(GirlfriendService);
+  private readonly dating = inject(DatingService);
   private readonly links = inject(PlaceLinkService);
   /** Guest chỉ xem: ẩn nút thêm/sửa/xoá (server cũng chặn request ghi). */
   protected readonly canEdit = inject(AuthService).canEdit;
@@ -225,6 +270,16 @@ export class GirlfriendListPage {
   protected readonly editing = signal<Girlfriend | null>(null);
   protected readonly pendingDelete = signal<Girlfriend | null>(null);
   protected readonly saving = signal(false);
+  /** Match của người đang đăng nhập (không phải hồ sơ người yêu, chỉ hiện kèm để nhắn tin nhanh) */
+  protected readonly matches = signal<Match[]>([]);
+
+  async ngOnInit(): Promise<void> {
+    try {
+      this.matches.set(await this.dating.matches());
+    } catch {
+      // không có match thì thôi, trang vẫn dùng bình thường
+    }
+  }
 
   protected readonly all = computed(() => this.service.items());
   protected readonly visible = computed(() => {

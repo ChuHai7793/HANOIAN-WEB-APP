@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import {
+  ChatMessage,
   DatingActivity,
   DatingReport,
   DatingStats,
@@ -143,12 +144,37 @@ type Tab = 'reports' | 'users';
                     <li class="text-xs">
                       <button type="button" class="font-medium text-brand-700 hover:underline" (click)="openActivity(e.user.id)">{{ e.user.displayName }}</button>
                       <span class="text-slate-400"> · {{ e.at | date: 'dd/MM HH:mm' }}</span>
+                      @if (e.matchId) {
+                        <button type="button" class="ml-1 text-brand-700 hover:underline" (click)="openConversation(a, e.matchId, e.user.displayName)">💬 Tin nhắn</button>
+                      }
                     </li>
                   }
                 </ul>
               </div>
             }
           </div>
+
+          @if (conversation(); as c) {
+            <div class="mt-5 border-t border-slate-100 pt-4">
+              <div class="mb-2 flex items-center justify-between">
+                <p class="text-sm font-semibold text-slate-700">💬 {{ c.title }} ({{ c.messages.length }} tin)</p>
+                <button type="button" class="text-xs text-slate-400 hover:text-slate-700" (click)="conversation.set(null)">Đóng</button>
+              </div>
+              @if (c.messages.length === 0) {
+                <p class="text-xs text-slate-400">Chưa nhắn tin.</p>
+              }
+              <div class="max-h-80 space-y-1.5 overflow-y-auto rounded-lg bg-slate-50 p-3">
+                @for (m of c.messages; track m.id) {
+                  <div class="flex" [class.justify-end]="m.senderId === c.ownerId">
+                    <div class="max-w-[80%] whitespace-pre-wrap break-words rounded-xl px-3 py-1.5 text-xs" [class]="m.senderId === c.ownerId ? 'bg-brand-100 text-brand-900' : 'bg-white text-slate-700'">
+                      {{ m.body }}
+                      <span class="block text-right text-[10px] text-slate-400">{{ m.createdAt | date: 'dd/MM HH:mm' }}{{ m.readAt ? ' · đã xem' : '' }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
         </div>
       </div>
     }
@@ -164,6 +190,8 @@ export class DatingAdminPage implements OnInit {
   protected readonly reports = signal<DatingReport[]>([]);
   protected readonly users = signal<DatingUserRow[]>([]);
   protected readonly activity = signal<DatingActivity | null>(null);
+  /** Cuộc trò chuyện đang xem; tin của người đang mở hoạt động (ownerId) nằm bên phải */
+  protected readonly conversation = signal<{ title: string; ownerId: string; messages: ChatMessage[] } | null>(null);
 
   async ngOnInit(): Promise<void> {
     await Promise.all([this.refreshStats(), this.loadReports('OPEN')]);
@@ -203,7 +231,13 @@ export class DatingAdminPage implements OnInit {
   }
 
   protected async openActivity(userId: string): Promise<void> {
+    this.conversation.set(null);
     this.activity.set(await this.dating.adminActivity(userId));
+  }
+
+  protected async openConversation(a: DatingActivity, matchId: string, otherName: string): Promise<void> {
+    const messages = await this.dating.adminMessages(matchId);
+    this.conversation.set({ title: `${a.summary.user.displayName} ↔ ${otherName}`, ownerId: a.summary.user.id, messages });
   }
 
   protected async resolve(r: DatingReport, status: 'OPEN' | 'RESOLVED'): Promise<void> {

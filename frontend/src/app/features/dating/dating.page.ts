@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject, OnInit, signal, viewChild } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { errorCode } from '../../core/api/api';
 import {
   Candidate,
@@ -87,7 +87,7 @@ type Tab = 'swipe' | 'matches';
             </p>
           }
           <p class="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-            Quản trị viên có thể xem hồ sơ và hoạt động của bạn trong mục này (ai bạn đã thích, các match).
+            Quản trị viên có thể xem hồ sơ và hoạt động của bạn trong mục này (ai bạn đã thích, các match, tin nhắn).
           </p>
           <button
             type="button"
@@ -142,16 +142,32 @@ type Tab = 'swipe' | 'matches';
           <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             @for (m of matches(); track m.id) {
               <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div class="aspect-[3/4] bg-slate-200">
+                <a [routerLink]="['/dating/matches', m.id]" class="relative block aspect-[3/4] bg-slate-200">
                   @if (m.user.avatarUrl) {
                     <img [src]="m.user.avatarUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
                   }
-                </div>
+                  @if (m.unread > 0) {
+                    <span class="absolute right-2 top-2 rounded-full bg-rose-600 px-2 py-0.5 text-xs font-bold text-white shadow">{{ m.unread }}</span>
+                  }
+                </a>
                 <div class="p-3">
                   <p class="font-semibold text-slate-900">{{ m.user.displayName }}, {{ m.user.age }}</p>
                   <p class="text-xs text-slate-500">
                     {{ m.user.city || '' }} · match {{ m.matchedAt | date: 'dd/MM/yyyy' }}
                   </p>
+                  <p class="mt-1 truncate text-xs" [class]="m.unread > 0 ? 'font-semibold text-slate-900' : 'text-slate-500'">
+                    @if (m.lastMessage; as last) {
+                      {{ last.mine ? 'Bạn: ' : '' }}{{ last.body }}
+                    } @else {
+                      Chưa nhắn tin
+                    }
+                  </p>
+                  <a
+                    [routerLink]="['/dating/matches', m.id]"
+                    class="mt-2 block rounded-lg bg-brand-600 px-3 py-1.5 text-center text-xs font-semibold text-white hover:bg-brand-700"
+                  >
+                    💬 Nhắn tin
+                  </a>
                   <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
                     <button type="button" class="text-slate-500 hover:text-slate-800" (click)="pending.set({ kind: 'unmatch', match: m })">💔 Bỏ match</button>
                     <button type="button" class="text-slate-500 hover:text-slate-800" (click)="pending.set({ kind: 'block', match: m })">⛔ Chặn</button>
@@ -244,7 +260,8 @@ type Tab = 'swipe' | 'matches';
             <img [src]="m.user.avatarUrl" alt="" class="mx-auto mt-6 h-40 w-40 rounded-full border-4 border-white object-cover shadow-lg" />
           }
           <div class="mt-8 flex flex-col gap-3">
-            <button type="button" class="rounded-full bg-white px-5 py-2.5 font-semibold text-brand-700" (click)="justMatched.set(null); openMatches()">Xem match</button>
+            <button type="button" class="rounded-full bg-white px-5 py-2.5 font-semibold text-brand-700" (click)="chatWith(m)">💬 Nhắn tin ngay</button>
+            <button type="button" class="rounded-full border border-white/70 px-5 py-2.5 font-semibold" (click)="justMatched.set(null); openMatches()">Xem match</button>
             <button type="button" class="rounded-full border border-white/70 px-5 py-2.5 font-semibold" (click)="justMatched.set(null)">Quẹt tiếp</button>
           </div>
         </div>
@@ -255,6 +272,8 @@ type Tab = 'swipe' | 'matches';
 export class DatingPage implements OnInit {
   private readonly dating = inject(DatingService);
   private readonly toast = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   protected readonly card = viewChild<SwipeCardComponent>('card');
   protected readonly tab = signal<Tab>('swipe');
@@ -275,7 +294,14 @@ export class DatingPage implements OnInit {
   async ngOnInit(): Promise<void> {
     const s = await this.dating.settings();
     this.settings.set(s);
+    // Quay lại từ trang nhắn tin: mở thẳng tab Match
+    if (this.route.snapshot.queryParamMap.get('tab') === 'matches') await this.openMatches();
     if (s.enabled) await this.loadDeck();
+  }
+
+  protected chatWith(m: Match): void {
+    this.justMatched.set(null);
+    void this.router.navigate(['/dating/matches', m.id]);
   }
 
   protected async enable(): Promise<void> {

@@ -68,6 +68,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dating/dating.page').then((m) => m.DatingPage),
       },
       {
+        path: 'dating/matches/:id',
+        title: 'Nhắn tin · Dating Master',
+        loadComponent: () => import('./features/dating/chat.page').then((m) => m.ChatPage),
+      },
+      {
         path: 'profile',
         title: 'Hồ sơ của tôi · Dating Master',
         loadComponent: () => import('./features/profile/profile.page').then((m) => m.ProfilePage),

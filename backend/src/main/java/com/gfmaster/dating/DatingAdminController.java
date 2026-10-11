@@ -33,10 +33,12 @@ public class DatingAdminController {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ImageUrls imageUrls;
+  private final DatingRepository dating;
 
-  public DatingAdminController(NamedParameterJdbcTemplate jdbc, ImageUrls imageUrls) {
+  public DatingAdminController(NamedParameterJdbcTemplate jdbc, ImageUrls imageUrls, DatingRepository dating) {
     this.jdbc = jdbc;
     this.imageUrls = imageUrls;
+    this.dating = dating;
   }
 
   /** Ảnh dạng lưu (/uploads/...) → URL công khai (local hoặc CDN). */
@@ -58,7 +60,8 @@ public class DatingAdminController {
   public record UserRow(
       Person user, boolean enabled, boolean banned, long likesGiven, long likesReceived, long matches, long reportsAgainst) {}
 
-  public record Edge(Person user, Instant at) {}
+  /** {@code matchId}: chỉ có ở danh sách match (để admin mở cuộc trò chuyện). */
+  public record Edge(Person user, Instant at, UUID matchId) {}
 
   public record Activity(UserRow summary, List<Edge> likesGiven, List<Edge> likesReceived, List<Edge> matches) {}
 
@@ -143,12 +146,20 @@ public class DatingAdminController {
             .orElseThrow(ApiException::notFound);
     return new Activity(
         summary,
-        edges("SELECT s.target_id AS other, s.created_at AS at FROM swipes s WHERE s.swiper_id = :id AND s.liked", id),
-        edges("SELECT s.swiper_id AS other, s.created_at AS at FROM swipes s WHERE s.target_id = :id AND s.liked", id),
+        edges("SELECT s.target_id AS other, s.created_at AS at, NULL::uuid AS match_id FROM swipes s WHERE s.swiper_id = :id AND s.liked", id),
+        edges("SELECT s.swiper_id AS other, s.created_at AS at, NULL::uuid AS match_id FROM swipes s WHERE s.target_id = :id AND s.liked", id),
         edges(
-            "SELECT CASE WHEN m.user_a = :id THEN m.user_b ELSE m.user_a END AS other, m.created_at AS at"
-                + " FROM matches m WHERE m.user_a = :id OR m.user_b = :id",
+            "SELECT CASE WHEN m.user_a = :id THEN m.user_b ELSE m.user_a END AS other, m.created_at AS at,"
+                + " m.id AS match_id FROM matches m WHERE m.user_a = :id OR m.user_b = :id",
             id));
+  }
+
+  /** Admin có toàn quyền: đọc cuộc trò chuyện của một match (cũ trước mới sau, tối đa 500 tin). */
+  @GetMapping("/matches/{id}/messages")
+  @Transactional(readOnly = true)
+  public List<DatingDtos.MessageView> messages(@PathVariable UUID id) {
+    if (dating.participants(id).isEmpty()) throw ApiException.notFound();
+    return dating.messages(id, null, null, null, 500);
   }
 
   /** Khoá: không hiện với ai, không quẹt được. Mở khoá: người đó tự bật lại. */
@@ -188,12 +199,12 @@ public class DatingAdminController {
 
   private List<Edge> edges(String sql, UUID id) {
     return jdbc.query(
-        "SELECT e.at, u.id, u.display_name, u.email, p.avatar_url FROM ("
+        "SELECT e.at, e.match_id, u.id, u.display_name, u.email, p.avatar_url FROM ("
             + sql
             + ") e JOIN users u ON u.id = e.other LEFT JOIN user_profiles p ON p.user_id = u.id ORDER BY e.at DESC",
         Map.of("id", id),
         (rs, i) ->
-            new Edge(person(rs, ""), instant(rs.getTimestamp("at"))));
+            new Edge(person(rs, ""), instant(rs.getTimestamp("at")), rs.getObject("match_id", UUID.class)));
   }
 
   private static Instant instant(Timestamp t) {

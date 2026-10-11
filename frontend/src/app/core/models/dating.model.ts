@@ -33,7 +33,24 @@ export interface Match {
   id: string;
   user: Candidate;
   matchedAt: string;
+  /** Tin nhắn gần nhất (null: chưa nhắn) */
+  lastMessage: { body: string; mine: boolean; at: string } | null;
+  /** Số tin người kia gửi mà mình chưa xem */
+  unread: number;
 }
+
+/** Một tin nhắn trong cuộc trò chuyện của một match. */
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  mine: boolean;
+  body: string;
+  createdAt: string;
+  /** Người nhận đã xem lúc nào (null: chưa xem) */
+  readAt: string | null;
+}
+
+export const MESSAGE_MAX = 2000;
 
 export type ReportReason = 'fake_profile' | 'inappropriate' | 'harassment' | 'spam' | 'underage' | 'other';
 
@@ -86,9 +103,16 @@ export interface DatingUserRow {
 
 export interface DatingActivity {
   summary: DatingUserRow;
-  likesGiven: { user: AdminPerson; at: string }[];
-  likesReceived: { user: AdminPerson; at: string }[];
-  matches: { user: AdminPerson; at: string }[];
+  likesGiven: ActivityEdge[];
+  likesReceived: ActivityEdge[];
+  matches: ActivityEdge[];
+}
+
+/** Một người trong hoạt động của ai đó; {@code matchId} chỉ có ở danh sách match (để xem tin nhắn). */
+export interface ActivityEdge {
+  user: AdminPerson;
+  at: string;
+  matchId: string | null;
 }
 
 export interface SwipeResult {

@@ -5,6 +5,7 @@ import { API_BASE } from '../api/api';
 import { SILENT_CODES } from '../api/http-context';
 import {
   Candidate,
+  ChatMessage,
   DatingActivity,
   DatingReport,
   DatingSettings,
@@ -58,6 +59,32 @@ export class DatingService {
     return firstValueFrom(this.http.get<Match[]>(`${this.base}/matches`));
   }
 
+  /** {@code after}: chỉ tin mới hơn (hỏi định kỳ); {@code before}: tin cũ hơn. Không có: 50 tin gần nhất. */
+  messages(matchId: string, opts: { after?: string; before?: string } = {}): Promise<ChatMessage[]> {
+    const params: Record<string, string> = {};
+    if (opts.after) params['after'] = opts.after;
+    if (opts.before) params['before'] = opts.before;
+    return firstValueFrom(
+      this.http.get<ChatMessage[]>(`${this.base}/matches/${matchId}/messages`, {
+        params,
+        // Match đã bị bỏ / chặn: trang chat tự xử lý
+        context: new HttpContext().set(SILENT_CODES, ['NOT_FOUND']),
+      }),
+    );
+  }
+
+  sendMessage(matchId: string, body: string): Promise<ChatMessage> {
+    return firstValueFrom(this.http.post<ChatMessage>(`${this.base}/matches/${matchId}/messages`, { body }));
+  }
+
+  markRead(matchId: string): Promise<void> {
+    return firstValueFrom(
+      this.http.post<void>(`${this.base}/matches/${matchId}/read`, {}, {
+        context: new HttpContext().set(SILENT_CODES, ['NOT_FOUND']),
+      }),
+    );
+  }
+
   unmatch(matchId: string): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`${this.base}/matches/${matchId}`));
   }
@@ -86,6 +113,10 @@ export class DatingService {
 
   adminUsers(): Promise<DatingUserRow[]> {
     return firstValueFrom(this.http.get<DatingUserRow[]>(`${API_BASE}/admin/dating/users`));
+  }
+
+  adminMessages(matchId: string): Promise<ChatMessage[]> {
+    return firstValueFrom(this.http.get<ChatMessage[]>(`${API_BASE}/admin/dating/matches/${matchId}/messages`));
   }
 
   adminActivity(userId: string): Promise<DatingActivity> {

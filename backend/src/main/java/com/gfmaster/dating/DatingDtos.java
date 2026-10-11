@@ -4,6 +4,7 @@ import com.gfmaster.profile.DatingInterest;
 import com.gfmaster.profile.Gender;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
@@ -49,7 +50,18 @@ public final class DatingDtos {
 
   public record SwipeRequest(@NotNull UUID targetId, boolean liked) {}
 
-  public record MatchView(UUID id, Candidate user, Instant matchedAt) {}
+  /**
+   * Một match. {@code lastMessage}: tin nhắn gần nhất (null nếu chưa nhắn); {@code unread}: số tin người kia
+   * gửi mà mình chưa xem.
+   */
+  public record MatchView(UUID id, Candidate user, Instant matchedAt, LastMessage lastMessage, int unread) {}
+
+  public record LastMessage(String body, boolean mine, Instant at) {}
+
+  /** Một tin nhắn. {@code mine}: do người đang xem gửi. {@code readAt}: người nhận đã xem lúc nào. */
+  public record MessageView(UUID id, UUID senderId, boolean mine, String body, Instant createdAt, Instant readAt) {}
+
+  public record SendMessageRequest(@NotBlank @Size(max = 2000) String body) {}
 
   /** {@code match}: có khi lượt thích này tạo match (hai bên cùng thích). */
   public record SwipeResult(boolean matched, MatchView match) {}
