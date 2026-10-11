@@ -59,8 +59,9 @@ public class PlaceController {
     return service.update(userId, id, patchReader.read(body, PlacePatch.class));
   }
 
+  /** "Bỏ khỏi My place": mỗi người chỉ xoá được quán của chính mình (guest cũng được). */
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@DataOwner UUID userId, @PathVariable UUID id) {
+  public ResponseEntity<Void> delete(@CurrentUser UUID userId, @PathVariable UUID id) {
     service.delete(userId, id);
     return ResponseEntity.noContent().build();
   }

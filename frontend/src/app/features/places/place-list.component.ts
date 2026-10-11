@@ -1,11 +1,14 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PlaceService } from '../../core/services/place.service';
+import { PlaceLinkService } from '../../core/services/place-link.service';
+import { ToastService } from '../../core/services/toast.service';
 import { Place, PriceRange, PRICE_RANGES, priceLabel } from '../../core/models/place.model';
 import { PlaceTypeConfig } from './place.config';
 import { PlaceDetailComponent } from './place-detail.component';
 import { RatingStarsComponent } from '../../shared/ui/rating-stars.component';
 import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
+import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component';
 import { directionsUrl } from '../../core/utils/gmap-url';
 import { formatDistance, haversineKm, LatLng } from '../../core/utils/geo';
 
@@ -18,7 +21,7 @@ interface PlaceRow {
 
 @Component({
   selector: 'app-place-list',
-  imports: [RouterLink, PlaceDetailComponent, RatingStarsComponent, EmptyStateComponent],
+  imports: [RouterLink, PlaceDetailComponent, RatingStarsComponent, EmptyStateComponent, ConfirmDialogComponent],
   template: `
     <!-- Vùng cố định: tiêu đề + bộ lọc. top-16 để nằm dưới thanh header mobile. -->
     <div
@@ -232,6 +235,14 @@ interface PlaceRow {
                 >
                   👁️
                 </button>
+                <button
+                  type="button"
+                  class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-rose-600 transition hover:bg-rose-50"
+                  (click)="pendingRemove.set(item.place)"
+                  title="Bỏ khỏi My place"
+                >
+                  🗑️
+                </button>
               </div>
             </div>
           </article>
@@ -249,14 +260,27 @@ interface PlaceRow {
         (dismiss)="detailing.set(null)"
       />
     }
+
+    <!-- Xác nhận bỏ khỏi My place -->
+    @if (pendingRemove(); as target) {
+      <app-confirm-dialog
+        title="Bỏ khỏi My place?"
+        [message]="'Bỏ &quot;' + target.name + '&quot; khỏi My place. Quán đã gắn với người yêu nào thì liên kết đó cũng bị gỡ. Có thể add lại từ Khám phá quán.'"
+        confirmLabel="Bỏ khỏi My place"
+        (confirm)="confirmRemove()"
+        (cancel)="pendingRemove.set(null)"
+      />
+    }
   `,
 })
 export class PlaceListComponent {
   /**
-   * My place của người đang đăng nhập: chỉ xem. Quán được thêm từ "Khám phá quán" (Add vào My place);
-   * không thêm, sửa, xoá ở đây.
+   * My place của người đang đăng nhập: xem và "Bỏ khỏi My place". Quán được thêm từ "Khám phá quán"
+   * (Add vào My place); không thêm, sửa ở đây.
    */
   private readonly placeService = inject(PlaceService);
+  private readonly linkService = inject(PlaceLinkService);
+  private readonly toast = inject(ToastService);
 
   readonly config = input.required<PlaceTypeConfig>();
 
@@ -277,6 +301,7 @@ export class PlaceListComponent {
   protected readonly locationError = signal('');
 
   protected readonly detailing = signal<PlaceRow | null>(null);
+  protected readonly pendingRemove = signal<Place | null>(null);
 
   protected readonly all = computed(() => this.placeService.byType(this.config().type)());
   protected readonly hasAny = computed(() => this.all().length > 0);
@@ -330,6 +355,20 @@ export class PlaceListComponent {
 
   protected directions(p: Place): string {
     return directionsUrl(p.lat, p.lng, `${p.name} ${p.address}`);
+  }
+
+  protected async confirmRemove(): Promise<void> {
+    const target = this.pendingRemove();
+    if (!target) return;
+    this.pendingRemove.set(null);
+    try {
+      await this.placeService.remove(target.id);
+      // Server đã gỡ liên kết người yêu–quán theo (ON DELETE CASCADE)
+      this.linkService.dropByPlace(target.id);
+      this.toast.success(`Đã bỏ "${target.name}" khỏi My place.`);
+    } catch {
+      // store đã hoàn tác, toast lỗi do errorInterceptor hiện
+    }
   }
 
   protected locateMe(): void {

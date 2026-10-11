@@ -70,6 +70,14 @@ class CatalogIT extends ApiTestSupport {
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("ALREADY_IN_MY_PLACE"));
 
+    // Bỏ khỏi My place: admin không xoá được quán của guest; guest bỏ được rồi add lại được
+    String guestCopy = body(getAs(guest, "/api/v1/places")).get(0).get("id").asString();
+    deleteAs(admin, "/api/v1/places/" + guestCopy).andExpect(status().isNotFound());
+    deleteAs(guest, "/api/v1/places/" + guestCopy).andExpect(status().isNoContent());
+    getAs(guest, "/api/v1/places").andExpect(jsonPath("$", hasSize(0)));
+    getAs(guest, "/api/v1/catalog?q=giảng").andExpect(jsonPath("$.items[0].inMyPlace").value(false));
+    postAs(guest, "/api/v1/catalog/" + giangId + "/my-place", "").andExpect(status().isCreated());
+
     // Admin sửa quán: bản sao trong My place của guest cập nhật theo; version cũ → 409
     putAs(admin, giangId, cafe("Cafe Giảng (mới)", "HOAN_KIEM", 0L)).andExpect(status().isOk()).andExpect(jsonPath("$.version").value(1));
     putAs(admin, giangId, cafe("Cafe Giảng (lại)", "HOAN_KIEM", 0L))

@@ -55,7 +55,8 @@ class RoleIT extends ApiTestSupport {
     // Mọi thao tác ghi: 403 FORBIDDEN, dữ liệu không đổi
     forbidden(postAs(guest, "/api/v1/places", "{}"));
     forbidden(patchAs(guest, "/api/v1/places/" + placeId, "{\"name\": \"Guest sửa\", \"version\": 0}"));
-    forbidden(deleteAs(guest, "/api/v1/places/" + placeId));
+    // Bỏ khỏi My place chỉ đụng tới quán của chính mình: quán của admin là "không tồn tại" với guest
+    deleteAs(guest, "/api/v1/places/" + placeId).andExpect(status().isNotFound());
     forbidden(postAs(guest, "/api/v1/girlfriends", "{\"name\": \"Lan\"}"));
     forbidden(patchAs(guest, "/api/v1/girlfriends/" + gfId, "{\"name\": \"X\", \"version\": 0}"));
     forbidden(deleteAs(guest, "/api/v1/girlfriends/" + gfId));

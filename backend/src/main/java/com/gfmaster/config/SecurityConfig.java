@@ -77,8 +77,10 @@ public class SecurityConfig {
                     .authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/v1/uploads/*/content")
                     .authenticated()
-                    // "Add vào My place": mỗi người lưu vào My place của chính mình
+                    // "Add vào My place" / "Bỏ khỏi My place": My place của chính mình
                     .requestMatchers(HttpMethod.POST, "/api/v1/catalog/*/my-place")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/places/*")
                     .authenticated()
                     // Guest chỉ xem: mọi GET đều cho, request ghi (POST/PATCH/PUT/DELETE) chỉ admin
                     .requestMatchers(HttpMethod.GET, "/api/**")
