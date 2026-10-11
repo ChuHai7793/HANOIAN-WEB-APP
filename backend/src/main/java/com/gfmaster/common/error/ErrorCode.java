@@ -13,6 +13,7 @@ public enum ErrorCode {
   NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy dữ liệu."),
   VERSION_CONFLICT(HttpStatus.CONFLICT, "Dữ liệu đã bị thay đổi ở thiết bị khác."),
   LINK_ALREADY_EXISTS(HttpStatus.CONFLICT, "Quán này đã được gắn cho người này."),
+  ALREADY_IN_MY_PLACE(HttpStatus.CONFLICT, "Quán này đã có trong My place."),
   EMAIL_TAKEN(HttpStatus.CONFLICT, "Email đã được sử dụng."),
   DATA_CONFLICT(HttpStatus.CONFLICT, "Dữ liệu bị trùng hoặc vi phạm ràng buộc."),
   IDEMPOTENCY_IN_PROGRESS(HttpStatus.CONFLICT, "Yêu cầu đang được xử lý."),

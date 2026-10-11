@@ -8,10 +8,3 @@ gfm:
     api-per-minute: 1000            # test gọi API dày đặc, không muốn dính giới hạn
   jwt:
     secret: test-secret-0123456789abcdef-0123456789abcdef
-  # Overpass giả do CatalogImportIT dựng trên cổng cố định (không đổi property theo test, để
-  # không tạo thêm Spring context và bộ container thứ hai)
-  catalog:
-    overpass-urls: [http://localhost:18765/api/interpreter]
-    request-timeout: 5s
-    delay-between-cells: 0s
-    retry-delay: 0s

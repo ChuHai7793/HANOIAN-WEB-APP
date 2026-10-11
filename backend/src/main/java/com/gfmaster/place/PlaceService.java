@@ -94,6 +94,35 @@ public class PlaceService {
     changed(userId, id, Action.deleted);
   }
 
+  /**
+   * "Add vào My place": sao chép một quán của "Khám phá quán" vào places của {@code userId} (admin hay
+   * guest đều được, mỗi người My place riêng). Đã có rồi thì 409 ALREADY_IN_MY_PLACE.
+   */
+  public PlaceResponse copyFromCatalog(UUID userId, UUID catalogId, PlaceRequest values) {
+    if (places.existsByUserIdAndCatalogId(userId, catalogId)) {
+      throw new ApiException(ErrorCode.ALREADY_IN_MY_PLACE);
+    }
+    Place place = mapper.toEntity(values);
+    place.setUser(users.getReferenceById(userId));
+    place.setCatalogId(catalogId);
+    normalizeTypeFields(place);
+    fillCoordinatesFromLink(place);
+    // Hai request song song cùng lọt qua bước kiểm tra: uk_places_user_catalog → 409
+    Place saved = places.saveAndFlush(place);
+    changed(userId, saved.getId(), Action.created);
+    return mapper.toResponse(saved);
+  }
+
+  /** Admin sửa quán trong danh mục: cập nhật mọi bản sao trong My place của mọi người. */
+  public void syncCatalogCopies(UUID catalogId, PlaceRequest values) {
+    for (Place place : places.findAllByCatalogId(catalogId)) {
+      mapper.overwrite(values, place);
+      normalizeTypeFields(place);
+      fillCoordinatesFromLink(place);
+      changed(place.getUser().getId(), place.getId(), Action.updated);
+    }
+  }
+
   /** Gửi sau commit; hiện dùng để xoá cache /stats (đổi loại quán cũng làm số đếm thay đổi). */
   private void changed(UUID userId, UUID id, Action action) {
     events.publish(new EntityChanged(userId, Entity.place, id, action));

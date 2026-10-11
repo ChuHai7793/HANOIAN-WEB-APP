@@ -39,6 +39,9 @@ export interface Place {
   /** Riêng quán ăn */
   cuisine?: string;
 
+  /** Chỉ dùng trong form của "Khám phá quán": mã quận (khu vực), bắt buộc ở đó */
+  district?: string;
+
   /** Optimistic locking: gửi kèm khi sửa, server tăng sau mỗi lần ghi */
   version: number;
   createdAt: string;

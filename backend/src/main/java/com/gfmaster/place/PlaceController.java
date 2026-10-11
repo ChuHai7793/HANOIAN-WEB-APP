@@ -1,5 +1,6 @@
 package com.gfmaster.place;
 
+import com.gfmaster.common.security.CurrentUser;
 import com.gfmaster.common.security.DataOwner;
 import com.gfmaster.common.web.PatchReader;
 import com.gfmaster.place.dto.PlacePatch;
@@ -33,14 +34,15 @@ public class PlaceController {
     this.patchReader = patchReader;
   }
 
+  /** My place: quán của chính người đăng nhập (guest cũng có My place riêng, không xem của admin). */
   @GetMapping
   public List<PlaceResponse> list(
-      @DataOwner UUID userId, @RequestParam(required = false) PlaceType type) {
+      @CurrentUser UUID userId, @RequestParam(required = false) PlaceType type) {
     return service.list(userId, type);
   }
 
   @GetMapping("/{id}")
-  public PlaceResponse get(@DataOwner UUID userId, @PathVariable UUID id) {
+  public PlaceResponse get(@CurrentUser UUID userId, @PathVariable UUID id) {
     return service.get(userId, id);
   }
 

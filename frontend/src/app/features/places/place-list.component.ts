@@ -1,16 +1,13 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { PlaceService } from '../../core/services/place.service';
-import { PlaceLinkService } from '../../core/services/place-link.service';
 import { Place, PriceRange, PRICE_RANGES, priceLabel } from '../../core/models/place.model';
 import { PlaceTypeConfig } from './place.config';
-import { PlaceFormComponent } from './place-form.component';
 import { PlaceDetailComponent } from './place-detail.component';
 import { RatingStarsComponent } from '../../shared/ui/rating-stars.component';
 import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
-import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component';
 import { directionsUrl } from '../../core/utils/gmap-url';
 import { formatDistance, haversineKm, LatLng } from '../../core/utils/geo';
-import { AuthService } from '../../core/auth/auth.service';
 
 type SortKey = 'rating' | 'name' | 'distance' | 'price';
 
@@ -21,13 +18,7 @@ interface PlaceRow {
 
 @Component({
   selector: 'app-place-list',
-  imports: [
-    PlaceFormComponent,
-    PlaceDetailComponent,
-    RatingStarsComponent,
-    EmptyStateComponent,
-    ConfirmDialogComponent,
-  ],
+  imports: [RouterLink, PlaceDetailComponent, RatingStarsComponent, EmptyStateComponent],
   template: `
     <!-- Vùng cố định: tiêu đề + bộ lọc. top-16 để nằm dưới thanh header mobile. -->
     <div
@@ -40,15 +31,12 @@ interface PlaceRow {
         </h1>
         <p class="mt-1 text-sm text-slate-500">{{ config().subtitle }}</p>
       </div>
-      @if (canEdit()) {
-        <button
-          type="button"
-          class="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
-          (click)="openCreate()"
-        >
-          + {{ config().addLabel }}
-        </button>
-      }
+      <a
+        routerLink="/explore"
+        class="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+      >
+        🔎 Khám phá quán
+      </a>
     </div>
 
       <!-- Bộ lọc -->
@@ -124,14 +112,13 @@ interface PlaceRow {
         [title]="hasAny() ? 'Không tìm thấy quán phù hợp' : config().emptyTitle"
         [description]="hasAny() ? 'Thử xoá bớt bộ lọc hoặc từ khoá tìm kiếm.' : config().emptyDescription"
       >
-        @if (!hasAny() && canEdit()) {
-          <button
-            type="button"
+        @if (!hasAny()) {
+          <a
+            routerLink="/explore"
             class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
-            (click)="openCreate()"
           >
-            {{ config().addLabel }}
-          </button>
+            🔎 Vào Khám phá quán
+          </a>
         }
       </app-empty-state>
     } @else {
@@ -245,24 +232,6 @@ interface PlaceRow {
                 >
                   👁️
                 </button>
-                @if (canEdit()) {
-                  <button
-                    type="button"
-                    class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
-                    (click)="openEdit(item.place)"
-                    title="Sửa"
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    type="button"
-                    class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-rose-600 transition hover:bg-rose-50"
-                    (click)="pendingDelete.set(item.place)"
-                    title="Xoá"
-                  >
-                    🗑️
-                  </button>
-                }
               </div>
             </div>
           </article>
@@ -271,43 +240,23 @@ interface PlaceRow {
       }
     </div>
 
-    <!-- Form thêm/sửa -->
-    @if (formOpen()) {
-      <app-place-form
-        [config]="config()"
-        [place]="editing()"
-        (save)="handleSave($event)"
-        (cancel)="closeForm()"
-      />
-    }
-
     <!-- Chi tiết quán -->
     @if (detailing(); as row) {
       <app-place-detail
         [place]="row.place"
         [distanceKm]="row.distanceKm"
-        [editable]="canEdit()"
-        (edit)="editFromDetail(row.place)"
+        [editable]="false"
         (dismiss)="detailing.set(null)"
-      />
-    }
-
-    <!-- Xác nhận xoá -->
-    @if (pendingDelete(); as target) {
-      <app-confirm-dialog
-        title="Xoá quán này?"
-        [message]="'Xoá &quot;' + target.name + '&quot; sẽ gỡ luôn quán khỏi mọi người yêu đã gắn. Hành động này không hoàn tác được.'"
-        (confirm)="confirmDelete()"
-        (cancel)="pendingDelete.set(null)"
       />
     }
   `,
 })
 export class PlaceListComponent {
+  /**
+   * My place của người đang đăng nhập: chỉ xem. Quán được thêm từ "Khám phá quán" (Add vào My place);
+   * không thêm, sửa, xoá ở đây.
+   */
   private readonly placeService = inject(PlaceService);
-  private readonly linkService = inject(PlaceLinkService);
-  /** Guest chỉ xem: ẩn nút thêm/sửa/xoá (server cũng chặn request ghi). */
-  protected readonly canEdit = inject(AuthService).canEdit;
 
   readonly config = input.required<PlaceTypeConfig>();
 
@@ -327,11 +276,7 @@ export class PlaceListComponent {
   protected readonly locating = signal(false);
   protected readonly locationError = signal('');
 
-  protected readonly formOpen = signal(false);
-  protected readonly editing = signal<Place | null>(null);
   protected readonly detailing = signal<PlaceRow | null>(null);
-  protected readonly pendingDelete = signal<Place | null>(null);
-  protected readonly saving = signal(false);
 
   protected readonly all = computed(() => this.placeService.byType(this.config().type)());
   protected readonly hasAny = computed(() => this.all().length > 0);
@@ -385,60 +330,6 @@ export class PlaceListComponent {
 
   protected directions(p: Place): string {
     return directionsUrl(p.lat, p.lng, `${p.name} ${p.address}`);
-  }
-
-  protected openCreate(): void {
-    this.editing.set(null);
-    this.formOpen.set(true);
-  }
-
-  protected openEdit(place: Place): void {
-    this.editing.set(place);
-    this.formOpen.set(true);
-  }
-
-  /** Từ modal chi tiết bấm Sửa: đóng chi tiết rồi mở form */
-  protected editFromDetail(place: Place): void {
-    this.detailing.set(null);
-    this.openEdit(place);
-  }
-
-  protected closeForm(): void {
-    this.formOpen.set(false);
-    this.editing.set(null);
-  }
-
-  /** Lỗi thì giữ form để người dùng sửa/thử lại (toast do errorInterceptor hiện) */
-  protected async handleSave(place: Place): Promise<void> {
-    if (this.saving()) return;
-    this.saving.set(true);
-    const existing = this.editing();
-    const { id, ...data } = place;
-    try {
-      if (existing) {
-        await this.placeService.update(existing.id, data);
-      } else {
-        await this.placeService.create(data);
-      }
-      this.closeForm();
-    } catch {
-      // giữ form mở
-    } finally {
-      this.saving.set(false);
-    }
-  }
-
-  protected async confirmDelete(): Promise<void> {
-    const target = this.pendingDelete();
-    if (!target) return;
-    this.pendingDelete.set(null);
-    try {
-      await this.placeService.remove(target.id);
-      // Server đã xoá link theo (ON DELETE CASCADE)
-      this.linkService.dropByPlace(target.id);
-    } catch {
-      // store đã hoàn tác, toast đã hiện
-    }
   }
 
   protected locateMe(): void {

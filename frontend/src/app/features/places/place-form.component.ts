@@ -6,6 +6,7 @@ import {
 } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ModalComponent } from '../../shared/ui/modal.component';
+import { DistrictOption } from '../../core/models/catalog.model';
 import { RatingStarsComponent } from '../../shared/ui/rating-stars.component';
 import { ImagePickerComponent } from '../../shared/ui/image-picker.component';
 import { CUISINES, Place, PRICE_RANGES } from '../../core/models/place.model';
@@ -28,6 +29,26 @@ import { errorMessage } from '../../core/api/api';
       <form [formGroup]="form" class="space-y-5">
         <!-- Thông tin cơ bản -->
         <div class="grid gap-4 sm:grid-cols-2">
+          @if (districts(); as list) {
+            <div class="sm:col-span-2">
+              <label class="mb-1.5 block text-sm font-medium text-slate-700">
+                Khu vực <span class="text-rose-500">*</span>
+              </label>
+              <select
+                formControlName="district"
+                class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500"
+              >
+                <option value="">Chọn quận…</option>
+                @for (d of list; track d.code) {
+                  <option [value]="d.code">{{ d.label }}</option>
+                }
+              </select>
+              @if (invalid('district')) {
+                <p class="mt-1 text-xs text-rose-600">Chọn khu vực của quán.</p>
+              }
+            </div>
+          }
+
           <div class="sm:col-span-2">
             <label class="mb-1.5 block text-sm font-medium text-slate-700">
               Tên quán <span class="text-rose-500">*</span>
@@ -243,8 +264,8 @@ export class PlaceFormComponent {
   readonly config = input.required<PlaceTypeConfig>();
   /** null = thêm mới */
   readonly place = input<Place | null>(null);
-  /** Thêm mới nhưng điền sẵn (từ "Khám phá quán"): tên, địa chỉ, toạ độ, link Maps… */
-  readonly draft = input<Partial<Place> | null>(null);
+  /** Có danh sách quận (form của "Khám phá quán"): hiện ô Khu vực, bắt buộc chọn. */
+  readonly districts = input<DistrictOption[] | null>(null);
 
   readonly save = output<Place>();
   readonly cancel = output<void>();
@@ -272,6 +293,7 @@ export class PlaceFormComponent {
     cuisine: [CUISINES[0]],
     hasWifi: [true],
     hasParking: [false],
+    district: [''],
   });
 
   protected readonly mapPreview = computed<SafeResourceUrl>(() => {
@@ -282,15 +304,16 @@ export class PlaceFormComponent {
 
   // Component được tạo mới mỗi lần mở modal nên nạp một lần ở ngOnInit là đủ.
   ngOnInit(): void {
+    if (this.districts()) {
+      this.form.controls.district.setValidators(Validators.required);
+      this.form.controls.district.updateValueAndValidity();
+    }
     this.patchFromInput();
   }
 
   private patchFromInput(): void {
     const existing = this.place();
-    if (!existing) {
-      this.patchFromDraft();
-      return;
-    }
+    if (!existing) return;
 
     this.form.patchValue({
       name: existing.name,
@@ -307,28 +330,13 @@ export class PlaceFormComponent {
       cuisine: existing.cuisine ?? CUISINES[0],
       hasWifi: existing.hasWifi ?? false,
       hasParking: existing.hasParking ?? false,
+      district: existing.district ?? '',
     });
     this.ratingValue.set(existing.rating);
     this.imageUrl.set(existing.imageUrl);
     if (existing.lat !== null && existing.lng !== null) {
       this.coords.set({ lat: existing.lat, lng: existing.lng });
     }
-  }
-
-  private patchFromDraft(): void {
-    const d = this.draft();
-    if (!d) return;
-    this.form.patchValue({
-      name: d.name ?? '',
-      address: d.address ?? '',
-      openTime: d.openTime ?? this.form.value.openTime,
-      closeTime: d.closeTime ?? this.form.value.closeTime,
-      googleMapsUrl: d.googleMapsUrl ?? '',
-      coordinates: d.lat != null && d.lng != null ? `${d.lat}, ${d.lng}` : '',
-      ...(d.cuisine ? { cuisine: d.cuisine } : {}),
-      ...(d.hasWifi != null ? { hasWifi: d.hasWifi } : {}),
-    });
-    if (d.lat != null && d.lng != null) this.coords.set({ lat: d.lat, lng: d.lng });
   }
 
   protected invalid(control: string): boolean {
@@ -437,6 +445,7 @@ export class PlaceFormComponent {
       version: existing?.version ?? 0,
       createdAt: existing?.createdAt ?? nowIso(),
       updatedAt: nowIso(),
+      ...(this.districts() ? { district: v.district } : {}),
     };
 
     this.save.emit(result);

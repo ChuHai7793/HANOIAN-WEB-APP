@@ -8,6 +8,7 @@ import com.gfmaster.place.dto.PlaceResponse;
 import com.gfmaster.upload.storage.ImageUrls;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
 @Mapper(config = MapperConfigDefaults.class, uses = ImageUrls.class)
 public interface PlaceMapper {
@@ -25,7 +26,21 @@ public interface PlaceMapper {
   @Mapping(target = "imageUrl", defaultValue = "")
   @Mapping(target = "note", defaultValue = "")
   @Mapping(target = "googleMapsUrl", defaultValue = "")
+  @Mapping(target = "catalogId", ignore = true)
   Place toEntity(PlaceRequest request);
+
+  /** Ghi đè mọi field nội dung (đồng bộ bản sao trong My place khi admin sửa quán trong danh mục). */
+  @Mapping(target = "id", ignore = true)
+  @Mapping(target = "user", ignore = true)
+  @Mapping(target = "version", ignore = true)
+  @Mapping(target = "createdAt", ignore = true)
+  @Mapping(target = "updatedAt", ignore = true)
+  @Mapping(target = "catalogId", ignore = true)
+  @Mapping(target = "address", defaultValue = "")
+  @Mapping(target = "imageUrl", defaultValue = "")
+  @Mapping(target = "note", defaultValue = "")
+  @Mapping(target = "googleMapsUrl", defaultValue = "")
+  void overwrite(PlaceRequest request, @MappingTarget Place place);
 
   /** Áp PATCH: field vắng mặt giữ nguyên; toạ độ/tiện ích/ẩm thực gửi null thì xoá. */
   default void apply(Patch<PlacePatch> patch, Place place) {

@@ -1,10 +1,16 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { PlaceService } from '../core/services/place.service';
 import { GirlfriendService } from '../core/services/girlfriend.service';
 import { DataBootstrapService } from '../core/services/data-bootstrap.service';
 import { AuthService } from '../core/auth/auth.service';
 import { LegacyImportDialogComponent } from '../shared/ui/legacy-import-dialog.component';
+
+interface NavSection {
+  /** Rỗng: không có tiêu đề nhóm */
+  title: string;
+  items: NavItem[];
+}
 
 interface NavItem {
   path: string;
@@ -32,29 +38,13 @@ interface NavItem {
         </div>
 
         <nav class="space-y-1 p-3">
-          @for (item of navItems; track item.path) {
-            <a
-              [routerLink]="item.path"
-              routerLinkActive="bg-brand-50 text-brand-700 font-semibold"
-              class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-50"
-              (click)="menuOpen.set(false)"
-            >
-              <span class="text-lg">{{ item.icon }}</span>
-              <span class="flex-1">{{ item.label }}</span>
-              @if (item.badge) {
-                <span
-                  class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
-                >
-                  {{ item.badge() }}
-                </span>
-              }
-            </a>
-          }
-          @if (auth.user()?.role === 'ADMIN') {
-            <p class="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-              Quản trị
-            </p>
-            @for (item of adminItems; track item.path) {
+          @for (section of sections(); track section.title) {
+            @if (section.title) {
+              <p class="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                {{ section.title }}
+              </p>
+            }
+            @for (item of section.items; track item.path) {
               <a
                 [routerLink]="item.path"
                 routerLinkActive="bg-brand-50 text-brand-700 font-semibold"
@@ -63,6 +53,13 @@ interface NavItem {
               >
                 <span class="text-lg">{{ item.icon }}</span>
                 <span class="flex-1">{{ item.label }}</span>
+                @if (item.badge) {
+                  <span
+                    class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
+                  >
+                    {{ item.badge() }}
+                  </span>
+                }
               </a>
             }
           }
@@ -190,36 +187,36 @@ export class ShellComponent {
     return name.trim().charAt(0).toUpperCase() || '?';
   }
 
-  protected readonly navItems: NavItem[] = [
+  /**
+   * Menu: Khám phá quán (danh mục chung) ở trên; "My place" gom 3 nhóm quán đã lưu của chính người
+   * đăng nhập; nhóm "Quản trị" chỉ admin thấy.
+   */
+  protected readonly sections = computed<NavSection[]>(() => [
     {
-      path: '/cafes',
-      label: 'Quán cafe',
-      icon: '☕',
-      badge: () => this.places.cafes().length,
+      title: '',
+      items: [{ path: '/explore', label: 'Khám phá quán', icon: '🔎' }],
     },
     {
-      path: '/bars',
-      label: 'Quán bar',
-      icon: '🍸',
-      badge: () => this.places.bars().length,
+      title: 'My place',
+      items: [
+        { path: '/cafes', label: 'Quán cafe', icon: '☕', badge: () => this.places.cafes().length },
+        { path: '/bars', label: 'Quán bar', icon: '🍸', badge: () => this.places.bars().length },
+        {
+          path: '/restaurants',
+          label: 'Quán ăn',
+          icon: '🍜',
+          badge: () => this.places.restaurants().length,
+        },
+      ],
     },
     {
-      path: '/restaurants',
-      label: 'Quán ăn',
-      icon: '🍜',
-      badge: () => this.places.restaurants().length,
+      title: 'Hẹn hò',
+      items: [
+        { path: '/girlfriends', label: 'Người yêu', icon: '👩', badge: () => this.girlfriends.count() },
+      ],
     },
-    {
-      path: '/girlfriends',
-      label: 'Người yêu',
-      icon: '👩',
-      badge: () => this.girlfriends.count(),
-    },
-    { path: '/explore', label: 'Khám phá quán', icon: '🔎' },
-  ];
-
-  protected readonly adminItems: NavItem[] = [
-    { path: '/admin/users', label: 'Người dùng', icon: '👥' },
-    { path: '/admin/catalog', label: 'Nguồn dữ liệu quán', icon: '🗺️' },
-  ];
+    ...(this.auth.user()?.role === 'ADMIN'
+      ? [{ title: 'Quản trị', items: [{ path: '/admin/users', label: 'Người dùng', icon: '👥' }] }]
+      : []),
+  ]);
 }

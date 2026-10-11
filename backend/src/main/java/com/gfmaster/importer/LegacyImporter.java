@@ -117,8 +117,7 @@ public class LegacyImporter {
               p.lng() == null ? null : BigDecimal.valueOf(p.lng()),
               p.hasWifi(),
               p.hasParking(),
-              p.cuisine(),
-              null);
+              p.cuisine());
       // Kiểm tra trước với ảnh trống: dòng bị bỏ qua thì không upload ảnh thừa
       String invalid = violations(build.apply(""));
       if (invalid != null) {

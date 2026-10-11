@@ -23,8 +23,9 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import tools.jackson.databind.JsonNode;
 
 /**
- * Phân quyền: admin được ghi; guest xem dữ liệu của admin, mọi request ghi dữ liệu bị 403. Ngoại lệ:
- * hồ sơ và upload ảnh của chính guest (ProfileIT, DirectUploadIT).
+ * Phân quyền: admin được ghi; guest xem người yêu, liên kết, stats của admin, mọi request ghi dữ liệu
+ * bị 403. Ngoại lệ: hồ sơ, upload ảnh và My place của chính guest (ProfileIT, DirectUploadIT,
+ * CatalogIT). Quán (My place) là của riêng từng người nên guest không thấy quán của admin.
  */
 class RoleIT extends ApiTestSupport {
 
@@ -43,8 +44,9 @@ class RoleIT extends ApiTestSupport {
     UUID guest = newGuestOf(admin);
 
     // Xem được đúng dữ liệu của admin
-    getAs(guest, "/api/v1/places").andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)));
-    getAs(guest, "/api/v1/places/" + placeId).andExpect(jsonPath("$.name").value("Của admin"));
+    // Quán (My place) là của riêng từng người: guest không thấy quán của admin
+    getAs(guest, "/api/v1/places").andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
+    getAs(guest, "/api/v1/places/" + placeId).andExpect(status().isNotFound());
     getAs(guest, "/api/v1/girlfriends").andExpect(jsonPath("$[0].name").value("Mai"));
     getAs(guest, "/api/v1/girlfriends/" + gfId + "/links").andExpect(jsonPath("$", hasSize(1)));
     getAs(guest, "/api/v1/place-links").andExpect(jsonPath("$", hasSize(1)));

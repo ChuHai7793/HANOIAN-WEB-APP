@@ -30,7 +30,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   private static final Map<String, ErrorCode> CONSTRAINTS =
       Map.of(
           "uk_link_gf_place", ErrorCode.LINK_ALREADY_EXISTS,
-          "uk_users_email", ErrorCode.EMAIL_TAKEN);
+          "uk_users_email", ErrorCode.EMAIL_TAKEN,
+          "uk_places_user_catalog", ErrorCode.ALREADY_IN_MY_PLACE);
 
   public static ProblemDetail problem(ErrorCode code, String detail) {
     ProblemDetail pd = ProblemDetail.forStatusAndDetail(code.status(), detail);

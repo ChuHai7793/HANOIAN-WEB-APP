@@ -1,9 +1,10 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE } from '../api/api';
-import { CatalogPage, DistrictOption, ImportRun } from '../models/catalog.model';
-import { PlaceType } from '../models/place.model';
+import { SILENT_CODES } from '../api/http-context';
+import { CatalogItem, CatalogPage, DistrictOption } from '../models/catalog.model';
+import { Place, PlaceType } from '../models/place.model';
 
 export interface CatalogQuery {
   q?: string;
@@ -13,7 +14,16 @@ export interface CatalogQuery {
   size?: number;
 }
 
-/** "Khám phá quán" (mọi người đọc) và nhập từ OpenStreetMap (chỉ admin). */
+/** Dữ liệu admin gửi khi thêm/sửa quán trong danh mục. `version`: bỏ qua khi thêm. */
+export type CatalogRequest = Omit<Place, 'id' | 'createdAt' | 'updatedAt' | 'version'> & {
+  district: string;
+  version?: number;
+};
+
+/**
+ * "Khám phá quán": mọi người xem và add vào My place của mình; chỉ admin thêm/sửa/xoá.
+ * VERSION_CONFLICT và ALREADY_IN_MY_PLACE do nơi gọi tự xử lý, không hiện toast chung.
+ */
 @Injectable({ providedIn: 'root' })
 export class CatalogService {
   private readonly http = inject(HttpClient);
@@ -30,13 +40,28 @@ export class CatalogService {
     return firstValueFrom(this.http.get<DistrictOption[]>(`${API_BASE}/catalog/districts`));
   }
 
-  startImport(districts: string[], types: PlaceType[]): Promise<ImportRun> {
+  /** Lưu quán vào My place của người đang đăng nhập; trả về quán vừa tạo trong My place. */
+  addToMyPlace(id: string): Promise<Place> {
     return firstValueFrom(
-      this.http.post<ImportRun>(`${API_BASE}/admin/catalog/import`, { districts, types }),
+      this.http.post<Place>(`${API_BASE}/catalog/${id}/my-place`, null, {
+        context: new HttpContext().set(SILENT_CODES, ['ALREADY_IN_MY_PLACE']),
+      }),
     );
   }
 
-  runs(): Promise<ImportRun[]> {
-    return firstValueFrom(this.http.get<ImportRun[]>(`${API_BASE}/admin/catalog/runs`));
+  create(item: CatalogRequest): Promise<CatalogItem> {
+    return firstValueFrom(this.http.post<CatalogItem>(`${API_BASE}/admin/catalog`, item));
+  }
+
+  update(id: string, item: CatalogRequest): Promise<CatalogItem> {
+    return firstValueFrom(
+      this.http.put<CatalogItem>(`${API_BASE}/admin/catalog/${id}`, item, {
+        context: new HttpContext().set(SILENT_CODES, ['VERSION_CONFLICT']),
+      }),
+    );
+  }
+
+  remove(id: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${API_BASE}/admin/catalog/${id}`));
   }
 }

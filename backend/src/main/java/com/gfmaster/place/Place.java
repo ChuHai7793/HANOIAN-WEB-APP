@@ -69,7 +69,10 @@ public class Place extends OwnedEntity {
   @Column(length = 50)
   private String cuisine;
 
-  /** Quán được thêm từ "Khám phá quán" (null nếu tự nhập): để danh mục hiện "Đã có trong sổ tay". */
+  /**
+   * Quán trong "My place" được sao chép từ "Khám phá quán" (null với quán cũ tự nhập). Admin sửa quán
+   * trong danh mục thì bản sao cập nhật theo; xoá quán trong danh mục thì giữ bản sao (thành null).
+   */
   @Column(name = "catalog_id")
   private UUID catalogId;
 }
