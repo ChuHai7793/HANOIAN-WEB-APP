@@ -197,7 +197,7 @@ export class ShellComponent {
   }
 
   /**
-   * Menu: Khám phá quán (danh mục chung) ở trên; "My place" gom 3 nhóm quán đã lưu của chính người
+   * Menu: Khám phá quán và Tìm chỗ chơi (danh mục chung) ở trên; "My place" gom 3 nhóm quán đã lưu của chính người
    * đăng nhập; nhóm "Quản trị" chỉ admin thấy.
    */
   protected readonly sections = computed<NavSection[]>(() => [
@@ -205,6 +205,7 @@ export class ShellComponent {
       title: '',
       items: [
         { path: '/explore', label: 'Khám phá quán', icon: '🔎' },
+        { path: '/spots', label: 'Tìm chỗ chơi', icon: '🎡' },
         { path: '/dating', label: 'Tìm đối tượng', icon: '💘', alert: () => this.inbox.unread() },
       ],
     },

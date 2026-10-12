@@ -63,6 +63,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/explore/explore.page').then((m) => m.ExplorePage),
       },
       {
+        path: 'spots',
+        title: 'Tìm chỗ chơi · Dating Master',
+        loadComponent: () => import('./features/spots/spot-list.page').then((m) => m.SpotListPage),
+      },
+      {
         path: 'dating',
         title: 'Tìm đối tượng · Dating Master',
         loadComponent: () => import('./features/dating/dating.page').then((m) => m.DatingPage),
