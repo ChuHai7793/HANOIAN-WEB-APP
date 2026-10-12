@@ -11,6 +11,8 @@ export interface CatalogQuery {
   q?: string;
   type?: PlaceType | '';
   district?: string;
+  /** Chỉ quán đã có trong My place của mình */
+  mine?: boolean;
   page?: number;
   size?: number;
 }

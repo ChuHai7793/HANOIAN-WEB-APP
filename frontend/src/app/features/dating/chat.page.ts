@@ -74,6 +74,18 @@ export function mergeMessages(list: ChatMessage[], incoming: ChatMessage[]): Cha
                 [class]="msg.mine ? 'rounded-br-md bg-brand-600 text-white' : 'rounded-bl-md bg-slate-100 text-slate-800'"
               >
                 {{ msg.body }}
+                @if (msg.plan; as plan) {
+                  <a [routerLink]="['/plans', plan.id]" class="mt-2 block whitespace-normal rounded-xl bg-white p-3 text-slate-800 ring-1 ring-brand-100 hover:ring-brand-300">
+                    <span class="flex items-center gap-1.5 text-xs font-semibold text-brand-700"><app-icon name="route" [size]="14" />Plan</span>
+                    <span class="mt-0.5 block font-semibold">{{ plan.title }}</span>
+                    <span class="text-xs text-slate-500">{{ plan.stopCount }} điểm@if (plan.date) { · {{ plan.date | date: 'dd/MM' }}} · Xem lịch trình</span>
+                  </a>
+                  @if (!msg.mine) {
+                    <button type="button" class="mt-2 flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700" (click)="agree(plan.title)">
+                      <app-icon name="check" [size]="14" />Đồng ý
+                    </button>
+                  }
+                }
                 <span class="mt-0.5 block text-right text-[10px]" [class]="msg.mine ? 'text-white/70' : 'text-slate-400'">{{ msg.createdAt | date: 'HH:mm' }}</span>
               </div>
             </div>
@@ -209,6 +221,12 @@ export class ChatPage implements OnInit, OnDestroy {
     if (!older) return;
     this.hasOlder.set(older.length >= PAGE);
     this.messages.update((list) => mergeMessages(list, older));
+  }
+
+  /** Trả lời nhanh lời rủ đi kèm plan */
+  protected agree(title: string): void {
+    this.draft.set(`Đồng ý đi "${title}" nhé!`);
+    void this.send();
   }
 
   protected async send(): Promise<void> {

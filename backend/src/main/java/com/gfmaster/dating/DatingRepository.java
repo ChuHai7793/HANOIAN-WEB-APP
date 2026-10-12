@@ -3,6 +3,7 @@ package com.gfmaster.dating;
 import com.gfmaster.dating.DatingDtos.Candidate;
 import com.gfmaster.dating.DatingDtos.LastMessage;
 import com.gfmaster.dating.DatingDtos.MessageView;
+import com.gfmaster.dating.DatingDtos.PlanRef;
 import com.gfmaster.dating.DatingDtos.SharedPlace;
 import com.gfmaster.catalog.CatalogDistrict;
 import com.gfmaster.place.PlaceType;
@@ -438,10 +439,22 @@ public class DatingRepository {
   }
 
   public MessageView insertMessage(UUID matchId, UUID sender, String body) {
+    return insertMessage(matchId, sender, body, null);
+  }
+
+  /** {@code planId}: tin "Rủ đi" kèm plan (null = tin thường). */
+  public MessageView insertMessage(UUID matchId, UUID sender, String body, UUID planId) {
     UUID id = UUID.randomUUID();
+    Map<String, Object> params = new HashMap<>();
+    params.put("id", id);
+    params.put("match", matchId);
+    params.put("sender", sender);
+    params.put("body", body);
+    params.put("plan", planId);
     jdbc.update(
-        "INSERT INTO messages (id, match_id, sender_id, body, created_at) VALUES (:id, :match, :sender, :body, now())",
-        Map.of("id", id, "match", matchId, "sender", sender, "body", body));
+        "INSERT INTO messages (id, match_id, sender_id, body, created_at, plan_id)"
+            + " VALUES (:id, :match, :sender, :body, now(), :plan)",
+        params);
     return queryMessages(matchId, sender, "id = :mid", Map.of("mid", id), "ASC", 1).getFirst();
   }
 
@@ -464,7 +477,11 @@ public class DatingRepository {
     params.put("match", matchId);
     params.put("limit", limit);
     return jdbc.query(
-        "SELECT id, sender_id, body, created_at, read_at FROM messages WHERE match_id = :match AND "
+        "SELECT id, sender_id, body, created_at, read_at, plan_id,"
+            + " (SELECT p.title FROM plans p WHERE p.id = messages.plan_id) AS plan_title,"
+            + " (SELECT p.plan_date FROM plans p WHERE p.id = messages.plan_id) AS plan_date,"
+            + " (SELECT count(*) FROM plan_stops s WHERE s.plan_id = messages.plan_id) AS plan_stops"
+            + " FROM messages WHERE match_id = :match AND "
             + where
             + " ORDER BY created_at "
             + order
@@ -480,8 +497,16 @@ public class DatingRepository {
               viewer != null && viewer.equals(sender),
               rs.getString("body"),
               toInstant(rs.getTimestamp("created_at")),
-              toInstant(rs.getTimestamp("read_at")));
+              toInstant(rs.getTimestamp("read_at")),
+              planRef(rs));
         });
+  }
+
+  private static PlanRef planRef(ResultSet rs) throws SQLException {
+    UUID planId = rs.getObject("plan_id", UUID.class);
+    if (planId == null) return null;
+    java.sql.Date date = rs.getDate("plan_date");
+    return new PlanRef(planId, rs.getString("plan_title"), date == null ? null : date.toLocalDate(), rs.getInt("plan_stops"));
   }
 
   /** Đánh dấu đã xem mọi tin người kia gửi trong match. */

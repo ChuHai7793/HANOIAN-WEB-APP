@@ -71,6 +71,8 @@ export interface ChatMessage {
   createdAt: string;
   /** Người nhận đã xem lúc nào (null: chưa xem) */
   readAt: string | null;
+  /** Tin "Rủ đi" kèm plan (null: tin thường, hoặc plan đã bị xoá) */
+  plan?: { id: string; title: string; date: string | null; stopCount: number } | null;
 }
 
 export const MESSAGE_MAX = 2000;

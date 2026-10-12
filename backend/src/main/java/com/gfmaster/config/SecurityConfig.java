@@ -85,6 +85,11 @@ public class SecurityConfig {
                     // "Tìm đối tượng": mỗi người quẹt, match bằng hồ sơ của chính mình
                     .requestMatchers("/api/v1/dating/**")
                     .authenticated()
+                    // Plan: của riêng từng người (guest cũng có). Lưu vào Người yêu ghi dữ liệu admin: chỉ admin
+                    .requestMatchers(HttpMethod.POST, "/api/v1/plans/*/save-to-girlfriend")
+                    .hasRole(Role.ADMIN.name())
+                    .requestMatchers("/api/v1/plans/**")
+                    .authenticated()
                     // Guest chỉ xem: mọi GET đều cho, request ghi (POST/PATCH/PUT/DELETE) chỉ admin
                     .requestMatchers(HttpMethod.GET, "/api/**")
                     .authenticated()

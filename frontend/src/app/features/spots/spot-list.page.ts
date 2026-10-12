@@ -18,6 +18,8 @@ import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component
 import { IconComponent } from '../../shared/ui/icon.component';
 import { SpotFormComponent } from './spot-form.component';
 import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
+import { AddToPlanDialogComponent } from '../plans/add-to-plan-dialog.component';
+import { StopKind } from '../../core/models/plan.model';
 
 /** Lọc theo ngân sách: giá thấp nhất của chỗ chơi không quá mức này. */
 const BUDGETS: { value: number | null; label: string }[] = [
@@ -39,7 +41,7 @@ function nowHHmm(): string {
  */
 @Component({
   selector: 'app-spot-list-page',
-  imports: [VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
+  imports: [AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
   template: `
     <div class="flex flex-col gap-6 px-4 pb-14 pt-6 sm:px-6 lg:px-10 lg:pt-8">
       <header class="flex flex-wrap items-end justify-between gap-4">
@@ -213,6 +215,13 @@ function nowHHmm(): string {
                   >
                     <app-icon name="navigate" [size]="15" />Chỉ đường
                   </a>
+                  <button
+                    type="button"
+                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
+                    (click)="planTarget.set({ kind: 'spot', refId: item.id, name: item.name, district: item.district })"
+                  >
+                    <app-icon name="route" [size]="15" />Vào plan
+                  </button>
                   @if (canEdit()) {
                     <button type="button" class="flex min-h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-slate-600 hover:bg-brand-50" title="Sửa" (click)="openEdit(item)">
                       <app-icon name="edit" [size]="15" />
@@ -263,9 +272,15 @@ function nowHHmm(): string {
         (cancel)="pendingDelete.set(null)"
       />
     }
+
+    @if (planTarget(); as t) {
+      <app-add-to-plan-dialog [kind]="t.kind" [refId]="t.refId" [name]="t.name" [district]="t.district" (closed)="planTarget.set(null)" />
+    }
   `,
 })
 export class SpotListPage implements OnInit {
+  /** Đang chọn plan để thêm quán / chỗ chơi này vào */
+  protected readonly planTarget = signal<{ kind: StopKind; refId: string; name: string; district: string } | null>(null);
   private readonly spots = inject(SpotService);
   private readonly catalog = inject(CatalogService);
   private readonly toast = inject(ToastService);

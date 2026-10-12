@@ -66,6 +66,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dating/dating.page').then((m) => m.DatingPage),
       },
       {
+        path: 'plans',
+        title: 'Plan · HANOIVIBE',
+        loadComponent: () => import('./features/plans/plan-list.page').then((m) => m.PlanListPage),
+      },
+      {
+        path: 'plans/:id',
+        title: 'Plan · HANOIVIBE',
+        loadComponent: () => import('./features/plans/plan-detail.page').then((m) => m.PlanDetailPage),
+      },
+      {
         path: 'dating/matches/:id',
         title: 'Nhắn tin · HANOIVIBE',
         loadComponent: () => import('./features/dating/chat.page').then((m) => m.ChatPage),

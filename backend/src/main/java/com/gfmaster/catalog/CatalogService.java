@@ -11,6 +11,7 @@ import com.gfmaster.common.error.ErrorCode;
 import com.gfmaster.dating.DatingRepository;
 import com.gfmaster.place.PlaceRepository;
 import com.gfmaster.place.PlaceService;
+import com.gfmaster.place.Place;
 import com.gfmaster.place.PlaceType;
 import com.gfmaster.place.dto.PlaceRequest;
 import com.gfmaster.place.dto.PlaceResponse;
@@ -77,13 +78,33 @@ public class CatalogService {
     return out;
   }
 
-  /** {@code userId}: người đang xem, để đánh dấu quán đã có trong My place của họ. */
   @Transactional(readOnly = true)
   public CatalogPage search(UUID userId, String q, PlaceType type, CatalogDistrict district, int page, int size) {
+    return search(userId, q, type, district, false, page, size);
+  }
+
+  /**
+   * {@code userId}: người đang xem, để đánh dấu quán đã có trong My place của họ. {@code mine}: chỉ quán đã
+   * có trong My place (hộp chọn điểm của Plan).
+   */
+  @Transactional(readOnly = true)
+  public CatalogPage search(
+      UUID userId, String q, PlaceType type, CatalogDistrict district, boolean mine, int page, int size) {
     int pageSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
+    Specification<CatalogPlace> spec = filter(q, type, district);
+    if (mine) {
+      spec =
+          spec.and(
+              (root, query, cb) -> {
+                var sub = query.subquery(UUID.class);
+                var p = sub.from(Place.class);
+                sub.select(p.get("catalogId")).where(cb.equal(p.get("user").get("id"), userId));
+                return root.get("id").in(sub);
+              });
+    }
     Page<CatalogPlace> result =
         catalog.findAll(
-            filter(q, type, district),
+            spec,
             PageRequest.of(Math.max(page, 0), pageSize, Sort.by("name").and(Sort.by("id"))));
     List<UUID> ids = result.getContent().stream().map(CatalogPlace::getId).toList();
     Set<UUID> saved = ids.isEmpty() ? Set.of() : new HashSet<>(places.findCatalogIdsInMyPlace(userId, ids));

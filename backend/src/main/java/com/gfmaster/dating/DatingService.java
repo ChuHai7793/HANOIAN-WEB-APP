@@ -157,11 +157,16 @@ public class DatingService {
   }
 
   public MessageView send(UUID me, UUID matchId, String body) {
+    return send(me, matchId, body, null);
+  }
+
+  /** {@code planId}: tin "Rủ đi" kèm plan (người gọi đã kiểm tra plan là của {@code me}). */
+  public MessageView send(UUID me, UUID matchId, String body, UUID planId) {
     UUID other = requireParticipant(me, matchId);
     if (profiles.findById(me).map(UserProfile::isDatingBanned).orElse(false)) {
       throw new ApiException(ErrorCode.DATING_BANNED);
     }
-    MessageView sent = dating.insertMessage(matchId, me, body.strip());
+    MessageView sent = dating.insertMessage(matchId, me, body.strip(), planId);
     events.send(other, "message", new MessageEvent(matchId, sent.forOther()));
     // Các tab khác của chính mình
     events.send(me, "message", new MessageEvent(matchId, sent));

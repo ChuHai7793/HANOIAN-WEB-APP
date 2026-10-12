@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -79,12 +80,17 @@ public final class DatingDtos {
   public record LastMessage(String body, boolean mine, Instant at) {}
 
   /** Một tin nhắn. {@code mine}: do người đang xem gửi. {@code readAt}: người nhận đã xem lúc nào. */
-  public record MessageView(UUID id, UUID senderId, boolean mine, String body, Instant createdAt, Instant readAt) {
+  /** {@code plan}: tin "Rủ đi" kèm một plan (null với tin thường, hoặc khi plan đã bị xoá). */
+  public record MessageView(
+      UUID id, UUID senderId, boolean mine, String body, Instant createdAt, Instant readAt, PlanRef plan) {
     /** Cùng tin, nhìn từ phía người kia. */
     public MessageView forOther() {
-      return new MessageView(id, senderId, !mine, body, createdAt, readAt);
+      return new MessageView(id, senderId, !mine, body, createdAt, readAt, plan);
     }
   }
+
+  /** Plan đính kèm trong tin nhắn. */
+  public record PlanRef(UUID id, String title, LocalDate date, int stopCount) {}
 
   // ---- Sự kiện realtime (SSE): message, read, match, unmatch ----
 

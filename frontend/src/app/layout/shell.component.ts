@@ -206,6 +206,7 @@ export class ShellComponent {
       title: 'Hẹn hò',
       items: [
         { path: '/girlfriends', label: 'Người yêu', icon: 'couple', badge: () => this.girlfriends.count() },
+        { path: '/plans', label: 'Plan', icon: 'route' },
       ],
     },
     ...(this.auth.user()?.role === 'ADMIN'

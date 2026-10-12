@@ -20,6 +20,8 @@ public enum ErrorCode {
   ALREADY_SWIPED(HttpStatus.CONFLICT, "Bạn đã quẹt người này rồi."),
   CANNOT_UNDO_MATCH(HttpStatus.CONFLICT, "Không hoàn tác được: hai bạn đã match."),
   DATING_BANNED(HttpStatus.FORBIDDEN, "Bạn đã bị quản trị viên khoá khỏi Tìm đối tượng."),
+  PLAN_FULL(HttpStatus.CONFLICT, "Plan đã đủ 12 điểm."),
+  NO_ALTERNATIVE(HttpStatus.CONFLICT, "Không còn địa điểm nào phù hợp để chọn."),
   SUPER_LIKE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "Bạn đã dùng hết lượt siêu thích hôm nay."),
   EMAIL_TAKEN(HttpStatus.CONFLICT, "Email đã được sử dụng."),
   DATA_CONFLICT(HttpStatus.CONFLICT, "Dữ liệu bị trùng hoặc vi phạm ràng buộc."),

@@ -42,9 +42,10 @@ public class CatalogController {
       @RequestParam(required = false) String q,
       @RequestParam(required = false) PlaceType type,
       @RequestParam(required = false) CatalogDistrict district,
+      @RequestParam(defaultValue = "false") boolean mine,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "30") int size) {
-    return catalog.search(userId, q, type, district, page, size);
+    return catalog.search(userId, q, type, district, mine, page, size);
   }
 
   @GetMapping("/api/v1/catalog/counts")

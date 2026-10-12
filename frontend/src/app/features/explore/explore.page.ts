@@ -13,6 +13,8 @@ import { IconComponent, IconName } from '../../shared/ui/icon.component';
 import { PlaceFormComponent } from '../places/place-form.component';
 import { BAR_CONFIG, CAFE_CONFIG, PlaceTypeConfig, RESTAURANT_CONFIG } from '../places/place.config';
 import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
+import { AddToPlanDialogComponent } from '../plans/add-to-plan-dialog.component';
+import { StopKind } from '../../core/models/plan.model';
 
 const CONFIGS: Record<PlaceType, PlaceTypeConfig> = {
   cafe: CAFE_CONFIG,
@@ -36,7 +38,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
  */
 @Component({
   selector: 'app-explore-page',
-  imports: [VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
+  imports: [AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
     <div class="flex flex-col gap-6 px-4 pb-14 pt-6 sm:px-6 lg:px-10 lg:pt-8">
       <header class="flex flex-wrap items-end justify-between gap-4">
@@ -200,6 +202,13 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
                   >
                     <app-icon name="navigate" [size]="15" />Chỉ đường
                   </a>
+                  <button
+                    type="button"
+                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
+                    (click)="planTarget.set({ kind: 'place', refId: item.id, name: item.name, district: item.district })"
+                  >
+                    <app-icon name="route" [size]="15" />Vào plan
+                  </button>
                   @if (canEdit()) {
                     <button type="button" class="flex min-h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-slate-600 hover:bg-brand-50" title="Sửa" (click)="openEdit(item)">
                       <app-icon name="edit" [size]="15" />
@@ -262,9 +271,15 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
         (cancel)="pendingDelete.set(null)"
       />
     }
+
+    @if (planTarget(); as t) {
+      <app-add-to-plan-dialog [kind]="t.kind" [refId]="t.refId" [name]="t.name" [district]="t.district" (closed)="planTarget.set(null)" />
+    }
   `,
 })
 export class ExplorePage implements OnInit {
+  /** Đang chọn plan để thêm quán / chỗ chơi này vào */
+  protected readonly planTarget = signal<{ kind: StopKind; refId: string; name: string; district: string } | null>(null);
   private readonly catalog = inject(CatalogService);
   private readonly placeService = inject(PlaceService);
   private readonly toast = inject(ToastService);
