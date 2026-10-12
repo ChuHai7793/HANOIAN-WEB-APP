@@ -12,6 +12,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IconComponent, IconName } from '../../shared/ui/icon.component';
 import { PlaceFormComponent } from '../places/place-form.component';
 import { BAR_CONFIG, CAFE_CONFIG, PlaceTypeConfig, RESTAURANT_CONFIG } from '../places/place.config';
+import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
 
 const CONFIGS: Record<PlaceType, PlaceTypeConfig> = {
   cafe: CAFE_CONFIG,
@@ -35,7 +36,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
  */
 @Component({
   selector: 'app-explore-page',
-  imports: [PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
+  imports: [VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
     <div class="flex flex-col gap-6 px-4 pb-14 pt-6 sm:px-6 lg:px-10 lg:pt-8">
       <header class="flex flex-wrap items-end justify-between gap-4">
@@ -166,6 +167,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
                     {{ item.address || 'Chưa có địa chỉ' }} · <span class="font-medium text-slate-600">{{ item.districtLabel }}</span>
                   </span>
                 </div>
+                <app-vibe-tags [vibes]="item.vibes" />
                 <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[13px] text-slate-700">
                   <span class="flex items-center gap-1">
                     <span class="tracking-[1px] text-[#E29A2D]" aria-hidden="true">{{ stars(item.rating).on }}</span><span class="tracking-[1px] text-[#D9D3EA]" aria-hidden="true">{{ stars(item.rating).off }}</span>
@@ -244,6 +246,8 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
         [config]="configs[type]"
         [place]="editing()"
         [districts]="districts()"
+        [vibes]="editing()?.vibes ?? null"
+        [vibesSource]="editing()?.vibesSource ?? null"
         (save)="save($event)"
         (cancel)="closeForm()"
       />
@@ -286,7 +290,7 @@ export class ExplorePage implements OnInit {
   protected readonly typeMenuOpen = signal(false);
   /** Loại quán của form đang mở (null = đóng) */
   protected readonly formType = signal<PlaceType | null>(null);
-  protected readonly editing = signal<Place | null>(null);
+  protected readonly editing = signal<CatalogItem | null>(null);
   protected readonly pendingDelete = signal<CatalogItem | null>(null);
   private readonly saving = signal(false);
 
@@ -399,7 +403,7 @@ export class ExplorePage implements OnInit {
     this.editing.set(null);
   }
 
-  protected async save(place: Place): Promise<void> {
+  protected async save(place: Place & Pick<CatalogRequest, 'vibes' | 'vibesAuto'>): Promise<void> {
     if (this.saving()) return;
     this.saving.set(true);
     const existing = this.editing();

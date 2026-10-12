@@ -1,5 +1,7 @@
 package com.gfmaster.spot;
 
+import com.gfmaster.vibe.VibeDefaults;
+import com.gfmaster.vibe.VibeDefaults.Tagged;
 import com.gfmaster.catalog.CatalogDistrict;
 import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
@@ -76,6 +78,7 @@ public class SpotService {
   public SpotItem create(SpotRequest req) {
     DateSpot s = new DateSpot();
     apply(req, s);
+    applyVibes(req, s, true);
     return toItem(spots.saveAndFlush(s));
   }
 
@@ -85,12 +88,24 @@ public class SpotService {
       throw new ApiException(ErrorCode.VERSION_CONFLICT).with("current", toItem(s));
     }
     apply(req, s);
+    applyVibes(req, s, false);
     return toItem(spots.saveAndFlush(s));
   }
 
   public void delete(UUID id) {
     if (!spots.existsById(id)) throw ApiException.notFound();
     spots.deleteById(id);
+  }
+
+  private static void applyVibes(SpotRequest r, DateSpot s, boolean isNew) {
+    Tagged t =
+        VibeDefaults.resolve(
+            r.vibes(),
+            Boolean.TRUE.equals(r.vibesAuto()),
+            isNew ? null : new Tagged(s.getVibes(), s.getVibesSource()),
+            VibeDefaults.forSpot(s.getCategory()));
+    s.setVibes(t.vibes());
+    s.setVibesSource(t.source());
   }
 
   private void apply(SpotRequest r, DateSpot s) {
@@ -195,6 +210,8 @@ public class SpotService {
         s.getGoogleMapsUrl(),
         s.getLat(),
         s.getLng(),
+        List.copyOf(s.getVibes()),
+        s.getVibesSource().code(),
         s.getVersion(),
         s.getCreatedAt(),
         s.getUpdatedAt());

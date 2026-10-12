@@ -2,6 +2,7 @@ package com.gfmaster.spot;
 
 import com.gfmaster.catalog.CatalogDistrict;
 import com.gfmaster.place.dto.PlaceRequest;
+import com.gfmaster.vibe.Vibe;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
@@ -14,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public final class SpotDtos {
@@ -45,6 +47,10 @@ public final class SpotDtos {
       @Size(max = 2048) String googleMapsUrl,
       @DecimalMin("-90") @DecimalMax("90") BigDecimal lat,
       @DecimalMin("-180") @DecimalMax("180") BigDecimal lng,
+      /** Nhãn kiểu hẹn admin chọn; null = giữ như cũ. Gửi lại đúng nhãn đang có thì không đổi nguồn. */
+      Set<Vibe> vibes,
+      /** true = bỏ nhãn admin, để hệ thống tự gán theo loại */
+      Boolean vibesAuto,
       Long version) {}
 
   /** Một chỗ chơi. {@code district}: mã quận; {@code districtLabel}: tên hiển thị. */
@@ -69,6 +75,10 @@ public final class SpotDtos {
       String googleMapsUrl,
       BigDecimal lat,
       BigDecimal lng,
+      /** Nhãn kiểu hẹn, theo thứ tự chill, active, romantic */
+      List<Vibe> vibes,
+      /** default | claude | admin */
+      String vibesSource,
       Long version,
       Instant createdAt,
       Instant updatedAt) {}

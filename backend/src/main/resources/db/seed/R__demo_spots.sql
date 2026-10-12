@@ -33,3 +33,6 @@ INSERT INTO date_spots (id, category, district, name, address, description, pric
    250000, 350000, '09:00', '18:30', 'Nên đặt trước, lớp hay kín. Điện thoại: 0848 500 505.', 120, true, true, '',
    '', 'https://www.google.com/maps/search/?api=1&query=B%C3%A0y%20Concept%20D%C3%A9cor%202%20Nguy%E1%BB%85n%20D%C3%A3%20T%C6%B0%E1%BB%A3ng',
    NULL, NULL, '2026-01-01 00:00:00', '2026-01-01 00:00:00', 0);
+
+-- Nhãn kiểu hẹn mặc định (V15): chỉ dòng chưa có ai gán (vibes_source = default)
+UPDATE date_spots SET vibes = default_spot_vibes(category) WHERE vibes_source = 'default';

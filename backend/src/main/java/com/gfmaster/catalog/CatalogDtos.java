@@ -3,6 +3,7 @@ package com.gfmaster.catalog;
 import com.gfmaster.place.PlaceType;
 import com.gfmaster.place.PriceRange;
 import com.gfmaster.place.dto.PlaceRequest;
+import com.gfmaster.vibe.Vibe;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
@@ -15,6 +16,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public final class CatalogDtos {
@@ -45,6 +47,10 @@ public final class CatalogDtos {
       Boolean hasWifi,
       Boolean hasParking,
       @Size(max = 50) String cuisine,
+      /** Nhãn kiểu hẹn admin chọn; null = giữ như cũ. Gửi lại đúng nhãn đang có thì không đổi nguồn. */
+      Set<Vibe> vibes,
+      /** true = bỏ nhãn admin, để hệ thống tự gán theo loại */
+      Boolean vibesAuto,
       Long version) {}
 
   /**
@@ -72,6 +78,10 @@ public final class CatalogDtos {
       Boolean hasWifi,
       Boolean hasParking,
       String cuisine,
+      /** Nhãn kiểu hẹn, theo thứ tự chill, active, romantic */
+      List<Vibe> vibes,
+      /** default | claude | admin */
+      String vibesSource,
       Long version,
       Instant createdAt,
       Instant updatedAt,

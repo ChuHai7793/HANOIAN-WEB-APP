@@ -17,6 +17,7 @@ import { directionsUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
 import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { SpotFormComponent } from './spot-form.component';
+import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
 
 /** Lọc theo ngân sách: giá thấp nhất của chỗ chơi không quá mức này. */
 const BUDGETS: { value: number | null; label: string }[] = [
@@ -38,7 +39,7 @@ function nowHHmm(): string {
  */
 @Component({
   selector: 'app-spot-list-page',
-  imports: [SpotFormComponent, ConfirmDialogComponent, IconComponent],
+  imports: [VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
   template: `
     <div class="flex flex-col gap-6 px-4 pb-14 pt-6 sm:px-6 lg:px-10 lg:pt-8">
       <header class="flex flex-wrap items-end justify-between gap-4">
@@ -175,6 +176,7 @@ function nowHHmm(): string {
                   <h2 class="text-lg font-bold tracking-tight text-slate-900">{{ item.name }}</h2>
                   <span class="text-[13px] leading-snug text-slate-500">{{ item.address || 'Chưa có địa chỉ' }}</span>
                 </div>
+                <app-vibe-tags [vibes]="item.vibes" />
                 <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[13px] text-slate-700">
                   <span class="font-semibold" [class]="item.priceFrom === 0 && !item.priceTo ? 'text-emerald-600' : 'text-slate-900'">
                     {{ price(item) }}

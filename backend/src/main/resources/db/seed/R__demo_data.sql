@@ -152,3 +152,6 @@ INSERT INTO place_links (id, girlfriend_id, place_id, her_rating, last_visited_a
    4, '2026-01-10', 'Nghe nhạc Trịnh cả buổi, nhưng cuối tuần hơi đông.', '2026-01-01 00:00:00', '2026-01-01 00:00:00', 0),
   ('30000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000014',
    5, '2026-01-05', 'Ăn gà rán sốt tới no căng, cười suốt buổi.', '2026-01-01 00:00:00', '2026-01-01 00:00:00', 0);
+
+-- Nhãn kiểu hẹn mặc định cho quán vừa nạp (V15): chỉ dòng chưa có ai gán (vibes_source = default)
+UPDATE place_catalog SET vibes = default_place_vibes(type, price_range) WHERE vibes_source = 'default';

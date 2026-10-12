@@ -5,6 +5,7 @@ import { API_BASE } from '../api/api';
 import { SILENT_CODES } from '../api/http-context';
 import { CatalogItem, CatalogPage, DistrictOption, TypeCounts } from '../models/catalog.model';
 import { Place, PlaceType } from '../models/place.model';
+import { Vibe } from '../models/vibe.model';
 
 export interface CatalogQuery {
   q?: string;
@@ -17,6 +18,9 @@ export interface CatalogQuery {
 /** Dữ liệu admin gửi khi thêm/sửa quán trong danh mục. `version`: bỏ qua khi thêm. */
 export type CatalogRequest = Omit<Place, 'id' | 'createdAt' | 'updatedAt' | 'version'> & {
   district: string;
+  vibes?: Vibe[];
+  /** true = để hệ thống tự gán nhãn theo loại */
+  vibesAuto?: boolean;
   version?: number;
 };
 

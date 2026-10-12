@@ -1,4 +1,4 @@
-import { Component, inject, input, OnInit, output, signal } from '@angular/core';
+import { Component, computed, inject, input, OnInit, output, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { DistrictOption } from '../../core/models/catalog.model';
 import { SPOT_CATEGORIES, SpotCategory, SpotItem } from '../../core/models/spot.model';
@@ -6,6 +6,9 @@ import { SpotRequest } from '../../core/services/spot.service';
 import { parseGmapUrl } from '../../core/utils/gmap-url';
 import { ImagePickerComponent } from '../../shared/ui/image-picker.component';
 import { ModalComponent } from '../../shared/ui/modal.component';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { defaultSpotVibes, VibeChoice } from '../../core/models/vibe.model';
+import { VibePickerComponent } from '../../shared/ui/vibe-picker.component';
 
 const INPUT =
   'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100';
@@ -22,7 +25,7 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
 /** Admin thêm/sửa chỗ chơi trong "Tìm chỗ chơi". */
 @Component({
   selector: 'app-spot-form',
-  imports: [ReactiveFormsModule, ModalComponent, ImagePickerComponent],
+  imports: [ReactiveFormsModule, ModalComponent, ImagePickerComponent, VibePickerComponent],
   template: `
     <app-modal
       [title]="spot() ? 'Sửa chỗ chơi' : 'Thêm chỗ chơi'"
@@ -51,6 +54,14 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
             @if (invalid('district')) {
               <p class="mt-1 text-xs text-rose-600">Chọn khu vực.</p>
             }
+          </div>
+          <div class="sm:col-span-2">
+            <app-vibe-picker
+              [(choice)]="vibeChoice"
+              [defaults]="defaultVibes()"
+              [source]="spot()?.vibesSource ?? null"
+              [saved]="spot()?.vibes ?? null"
+            />
           </div>
 
           <div class="sm:col-span-2">
@@ -209,10 +220,18 @@ export class SpotFormComponent implements OnInit {
     { validators: spotFormRules },
   );
 
+  /** Mặc định "tự gán theo nhóm"; chỗ đã có nhãn Claude / admin thì giữ nhãn đó (ngOnInit) */
+  protected readonly vibeChoice = signal<VibeChoice>({ vibes: [], auto: true });
+  private readonly category = toSignal(this.form.controls.category.valueChanges, {
+    initialValue: this.form.controls.category.value,
+  });
+  protected readonly defaultVibes = computed(() => defaultSpotVibes(this.category()));
+
   // Component được tạo mới mỗi lần mở modal nên nạp một lần ở ngOnInit là đủ.
   ngOnInit(): void {
     const s = this.spot();
     if (!s) return;
+    if (s.vibesSource !== 'default') this.vibeChoice.set({ vibes: s.vibes, auto: false });
     this.form.patchValue({
       category: s.category,
       district: s.district,
@@ -283,6 +302,8 @@ export class SpotFormComponent implements OnInit {
       googleMapsUrl: v.googleMapsUrl.trim(),
       lat,
       lng,
+      vibes: this.vibeChoice().auto ? this.defaultVibes() : this.vibeChoice().vibes,
+      vibesAuto: this.vibeChoice().auto,
     });
   }
 }

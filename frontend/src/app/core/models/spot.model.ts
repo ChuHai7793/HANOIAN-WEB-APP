@@ -1,3 +1,5 @@
+import type { Vibe, VibeSource } from './vibe.model';
+
 export type SpotCategory =
   | 'entertainment'
   | 'workshop'
@@ -42,6 +44,9 @@ export interface SpotItem {
   googleMapsUrl: string;
   lat: number | null;
   lng: number | null;
+  /** Kiểu hẹn phù hợp (Autoplan) và nguồn nhãn */
+  vibes: Vibe[];
+  vibesSource: VibeSource;
   version: number;
   createdAt: string;
   updatedAt: string;

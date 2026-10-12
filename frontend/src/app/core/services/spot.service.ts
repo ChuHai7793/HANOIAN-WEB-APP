@@ -28,7 +28,12 @@ function toParams(query: object): HttpParams {
 }
 
 /** Dữ liệu admin gửi khi thêm/sửa chỗ chơi. `version`: bỏ qua khi thêm. */
-export type SpotRequest = Omit<SpotItem, 'id' | 'districtLabel' | 'createdAt' | 'updatedAt' | 'version'> & {
+export type SpotRequest = Omit<
+  SpotItem,
+  'id' | 'districtLabel' | 'createdAt' | 'updatedAt' | 'version' | 'vibesSource'
+> & {
+  /** true = để hệ thống tự gán nhãn theo nhóm */
+  vibesAuto?: boolean;
   version?: number;
 };
 

@@ -9,16 +9,19 @@ import { ModalComponent } from '../../shared/ui/modal.component';
 import { DistrictOption } from '../../core/models/catalog.model';
 import { RatingStarsComponent } from '../../shared/ui/rating-stars.component';
 import { ImagePickerComponent } from '../../shared/ui/image-picker.component';
-import { CUISINES, Place, PRICE_RANGES } from '../../core/models/place.model';
+import { CUISINES, Place, PRICE_RANGES, PriceRange } from '../../core/models/place.model';
 import { PlaceTypeConfig } from './place.config';
 import { embedMapUrl, isShortMapsLink, parseGmapUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
 import { nowIso } from '../../core/utils/id';
 import { MapsService } from '../../core/services/maps.service';
 import { errorMessage } from '../../core/api/api';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { defaultPlaceVibes, Vibe, VibeChoice, VibeSource } from '../../core/models/vibe.model';
+import { VibePickerComponent } from '../../shared/ui/vibe-picker.component';
 
 @Component({
   selector: 'app-place-form',
-  imports: [ReactiveFormsModule, ModalComponent, RatingStarsComponent, ImagePickerComponent],
+  imports: [VibePickerComponent, ReactiveFormsModule, ModalComponent, RatingStarsComponent, ImagePickerComponent],
   template: `
     <app-modal
       [title]="place() ? 'Sửa ' + config().title.toLowerCase() : config().addLabel"
@@ -46,6 +49,14 @@ import { errorMessage } from '../../core/api/api';
               @if (invalid('district')) {
                 <p class="mt-1 text-xs text-rose-600">Chọn khu vực của quán.</p>
               }
+            </div>
+            <div class="sm:col-span-2">
+              <app-vibe-picker
+                [(choice)]="vibeChoice"
+                [defaults]="defaultVibes()"
+                [source]="vibesSource()"
+                [saved]="vibes()"
+              />
             </div>
           }
 
@@ -266,8 +277,12 @@ export class PlaceFormComponent {
   readonly place = input<Place | null>(null);
   /** Có danh sách quận (form của "Khám phá quán"): hiện ô Khu vực, bắt buộc chọn. */
   readonly districts = input<DistrictOption[] | null>(null);
+  /** Nhãn kiểu hẹn đang lưu của quán (chỉ form Khám phá quán) */
+  readonly vibes = input<Vibe[] | null>(null);
+  readonly vibesSource = input<VibeSource | null>(null);
 
-  readonly save = output<Place>();
+  /** Form Khám phá quán gửi kèm nhãn kiểu hẹn */
+  readonly save = output<Place & Partial<{ vibes: Vibe[]; vibesAuto: boolean }>>();
   readonly cancel = output<void>();
 
   protected readonly priceRanges = PRICE_RANGES;
@@ -296,6 +311,15 @@ export class PlaceFormComponent {
     district: [''],
   });
 
+  /** Mặc định "tự gán theo loại"; quán đã có nhãn Claude / admin thì giữ nhãn đó (ngOnInit) */
+  protected readonly vibeChoice = signal<VibeChoice>({ vibes: [], auto: true });
+  private readonly price = toSignal(this.form.controls.priceRange.valueChanges, {
+    initialValue: this.form.controls.priceRange.value,
+  });
+  protected readonly defaultVibes = computed(() =>
+    defaultPlaceVibes(this.config().type, this.price() as PriceRange),
+  );
+
   protected readonly mapPreview = computed<SafeResourceUrl>(() => {
     const c = this.coords();
     const url = embedMapUrl(c?.lat ?? null, c?.lng ?? null, this.form.value.address ?? '');
@@ -308,6 +332,8 @@ export class PlaceFormComponent {
       this.form.controls.district.setValidators(Validators.required);
       this.form.controls.district.updateValueAndValidity();
     }
+    const source = this.vibesSource();
+    if (source && source !== 'default') this.vibeChoice.set({ vibes: this.vibes() ?? [], auto: false });
     this.patchFromInput();
   }
 
@@ -447,7 +473,11 @@ export class PlaceFormComponent {
       updatedAt: nowIso(),
       ...(this.districts() ? { district: v.district } : {}),
     };
+    const vibes = this.vibeChoice();
+    const tagged = this.districts()
+      ? { ...result, vibes: vibes.auto ? this.defaultVibes() : vibes.vibes, vibesAuto: vibes.auto }
+      : result;
 
-    this.save.emit(result);
+    this.save.emit(tagged);
   }
 }

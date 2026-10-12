@@ -1,4 +1,5 @@
 import { Place, PlaceType } from './place.model';
+import { Vibe, VibeSource } from './vibe.model';
 
 /**
  * Một quán trong "Khám phá quán" (admin nhập): đủ thông tin như một quán trong My place, thêm khu vực.
@@ -10,6 +11,9 @@ export interface CatalogItem extends Omit<Place, 'district'> {
   districtLabel: string;
   inMyPlace: boolean;
   fans: number | null;
+  /** Kiểu hẹn phù hợp (Autoplan) và nguồn nhãn */
+  vibes: Vibe[];
+  vibesSource: VibeSource;
 }
 
 /** Số quán theo loại cho chip lọc; `all` là tổng. */

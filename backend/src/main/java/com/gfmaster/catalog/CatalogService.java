@@ -1,5 +1,7 @@
 package com.gfmaster.catalog;
 
+import com.gfmaster.vibe.VibeDefaults;
+import com.gfmaster.vibe.VibeDefaults.Tagged;
 import com.gfmaster.catalog.CatalogDtos.CatalogItem;
 import com.gfmaster.catalog.CatalogDtos.CatalogPage;
 import com.gfmaster.catalog.CatalogDtos.CatalogRequest;
@@ -97,6 +99,7 @@ public class CatalogService {
   public CatalogItem create(CatalogRequest req) {
     CatalogPlace c = new CatalogPlace();
     apply(req, c);
+    applyVibes(req, c, true);
     return toItem(catalog.saveAndFlush(c), false, null);
   }
 
@@ -106,6 +109,7 @@ public class CatalogService {
       throw new ApiException(ErrorCode.VERSION_CONFLICT).with("current", toItem(c, false, null));
     }
     apply(req, c);
+    applyVibes(req, c, false);
     CatalogPlace saved = catalog.saveAndFlush(c);
     placeService.syncCatalogCopies(id, toPlaceRequest(saved));
     return toItem(saved, false, null);
@@ -147,6 +151,17 @@ public class CatalogService {
     c.setHasWifi(restaurant ? null : r.hasWifi());
     c.setHasParking(restaurant ? null : r.hasParking());
     c.setCuisine(restaurant ? r.cuisine() : null);
+  }
+
+  private static void applyVibes(CatalogRequest r, CatalogPlace c, boolean isNew) {
+    Tagged t =
+        VibeDefaults.resolve(
+            r.vibes(),
+            Boolean.TRUE.equals(r.vibesAuto()),
+            isNew ? null : new Tagged(c.getVibes(), c.getVibesSource()),
+            VibeDefaults.forPlace(c.getType(), c.getPriceRange()));
+    c.setVibes(t.vibes());
+    c.setVibesSource(t.source());
   }
 
   /** Nội dung quán dưới dạng request tạo/ghi đè quán trong My place (ảnh giữ dạng lưu). */
@@ -205,6 +220,8 @@ public class CatalogService {
         c.getHasWifi(),
         c.getHasParking(),
         c.getCuisine(),
+        List.copyOf(c.getVibes()),
+        c.getVibesSource().code(),
         c.getVersion(),
         c.getCreatedAt(),
         c.getUpdatedAt(),

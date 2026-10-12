@@ -3,12 +3,19 @@ package com.gfmaster.catalog;
 import com.gfmaster.common.entity.BaseEntity;
 import com.gfmaster.place.PlaceType;
 import com.gfmaster.place.PriceRange;
+import com.gfmaster.vibe.Vibe;
+import com.gfmaster.vibe.VibeConverters;
+import com.gfmaster.vibe.VibeDefaults;
+import com.gfmaster.vibe.VibeSource;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.util.EnumSet;
+import java.util.Set;
 import java.time.LocalTime;
 import lombok.Getter;
 import lombok.Setter;
@@ -77,4 +84,13 @@ public class CatalogPlace extends BaseEntity {
 
   @Column(length = 50)
   private String cuisine;
+
+  /** Nhãn kiểu hẹn (cho Autoplan) và nguồn của nhãn, xem V15 / {@link VibeDefaults#resolve}. */
+  @Convert(converter = VibeConverters.VibesConverter.class)
+  @Column(nullable = false, length = 40)
+  private Set<Vibe> vibes = EnumSet.noneOf(Vibe.class);
+
+  @Convert(converter = VibeConverters.SourceConverter.class)
+  @Column(nullable = false, length = 10)
+  private VibeSource vibesSource = VibeSource.DEFAULT;
 }
