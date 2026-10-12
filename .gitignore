@@ -36,3 +36,6 @@ Thumbs.db
 # Tài liệu Markdown chỉ giữ trên máy (không commit), trừ README.md ở gốc repo
 *.md
 !/README.md
+
+# Tài liệu thiết kế, ảnh chụp màn hình… chỉ giữ trên máy
+/ignore/
