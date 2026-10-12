@@ -20,6 +20,7 @@ import { SpotFormComponent } from './spot-form.component';
 import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
 import { AddToPlanDialogComponent } from '../plans/add-to-plan-dialog.component';
 import { StopKind } from '../../core/models/plan.model';
+import { ModalComponent } from '../../shared/ui/modal.component';
 
 /** Lọc theo ngân sách: giá thấp nhất của chỗ chơi không quá mức này. */
 const BUDGETS: { value: number | null; label: string }[] = [
@@ -41,7 +42,7 @@ function nowHHmm(): string {
  */
 @Component({
   selector: 'app-spot-list-page',
-  imports: [AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
+  imports: [ModalComponent, AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
   template: `
     <div class="flex flex-col gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
@@ -154,7 +155,14 @@ function nowHHmm(): string {
         <span class="text-[13px] text-slate-500">{{ total() }} chỗ chơi</span>
         <div class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
           @for (item of items(); track item.id) {
-            <article class="flex flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)]">
+            <article
+              class="flex cursor-pointer flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)] transition hover:border-brand-300 focus-visible:outline-2 focus-visible:outline-brand-500"
+              tabindex="0"
+              role="button"
+              [attr.aria-label]="'Xem chi tiết ' + item.name"
+              (click)="detail.set(item)"
+              (keydown.enter)="detail.set(item)"
+            >
               <div class="relative flex h-36 items-center justify-center bg-[#EFEAFC] text-brand-500">
                 @if (item.imageUrl) {
                   <img [src]="item.imageUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
@@ -179,26 +187,7 @@ function nowHHmm(): string {
                   <span class="text-[13px] leading-snug text-slate-500">{{ item.address || 'Chưa có địa chỉ' }}</span>
                 </div>
                 <app-vibe-tags [vibes]="item.vibes" />
-                <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[13px] text-slate-700">
-                  <span class="font-semibold" [class]="item.priceFrom === 0 && !item.priceTo ? 'text-emerald-600' : 'text-slate-900'">
-                    {{ price(item) }}
-                  </span>
-                  <span class="flex items-center gap-1">
-                    <span class="text-slate-500"><app-icon name="clock" [size]="14" /></span>
-                    {{ item.openTime ? item.openTime + '–' + item.closeTime : 'Không giờ cố định' }}
-                  </span>
-                  @if (item.durationMin) {
-                    <span>Khoảng {{ duration(item.durationMin) }}</span>
-                  }
-                  <span>{{ item.indoor ? 'Trong nhà' : 'Ngoài trời' }}</span>
-                </div>
-                @if (item.description) {
-                  <p class="line-clamp-3 text-sm leading-relaxed text-slate-600">{{ item.description }}</p>
-                }
-                @if (item.hoursNote) {
-                  <p class="text-[13px] italic text-slate-500">{{ item.hoursNote }}</p>
-                }
-                <div class="mt-auto flex flex-wrap items-center gap-2 pt-1.5">
+                <div class="mt-auto flex flex-wrap items-center gap-2 pt-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
                   <a
                     [href]="mapUrl(item)"
                     target="_blank"
@@ -276,9 +265,71 @@ function nowHHmm(): string {
     @if (planTarget(); as t) {
       <app-add-to-plan-dialog [kind]="t.kind" [refId]="t.refId" [name]="t.name" [district]="t.district" (closed)="planTarget.set(null)" />
     }
+
+    @if (detail(); as d) {
+      <app-modal [title]="d.name" [subtitle]="cat(d).label + ' · ' + d.districtLabel" width="max-w-lg" (dismiss)="detail.set(null)">
+        <div class="flex flex-col gap-4">
+          @if (d.imageUrl) {
+            <img [src]="d.imageUrl" alt="" class="h-52 w-full rounded-xl object-cover" />
+          }
+          <p class="flex items-start gap-1.5 text-sm text-slate-600">
+            <span class="mt-0.5 text-slate-400"><app-icon name="pin" [size]="15" /></span>{{ d.address || 'Chưa có địa chỉ' }}
+          </p>
+          <app-vibe-tags [vibes]="d.vibes" />
+          <dl class="grid grid-cols-2 gap-3 rounded-xl bg-brand-50/60 p-3 text-sm">
+            <div>
+              <dt class="text-xs text-slate-500">Giá</dt>
+              <dd class="font-semibold" [class]="d.priceFrom === 0 && !d.priceTo ? 'text-emerald-600' : 'text-slate-900'">{{ price(d) }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-slate-500">Giờ mở cửa</dt>
+              <dd class="font-semibold text-slate-900">{{ d.openTime ? d.openTime + '–' + d.closeTime : 'Không giờ cố định' }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-slate-500">Thời lượng gợi ý</dt>
+              <dd class="font-semibold text-slate-900">{{ d.durationMin ? 'Khoảng ' + duration(d.durationMin) : 'Tuỳ bạn' }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-slate-500">Không gian</dt>
+              <dd class="font-semibold text-slate-900">{{ d.indoor ? 'Trong nhà' : 'Ngoài trời' }}{{ d.needsBooking ? ' · Cần đặt trước' : '' }}</dd>
+            </div>
+          </dl>
+          @if (d.description) {
+            <p class="whitespace-pre-line text-sm leading-relaxed text-slate-700">{{ d.description }}</p>
+          }
+          @if (d.hoursNote) {
+            <p class="flex items-start gap-1.5 text-[13px] italic text-slate-500">
+              <span class="mt-0.5 not-italic"><app-icon name="info" [size]="14" /></span>{{ d.hoursNote }}
+            </p>
+          }
+        </div>
+        <div modalFooter class="flex flex-wrap justify-end gap-2">
+          <a [href]="mapUrl(d)" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50">
+            <app-icon name="pin" [size]="15" />Maps
+          </a>
+          <a [href]="directions(d)" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50">
+            <app-icon name="navigate" [size]="15" />Chỉ đường
+          </a>
+          <button
+            type="button"
+            class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
+            (click)="detail.set(null); planTarget.set({ kind: 'spot', refId: d.id, name: d.name, district: d.district })"
+          >
+            <app-icon name="route" [size]="15" />Vào plan
+          </button>
+          @if (d.bookingUrl) {
+            <a [href]="d.bookingUrl" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-1.5 rounded-[10px] bg-brand-600 px-3.5 text-[13px] font-semibold text-white hover:bg-brand-700">
+              <app-icon name="calendar" [size]="15" />Đặt chỗ
+            </a>
+          }
+        </div>
+      </app-modal>
+    }
   `,
 })
 export class SpotListPage implements OnInit {
+  /** Chỗ chơi đang xem chi tiết (popup) */
+  protected readonly detail = signal<SpotItem | null>(null);
   /** Đang chọn plan để thêm quán / chỗ chơi này vào */
   protected readonly planTarget = signal<{ kind: StopKind; refId: string; name: string; district: string } | null>(null);
   private readonly spots = inject(SpotService);
