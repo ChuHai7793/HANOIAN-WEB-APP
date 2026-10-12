@@ -40,11 +40,11 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
   selector: 'app-explore-page',
   imports: [AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
-    <div class="flex flex-col gap-6 px-4 pb-14 pt-6 sm:px-6 lg:px-10 lg:pt-8">
+    <div class="flex flex-col gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-1.5">
-          <h1 class="text-[32px] font-extrabold tracking-tight text-slate-900">Khám phá quán</h1>
-          <p class="text-[15px] text-slate-500">
+          <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Khám phá quán</h1>
+          <p class="text-[13px] text-slate-500">
             Quán cafe, bar, quán ăn ở Hà Nội. Ưng quán nào thì lưu vào My place.
           </p>
         </div>
@@ -52,7 +52,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
           <div class="relative">
             <button
               type="button"
-              class="flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
+              class="flex min-h-10 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
               (click)="typeMenuOpen.set(!typeMenuOpen())"
             >
               <app-icon name="plus" [size]="18" [stroke]="2.4" />
@@ -86,7 +86,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
         </div>
         <a
           routerLink="/dating"
-          class="flex min-h-11 items-center gap-2 rounded-xl border border-brand-300 bg-white px-5 text-sm font-semibold text-brand-800 transition hover:bg-brand-50"
+          class="flex min-h-10 items-center gap-2 rounded-xl border border-brand-300 bg-white px-5 text-sm font-semibold text-brand-800 transition hover:bg-brand-50"
         >
           Bắt đầu quẹt
           <app-icon name="arrowRight" [size]="16" [stroke]="2.4" />
@@ -94,7 +94,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
       </section>
 
       <div class="flex flex-wrap items-center gap-3">
-        <label class="flex min-h-11 max-w-[420px] flex-[1_1_280px] items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 text-slate-500">
+        <label class="flex min-h-10 max-w-[420px] flex-[1_1_280px] items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 text-slate-500">
           <app-icon name="search" [size]="18" />
           <span class="sr-only">Tìm quán</span>
           <input
@@ -105,7 +105,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
             placeholder="Tìm theo tên, địa chỉ…"
           />
         </label>
-        <label class="flex min-h-11 items-center gap-2 rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
+        <label class="flex min-h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
           <span class="text-brand-600"><app-icon name="pin" [size]="18" /></span>
           <span class="sr-only">Khu vực</span>
           <select
@@ -140,15 +140,15 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
       @if (loading() && items().length === 0) {
         <p class="text-sm text-slate-500">Đang tải…</p>
       } @else if (items().length === 0) {
-        <div class="rounded-[20px] border border-dashed border-brand-300 bg-white px-6 py-12 text-center text-[15px] text-slate-500">
+        <div class="rounded-[20px] border border-dashed border-brand-300 bg-white px-6 py-12 text-center text-sm text-slate-500">
           {{ q() || type() || district() ? 'Không tìm thấy quán phù hợp. Thử từ khoá khác nhé.' : 'Chưa có quán nào trong danh mục.' }}
         </div>
       } @else {
         <span class="text-[13px] text-slate-500">{{ total() }} quán</span>
-        <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-6">
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
           @for (item of items(); track item.id) {
             <article class="flex flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)]">
-              <div class="relative flex h-44 items-center justify-center bg-[#EFEAFC] text-brand-500">
+              <div class="relative flex h-36 items-center justify-center bg-[#EFEAFC] text-brand-500">
                 @if (item.imageUrl) {
                   <img [src]="item.imageUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
                 } @else {
@@ -163,9 +163,9 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
                   </span>
                 }
               </div>
-              <div class="flex flex-1 flex-col gap-2.5 px-5 pb-5 pt-[18px]">
+              <div class="flex flex-1 flex-col gap-2.5 px-4 pb-4 pt-3.5">
                 <div class="flex flex-col gap-1">
-                  <h2 class="text-lg font-bold tracking-tight text-slate-900">{{ item.name }}</h2>
+                  <h2 class="text-base font-bold tracking-tight text-slate-900">{{ item.name }}</h2>
                   <span class="text-[13px] leading-snug text-slate-500">
                     {{ item.address || 'Chưa có địa chỉ' }} · <span class="font-medium text-slate-600">{{ item.districtLabel }}</span>
                   </span>
@@ -240,7 +240,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
           <div class="text-center">
             <button
               type="button"
-              class="min-h-11 rounded-xl border border-brand-200 bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-brand-50 disabled:opacity-60"
+              class="min-h-10 rounded-xl border border-brand-200 bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-brand-50 disabled:opacity-60"
               [disabled]="loading()"
               (click)="loadMore()"
             >

@@ -25,7 +25,7 @@ const SHARED_SHOWN = 2;
       (pointerup)="end()"
       (pointercancel)="end()"
     >
-      <div class="relative h-[min(440px,55vh)] bg-[#EFEAFC]">
+      <div class="relative h-[clamp(150px,calc(100dvh-520px),420px)] bg-[#EFEAFC] lg:h-[clamp(200px,calc(100dvh-430px),420px)]">
         @if (photo(); as url) {
           <img [src]="url" alt="" class="pointer-events-none h-full w-full object-cover" draggable="false" />
         } @else {
@@ -79,10 +79,10 @@ const SHARED_SHOWN = 2;
         >
       </div>
 
-      <div class="pointer-events-none flex flex-col gap-3 px-6 pb-6 pt-5">
+      <div class="pointer-events-none flex flex-col gap-2 px-5 pb-4 pt-3.5">
         <div class="flex flex-wrap items-baseline gap-2.5">
-          <h2 class="text-[26px] font-extrabold tracking-tight text-slate-900">{{ candidate().displayName }}</h2>
-          <span class="text-[22px] text-slate-600">{{ candidate().age }}</span>
+          <h2 class="text-[22px] font-extrabold tracking-tight text-slate-900">{{ candidate().displayName }}</h2>
+          <span class="text-lg text-slate-600">{{ candidate().age }}</span>
           @if (candidate().city) {
             <span class="ml-auto flex items-center gap-1 text-[13px] text-slate-500">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -93,17 +93,17 @@ const SHARED_SHOWN = 2;
           }
         </div>
         @if (candidate().bio) {
-          <p class="line-clamp-3 text-[15px] leading-relaxed text-slate-700">{{ candidate().bio }}</p>
+          <p class="line-clamp-2 text-sm leading-snug text-slate-700">{{ candidate().bio }}</p>
         }
         @if (candidate().interests.length) {
-          <div class="flex flex-wrap gap-2">
+          <div class="flex max-h-[26px] flex-wrap gap-1.5 overflow-hidden">
             @for (i of candidate().interests; track i) {
-              <span class="rounded-full bg-brand-100 px-3 py-1.5 text-[13px] font-medium text-brand-800">{{ i }}</span>
+              <span class="rounded-full bg-brand-100 px-2.5 py-1 text-xs font-medium text-brand-800">{{ i }}</span>
             }
           </div>
         }
         @if (sharedLabel(); as shared) {
-          <div class="mt-1 flex items-center gap-2.5 rounded-[14px] border border-dashed border-brand-300 px-3.5 py-3 text-[13px] text-slate-600">
+          <div class="flex items-center gap-2 rounded-xl border border-dashed border-brand-300 px-3 py-2 text-xs text-slate-600">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6D4FD6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M17 8h1a4 4 0 1 1 0 8h-1" /><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z" />
             </svg>

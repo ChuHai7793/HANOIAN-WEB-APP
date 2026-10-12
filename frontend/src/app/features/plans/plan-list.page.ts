@@ -22,23 +22,23 @@ const INPUT = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text
   selector: 'app-plan-list-page',
   imports: [RouterLink, IconComponent, ModalComponent],
   template: `
-    <div class="flex flex-col gap-6 px-4 pb-14 pt-6 sm:px-6 lg:px-10 lg:pt-8">
+    <div class="flex flex-col gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-1.5">
-          <h1 class="text-[32px] font-extrabold tracking-tight text-slate-900">Plan</h1>
-          <p class="text-[15px] text-slate-500">Lên lịch trình buổi hẹn: điểm 1 → điểm 2 → … Tự làm, hoặc để Autoplan dựng sẵn.</p>
+          <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Plan</h1>
+          <p class="text-[13px] text-slate-500">Lên lịch trình buổi hẹn: điểm 1 → điểm 2 → … Tự làm, hoặc để Autoplan dựng sẵn.</p>
         </div>
         <div class="flex flex-wrap gap-2">
           <button
             type="button"
-            class="flex min-h-11 items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-50"
+            class="flex min-h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-50"
             (click)="openCreate()"
           >
             <app-icon name="plus" [size]="18" [stroke]="2.4" />Tạo plan
           </button>
           <button
             type="button"
-            class="flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
+            class="flex min-h-10 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
             (click)="openAuto()"
           >
             <app-icon name="shuffle" [size]="18" />Autoplan
@@ -51,7 +51,7 @@ const INPUT = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text
           <span class="text-brand-600"><app-icon name="route" [size]="36" /></span>
           <p class="text-lg font-semibold text-slate-900">Chưa có plan nào</p>
           <p class="max-w-md text-sm text-slate-500">Chọn một khu vực và bấm Autoplan: app dựng sẵn lịch trình gồm chỗ chơi, quán ăn, cafe gần nhau. Sửa tiếp theo ý bạn.</p>
-          <button type="button" class="mt-2 flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white hover:bg-brand-700" (click)="openAuto()">
+          <button type="button" class="mt-2 flex min-h-10 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white hover:bg-brand-700" (click)="openAuto()">
             <app-icon name="shuffle" [size]="18" />Thử Autoplan
           </button>
         </div>
@@ -62,7 +62,7 @@ const INPUT = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text
               [routerLink]="['/plans', p.id]"
               class="flex flex-col overflow-hidden rounded-2xl border border-brand-100 bg-white transition hover:border-brand-300 hover:shadow-md"
             >
-              <div class="relative h-32 bg-brand-50">
+              <div class="relative h-28 bg-brand-50">
                 @if (p.imageUrl) {
                   <img [src]="p.imageUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
                 } @else {

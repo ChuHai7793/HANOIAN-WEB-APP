@@ -32,15 +32,15 @@ interface PlaceRow {
   selector: 'app-place-list',
   imports: [RouterLink, PlaceDetailComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent],
   template: `
-    <div class="flex flex-col gap-6 px-4 pb-14 pt-6 sm:px-6 lg:px-10 lg:pt-8">
+    <div class="flex flex-col gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-1.5">
-          <h1 class="text-[32px] font-extrabold tracking-tight text-slate-900">My place</h1>
-          <p class="text-[15px] text-slate-500">Quán cafe, bar, quán ăn bạn đã lưu từ Khám phá quán.</p>
+          <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">My place</h1>
+          <p class="text-[13px] text-slate-500">Quán cafe, bar, quán ăn bạn đã lưu từ Khám phá quán.</p>
         </div>
         <a
           routerLink="/explore"
-          class="flex min-h-11 items-center gap-2 rounded-xl border border-brand-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-brand-50"
+          class="flex min-h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-brand-50"
         >
           <app-icon name="compass" [size]="18" />
           Khám phá quán
@@ -48,7 +48,7 @@ interface PlaceRow {
       </header>
 
       <div class="flex flex-wrap items-center gap-3">
-        <label class="flex min-h-11 max-w-[420px] flex-[1_1_280px] items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 text-slate-500">
+        <label class="flex min-h-10 max-w-[420px] flex-[1_1_280px] items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 text-slate-500">
           <app-icon name="search" [size]="18" />
           <span class="sr-only">Tìm quán</span>
           <input
@@ -59,7 +59,7 @@ interface PlaceRow {
             placeholder="Tìm theo tên, địa chỉ, ghi chú…"
           />
         </label>
-        <label class="flex min-h-11 items-center rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
+        <label class="flex min-h-10 items-center rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
           <span class="sr-only">Khoảng giá</span>
           <select
             [value]="price()"
@@ -133,7 +133,7 @@ interface PlaceRow {
           @if (!hasAny()) {
             <a
               routerLink="/explore"
-              class="flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
+              class="flex min-h-10 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
             >
               <app-icon name="compass" [size]="18" />
               Vào Khám phá quán
@@ -142,12 +142,12 @@ interface PlaceRow {
         </app-empty-state>
       } @else {
         <span class="text-[13px] text-slate-500">{{ visible().length }} / {{ all().length }} quán</span>
-        <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-6">
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
           @for (item of visible(); track item.place.id) {
             <article class="flex flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)]">
               <button
                 type="button"
-                class="group relative flex h-44 cursor-pointer items-center justify-center overflow-hidden bg-[#EFEAFC] text-brand-500"
+                class="group relative flex h-36 cursor-pointer items-center justify-center overflow-hidden bg-[#EFEAFC] text-brand-500"
                 (click)="detailing.set(item)"
                 [attr.aria-label]="'Xem chi tiết ' + item.place.name"
               >
@@ -165,9 +165,9 @@ interface PlaceRow {
                   </span>
                 }
               </button>
-              <div class="flex flex-1 flex-col gap-2.5 px-5 pb-5 pt-[18px]">
+              <div class="flex flex-1 flex-col gap-2.5 px-4 pb-4 pt-3.5">
                 <div class="flex flex-col gap-1">
-                  <h2 class="text-lg font-bold tracking-tight text-slate-900">{{ item.place.name }}</h2>
+                  <h2 class="text-base font-bold tracking-tight text-slate-900">{{ item.place.name }}</h2>
                   <span class="text-[13px] leading-snug text-slate-500">{{ item.place.address || 'Chưa có địa chỉ' }}</span>
                 </div>
                 <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[13px] text-slate-700">

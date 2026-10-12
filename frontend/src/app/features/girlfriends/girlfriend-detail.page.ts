@@ -41,7 +41,7 @@ interface LinkedPlace {
     ConfirmDialogComponent,
     ModalComponent, IconComponent],
   template: `
-    <div class="p-4 sm:p-6 lg:p-8">
+    <div class="p-4 sm:p-5 lg:p-6">
     @if (girlfriend(); as gf) {
       <a
         routerLink="/girlfriends"
@@ -66,7 +66,7 @@ interface LinkedPlace {
 
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-2.5">
-              <h1 class="text-2xl font-bold text-slate-900">{{ gf.name }}</h1>
+              <h1 class="text-xl font-bold text-slate-900">{{ gf.name }}</h1>
               <span
                 class="rounded-full px-2.5 py-0.5 text-xs font-medium"
                 [class]="statusClasses(gf)"

@@ -42,7 +42,7 @@ const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240];
   selector: 'app-plan-detail-page',
   imports: [RouterLink, IconComponent, ModalComponent, ConfirmDialogComponent, StopPickerComponent, PlanMapComponent],
   template: `
-    <div class="mx-auto flex max-w-4xl flex-col gap-5 px-4 pb-14 pt-6 sm:px-6 lg:pt-8">
+    <div class="mx-auto flex max-w-4xl flex-col gap-4 px-4 pb-10 pt-4 sm:px-6 lg:pt-5">
       <a routerLink="/plans" class="flex w-fit items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
         <span class="rotate-180"><app-icon name="arrowRight" [size]="16" /></span>Tất cả plan
       </a>
@@ -62,7 +62,7 @@ const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240];
         <header class="flex flex-wrap items-start justify-between gap-4">
           <div class="flex flex-col gap-2">
             <div class="flex flex-wrap items-center gap-2">
-              <h1 class="text-[28px] font-extrabold tracking-tight text-slate-900">{{ p.title }}</h1>
+              <h1 class="text-[22px] font-extrabold tracking-tight text-slate-900">{{ p.title }}</h1>
               <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [class]="statusMeta(p.status).classes">{{ statusMeta(p.status).label }}</span>
             </div>
             <p class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
@@ -104,14 +104,14 @@ const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240];
 
         @if (p.mine) {
           <div class="flex flex-wrap gap-2">
-            <button type="button" class="flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50" [disabled]="p.stops.length >= 12" (click)="pickerOpen.set(true)">
+            <button type="button" class="flex min-h-10 items-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50" [disabled]="p.stops.length >= 12" (click)="pickerOpen.set(true)">
               <app-icon name="plus" [size]="18" [stroke]="2.4" />Thêm điểm
             </button>
-            <button type="button" class="flex min-h-11 items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50" [disabled]="!p.stops.length" (click)="shareOpen.set(true)">
+            <button type="button" class="flex min-h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50" [disabled]="!p.stops.length" (click)="shareOpen.set(true)">
               <app-icon name="chat" [size]="18" />Rủ đi
             </button>
             @if (directions(); as url) {
-              <a [href]="url" target="_blank" rel="noopener" class="flex min-h-11 items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 text-sm text-slate-700 hover:bg-brand-50">
+              <a [href]="url" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 text-sm text-slate-700 hover:bg-brand-50">
                 <app-icon name="navigate" [size]="18" />Chỉ đường
               </a>
             }

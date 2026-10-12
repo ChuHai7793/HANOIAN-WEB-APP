@@ -30,17 +30,17 @@ type Tab = 'swipe' | 'matches';
   selector: 'app-dating-page',
   imports: [DatePipe, RouterLink, SwipeCardComponent, ReportDialogComponent, ConfirmDialogComponent, IconComponent],
   template: `
-    <div class="relative flex flex-col gap-7 px-4 pb-12 pt-6 sm:px-6 lg:px-10 lg:pt-8">
+    <div class="relative flex flex-col gap-4 px-4 pb-8 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-1.5">
-          <h1 class="text-[32px] font-extrabold tracking-tight text-slate-900">Tìm đối tượng</h1>
-          <p class="text-[15px] text-slate-500">Quẹt phải để thích, quẹt trái để bỏ qua. Hai bên cùng thích là match.</p>
+          <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Tìm đối tượng</h1>
+          <p class="hidden text-[13px] text-slate-500 sm:block">Quẹt phải để thích, quẹt trái để bỏ qua. Hai bên cùng thích là match.</p>
         </div>
         @if (settings()?.enabled) {
           <div class="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              class="flex min-h-11 items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-brand-50"
+              class="flex min-h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-brand-50"
               (click)="openFilters()"
             >
               <app-icon name="filter" [size]="18" />
@@ -107,7 +107,7 @@ type Tab = 'swipe' | 'matches';
           </p>
           <button
             type="button"
-            class="mt-5 min-h-12 w-full rounded-[14px] bg-brand-600 px-4 text-[15px] font-bold text-white hover:bg-brand-700 disabled:opacity-50"
+            class="mt-5 min-h-11 w-full rounded-[14px] bg-brand-600 px-4 text-sm font-bold text-white hover:bg-brand-700 disabled:opacity-50"
             [disabled]="settings()!.missing.length > 0 || busy()"
             (click)="enable()"
           >
@@ -115,9 +115,9 @@ type Tab = 'swipe' | 'matches';
           </button>
         </div>
       } @else if (tab() === 'swipe') {
-        <div class="flex flex-wrap items-start justify-center gap-8">
+        <div class="flex flex-wrap items-start justify-center gap-6">
           <!-- Cột thẻ -->
-          <div class="flex w-full max-w-[440px] flex-[1_1_400px] flex-col items-stretch gap-5">
+          <div class="flex w-full max-w-[400px] flex-[1_1_360px] flex-col items-stretch gap-3">
             <div class="relative">
               @if (deck().length > 1) {
                 <!-- Thẻ kế tiếp nằm phía sau -->
@@ -136,43 +136,43 @@ type Tab = 'swipe' | 'matches';
                   />
                 }
               } @else {
-                <div class="flex h-[560px] flex-col items-center justify-center gap-2 rounded-[28px] border-2 border-dashed border-brand-300 bg-white text-center text-slate-500">
+                <div class="flex h-[min(460px,calc(100dvh-220px))] flex-col items-center justify-center gap-2 rounded-[28px] border-2 border-dashed border-brand-300 bg-white text-center text-slate-500">
                   <p class="text-brand-400"><app-icon name="moon" [size]="36" /></p>
                   <p class="text-sm">{{ loading() ? 'Đang tìm người…' : 'Hết người để quẹt rồi. Quay lại sau nhé!' }}</p>
                 </div>
               }
             </div>
 
-            <div class="flex items-center justify-center gap-5">
+            <div class="flex items-center justify-center gap-4">
               <button
                 type="button"
                 aria-label="Hoàn tác"
                 title="Hoàn tác"
-                class="flex h-[52px] w-[52px] items-center justify-center rounded-full border border-slate-200 bg-white text-brand-600 shadow-[0_6px_16px_rgba(48,30,110,0.08)] transition hover:scale-105 disabled:opacity-40"
+                class="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-brand-600 shadow-[0_6px_16px_rgba(48,30,110,0.08)] transition hover:scale-105 disabled:opacity-40"
                 [disabled]="busy()"
                 (click)="undo()"
               >
-                <app-icon name="undo" [size]="22" [stroke]="2.2" />
+                <app-icon name="undo" [size]="18" [stroke]="2.2" />
               </button>
               <button
                 type="button"
                 aria-label="Bỏ qua"
                 title="Bỏ qua"
-                class="flex h-[68px] w-[68px] items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-[0_8px_20px_rgba(48,30,110,0.10)] transition hover:scale-105 disabled:opacity-40"
+                class="flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-[0_8px_20px_rgba(48,30,110,0.10)] transition hover:scale-105 disabled:opacity-40"
                 [disabled]="!deck().length || busy()"
                 (click)="card()?.fling(false)"
               >
-                <app-icon name="close" [size]="30" [stroke]="2.6" />
+                <app-icon name="close" [size]="24" [stroke]="2.6" />
               </button>
               <button
                 type="button"
                 aria-label="Siêu thích"
                 [title]="superLeft() > 0 ? 'Siêu thích (còn ' + superLeft() + ' lượt hôm nay)' : 'Hết lượt siêu thích hôm nay'"
-                class="relative flex h-[52px] w-[52px] items-center justify-center rounded-full border border-slate-200 bg-white text-[#2F80D9] shadow-[0_6px_16px_rgba(48,30,110,0.08)] transition hover:scale-105 disabled:opacity-40"
+                class="relative flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-[#2F80D9] shadow-[0_6px_16px_rgba(48,30,110,0.08)] transition hover:scale-105 disabled:opacity-40"
                 [disabled]="!deck().length || busy() || superLeft() === 0"
                 (click)="card()?.flingUp()"
               >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                   <path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 17.6 5.9 20.8l1.2-6.8-5-4.8 6.9-.9z" />
                 </svg>
                 @if (superLeft() > 0) {
@@ -185,17 +185,17 @@ type Tab = 'swipe' | 'matches';
                 type="button"
                 aria-label="Thích"
                 title="Thích"
-                class="flex h-[68px] w-[68px] items-center justify-center rounded-full bg-brand-600 text-white shadow-[0_10px_24px_rgba(109,79,214,0.35)] transition hover:scale-105 disabled:opacity-40"
+                class="flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-[0_10px_24px_rgba(109,79,214,0.35)] transition hover:scale-105 disabled:opacity-40"
                 [disabled]="!deck().length || busy()"
                 (click)="card()?.fling(true)"
               >
-                <app-icon name="heart" [size]="30" [filled]="true" />
+                <app-icon name="heart" [size]="24" [filled]="true" />
               </button>
             </div>
             @if (deck()[0]; as top) {
               <button
                 type="button"
-                class="flex min-h-10 items-center gap-1.5 self-center px-3 text-[13px] text-slate-500 hover:text-rose-600"
+                class="flex min-h-8 items-center gap-1.5 self-center px-3 text-xs text-slate-500 hover:text-rose-600"
                 (click)="reporting.set({ userId: top.userId, name: top.displayName })"
               >
                 <app-icon name="flag" [size]="14" />
@@ -205,8 +205,8 @@ type Tab = 'swipe' | 'matches';
           </div>
 
           <!-- Panel bên -->
-          <aside class="flex w-full max-w-[360px] flex-[1_1_280px] flex-col gap-5">
-            <section class="flex flex-col gap-3.5 rounded-[20px] border border-slate-200 bg-white p-5">
+          <aside class="flex w-full max-w-[320px] flex-[1_1_260px] flex-col gap-4">
+            <section class="flex flex-col gap-3 rounded-[20px] border border-slate-200 bg-white p-4">
               <div class="flex items-center justify-between">
                 <h3 class="text-base font-bold text-slate-900">Match gần đây</h3>
                 <button type="button" class="min-h-9 px-2 text-[13px] font-semibold text-brand-700 hover:text-brand-900" (click)="openMatches()">
@@ -220,9 +220,9 @@ type Tab = 'swipe' | 'matches';
                   @for (m of recentMatches(); track m.id) {
                     <a [routerLink]="['/dating/matches', m.id]" class="flex w-16 flex-col items-center gap-1.5">
                       @if (m.user.avatarUrl) {
-                        <img [src]="m.user.avatarUrl" alt="" class="h-14 w-14 rounded-full border-2 border-brand-600 object-cover" />
+                        <img [src]="m.user.avatarUrl" alt="" class="h-12 w-12 rounded-full border-2 border-brand-600 object-cover" />
                       } @else {
-                        <span class="flex h-14 w-14 items-center justify-center rounded-full border-2 border-brand-600 bg-brand-200 font-bold text-brand-800">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-full border-2 border-brand-600 bg-brand-200 font-bold text-brand-800">
                           {{ initials(m.user.displayName) }}
                         </span>
                       }
@@ -233,7 +233,7 @@ type Tab = 'swipe' | 'matches';
               }
             </section>
 
-            <section class="flex flex-col gap-3.5 rounded-[20px] border border-slate-200 bg-white p-5">
+            <section class="flex flex-col gap-3 rounded-[20px] border border-slate-200 bg-white p-4">
               @if (deck()[0]?.sharedPlaces?.length) {
                 <h3 class="text-base font-bold text-slate-900">Gợi ý điểm hẹn với {{ deck()[0].displayName }}</h3>
                 @for (sp of deck()[0].sharedPlaces.slice(0, 2); track sp.catalogId) {
@@ -242,7 +242,7 @@ type Tab = 'swipe' | 'matches';
                     [queryParams]="{ q: sp.name }"
                     class="flex items-center gap-3 rounded-[14px] bg-slate-50 p-2.5 text-slate-900 hover:bg-brand-50"
                   >
-                    <span class="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-[#EFEAFC] text-brand-600">
+                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EFEAFC] text-brand-600">
                       <app-icon name="pin" [size]="22" />
                     </span>
                     <span class="flex min-w-0 flex-col gap-0.5">
@@ -254,7 +254,7 @@ type Tab = 'swipe' | 'matches';
               } @else {
               <h3 class="text-base font-bold text-slate-900">Gợi ý điểm hẹn</h3>
               <a routerLink="/explore" class="flex items-center gap-3 rounded-[14px] bg-slate-50 p-2.5 text-slate-900 hover:bg-brand-50">
-                <span class="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-[#EFEAFC] text-brand-600">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EFEAFC] text-brand-600">
                   <app-icon name="cup" [size]="22" />
                 </span>
                 <span class="flex min-w-0 flex-col gap-0.5">
@@ -263,7 +263,7 @@ type Tab = 'swipe' | 'matches';
                 </span>
               </a>
               <a routerLink="/spots" class="flex items-center gap-3 rounded-[14px] bg-slate-50 p-2.5 text-slate-900 hover:bg-brand-50">
-                <span class="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-[#EFEAFC] text-brand-600">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EFEAFC] text-brand-600">
                   <app-icon name="gate" [size]="22" />
                 </span>
                 <span class="flex min-w-0 flex-col gap-0.5">
@@ -274,9 +274,9 @@ type Tab = 'swipe' | 'matches';
               }
             </section>
 
-            <section class="flex flex-col gap-1.5 rounded-[20px] bg-brand-100 px-5 py-[18px]">
+            <section class="flex flex-col gap-1 rounded-[20px] bg-brand-100 px-4 py-3">
               <span class="text-[13px] text-slate-600">Hôm nay bạn đã thích</span>
-              <span class="text-[28px] font-extrabold text-brand-800">{{ likedToday() }} người</span>
+              <span class="text-lg font-extrabold text-brand-800">{{ likedToday() }} người</span>
               <span class="text-xs text-slate-600">Lưu thêm quán để nhận gợi ý chuẩn gu hơn.</span>
             </section>
           </aside>
@@ -284,14 +284,14 @@ type Tab = 'swipe' | 'matches';
       } @else {
         <!-- Tab Match -->
         @if (matches().length === 0) {
-          <div class="rounded-[20px] border border-dashed border-brand-300 bg-white px-6 py-12 text-center text-[15px] text-slate-500">
+          <div class="rounded-[20px] border border-dashed border-brand-300 bg-white px-6 py-12 text-center text-sm text-slate-500">
             Chưa có match nào. Quẹt thêm nhé!
           </div>
         } @else {
-          <div class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-5">
+          <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
             @for (m of matches(); track m.id) {
               <article class="flex flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white">
-                <a [routerLink]="['/dating/matches', m.id]" class="relative flex h-[200px] items-center justify-center bg-[#EFEAFC] text-brand-400">
+                <a [routerLink]="['/dating/matches', m.id]" class="relative flex h-40 items-center justify-center bg-[#EFEAFC] text-brand-400">
                   @if (m.user.avatarUrl) {
                     <img [src]="m.user.avatarUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
                   } @else {
@@ -354,7 +354,7 @@ type Tab = 'swipe' | 'matches';
           <h2 class="mb-4 text-lg font-extrabold text-slate-900">Bộ lọc</h2>
           <label class="mb-1.5 block text-sm font-medium text-slate-700">Muốn gặp</label>
           <select
-            class="mb-4 min-h-11 w-full rounded-xl border border-brand-200 bg-white px-3 text-sm"
+            class="mb-4 min-h-10 w-full rounded-xl border border-brand-200 bg-white px-3 text-sm"
             [value]="f.interestedIn"
             (change)="filters.set({ ...f, interestedIn: $any($event.target).value })"
           >
@@ -366,14 +366,14 @@ type Tab = 'swipe' | 'matches';
           <div class="mb-4 flex items-center gap-2">
             <input
               type="number" min="18" max="99"
-              class="min-h-11 w-20 rounded-xl border border-brand-200 px-3 text-sm"
+              class="min-h-10 w-20 rounded-xl border border-brand-200 px-3 text-sm"
               [value]="f.ageMin"
               (input)="filters.set({ ...f, ageMin: +$any($event.target).value })"
             />
             <span class="text-slate-400">–</span>
             <input
               type="number" min="18" max="99"
-              class="min-h-11 w-20 rounded-xl border border-brand-200 px-3 text-sm"
+              class="min-h-10 w-20 rounded-xl border border-brand-200 px-3 text-sm"
               [value]="f.ageMax"
               (input)="filters.set({ ...f, ageMax: +$any($event.target).value })"
             />
@@ -424,18 +424,18 @@ type Tab = 'swipe' | 'matches';
               </span>
             }
           </div>
-          <h2 class="text-[26px] font-extrabold text-brand-800">Hai bạn đã match!</h2>
-          <p class="text-[15px] leading-normal text-slate-600">
+          <h2 class="text-[22px] font-extrabold text-brand-800">Hai bạn đã match!</h2>
+          <p class="text-sm leading-normal text-slate-600">
             @if (m.user.sharedPlaces.length) {
               Bạn và {{ m.user.displayName }} cùng lưu <b class="text-slate-900">{{ m.user.sharedPlaces[0].name }}</b>. Hẹn nhau ở đó nhé?
             } @else {
               Bạn và <b class="text-slate-900">{{ m.user.displayName }}</b> đã thích nhau. Nhắn tin rủ đi hẹn nhé?
             }
           </p>
-          <button type="button" class="min-h-12 w-full rounded-[14px] bg-brand-600 text-[15px] font-bold text-white hover:bg-brand-700" (click)="chatWith(m)">
+          <button type="button" class="min-h-11 w-full rounded-[14px] bg-brand-600 text-sm font-bold text-white hover:bg-brand-700" (click)="chatWith(m)">
             Nhắn tin ngay
           </button>
-          <button type="button" class="min-h-11 w-full rounded-[14px] border border-brand-200 bg-white text-sm font-semibold text-slate-700 hover:bg-brand-50" (click)="justMatched.set(null)">
+          <button type="button" class="min-h-10 w-full rounded-[14px] border border-brand-200 bg-white text-sm font-semibold text-slate-700 hover:bg-brand-50" (click)="justMatched.set(null)">
             Tiếp tục quẹt
           </button>
         </div>
