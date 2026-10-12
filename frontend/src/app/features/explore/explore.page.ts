@@ -20,11 +20,11 @@ const CONFIGS: Record<PlaceType, PlaceTypeConfig> = {
   bar: BAR_CONFIG,
 };
 
-const TYPE_FILTERS: { value: PlaceType | ''; label: string }[] = [
-  { value: '', label: 'Tất cả' },
-  { value: 'cafe', label: 'Cafe' },
-  { value: 'bar', label: 'Bar' },
-  { value: 'restaurant', label: 'Quán ăn' },
+const TYPE_FILTERS: { value: PlaceType | ''; label: string; icon: IconName }[] = [
+  { value: '', label: 'Tất cả', icon: 'compass' },
+  { value: 'cafe', label: 'Cafe', icon: 'cup' },
+  { value: 'bar', label: 'Bar', icon: 'cocktail' },
+  { value: 'restaurant', label: 'Quán ăn', icon: 'utensils' },
 ];
 
 const TYPE_LABELS: Record<PlaceType, string> = { cafe: 'Cafe', bar: 'Bar', restaurant: 'Quán ăn' };
@@ -122,12 +122,13 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
             <button
               type="button"
               [attr.aria-pressed]="type() === t.value"
-              class="min-h-10 rounded-full border px-4 text-sm transition"
+              class="inline-flex min-h-10 items-center gap-1.5 rounded-full border px-4 text-sm transition"
               [class]="type() === t.value
                 ? 'border-brand-600 bg-brand-600 font-semibold text-white'
                 : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
               (click)="type.set(t.value); reload(false)"
             >
+              <app-icon [name]="t.icon" [size]="16" />
               {{ t.label }}@if (counts(); as n) { · {{ n[t.value || 'all'] }}}
             </button>
           }
