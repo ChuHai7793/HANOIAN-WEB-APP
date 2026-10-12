@@ -15,6 +15,8 @@ import { BAR_CONFIG, CAFE_CONFIG, PlaceTypeConfig, RESTAURANT_CONFIG } from '../
 import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
 import { AddToPlanDialogComponent } from '../plans/add-to-plan-dialog.component';
 import { StopKind } from '../../core/models/plan.model';
+import { FitRowDirective } from '../../shared/ui/fit-row.directive';
+import { ModalComponent } from '../../shared/ui/modal.component';
 
 const CONFIGS: Record<PlaceType, PlaceTypeConfig> = {
   cafe: CAFE_CONFIG,
@@ -38,13 +40,13 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
  */
 @Component({
   selector: 'app-explore-page',
-  imports: [AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
+  imports: [ModalComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
-    <div class="flex flex-col gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
+    <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-1.5">
-          <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Khám phá quán</h1>
-          <p class="text-[13px] text-slate-500">
+          <h1 class="text-xl font-extrabold tracking-tight text-slate-900">Khám phá quán</h1>
+          <p class="hidden text-[13px] text-slate-500 sm:block">
             Quán cafe, bar, quán ăn ở Hà Nội. Ưng quán nào thì lưu vào My place.
           </p>
         </div>
@@ -52,7 +54,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
           <div class="relative">
             <button
               type="button"
-              class="flex min-h-10 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
+              class="flex min-h-9 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
               (click)="typeMenuOpen.set(!typeMenuOpen())"
             >
               <app-icon name="plus" [size]="18" [stroke]="2.4" />
@@ -76,25 +78,17 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
       </header>
 
       <!-- Cầu nối: có quán ưng ý thì đi tìm người hẹn -->
-      <section class="flex flex-wrap items-center gap-5 rounded-[20px] border border-brand-200 bg-brand-100 px-6 py-5">
-        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-brand-600">
-          <app-icon name="heart" [size]="28" />
-        </div>
-        <div class="flex min-w-0 flex-[1_1_320px] flex-col gap-1">
-          <span class="text-[17px] font-bold text-slate-900">Đã có quán ưng ý? Giờ tìm người đi cùng.</span>
-          <span class="text-sm text-slate-600">Bật Tìm đối tượng, quẹt và match rồi hẹn nhau ở quán bạn thích.</span>
-        </div>
-        <a
-          routerLink="/dating"
-          class="flex min-h-10 items-center gap-2 rounded-xl border border-brand-300 bg-white px-5 text-sm font-semibold text-brand-800 transition hover:bg-brand-50"
-        >
-          Bắt đầu quẹt
-          <app-icon name="arrowRight" [size]="16" [stroke]="2.4" />
-        </a>
-      </section>
+      <a
+        routerLink="/dating"
+        class="flex items-center gap-2.5 rounded-xl border border-brand-200 bg-brand-100 px-3.5 py-2 text-[13px] text-slate-700 transition hover:bg-brand-50"
+      >
+        <span class="text-brand-600"><app-icon name="heart" [size]="16" /></span>
+        <span class="min-w-0 flex-1 truncate"><b class="text-slate-900">Đã có quán ưng ý?</b><span class="max-sm:hidden"> Bật Tìm đối tượng, quẹt và match rồi hẹn nhau ở quán bạn thích.</span></span>
+        <span class="flex shrink-0 items-center gap-1 font-semibold text-brand-800">Tìm người đi cùng<app-icon name="arrowRight" [size]="14" [stroke]="2.4" /></span>
+      </a>
 
-      <div class="flex flex-wrap items-center gap-3">
-        <label class="flex min-h-10 max-w-[420px] flex-[1_1_280px] items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 text-slate-500">
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="flex min-h-9 max-w-[420px] flex-[1_1_280px] items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 text-slate-500">
           <app-icon name="search" [size]="18" />
           <span class="sr-only">Tìm quán</span>
           <input
@@ -105,7 +99,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
             placeholder="Tìm theo tên, địa chỉ…"
           />
         </label>
-        <label class="flex min-h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
+        <label class="flex min-h-9 items-center gap-2 rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
           <span class="text-brand-600"><app-icon name="pin" [size]="18" /></span>
           <span class="sr-only">Khu vực</span>
           <select
@@ -119,12 +113,12 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
             }
           </select>
         </label>
-        <div role="group" aria-label="Loại quán" class="flex flex-wrap gap-2">
+        <div role="group" aria-label="Loại quán" class="flex max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:flex-wrap gap-2">
           @for (t of typeFilters; track t.value) {
             <button
               type="button"
               [attr.aria-pressed]="type() === t.value"
-              class="inline-flex min-h-10 items-center gap-1.5 rounded-full border px-4 text-sm transition"
+              class="inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-[13px] transition"
               [class]="type() === t.value
                 ? 'border-brand-600 bg-brand-600 font-semibold text-white'
                 : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
@@ -145,10 +139,18 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
         </div>
       } @else {
         <span class="text-[13px] text-slate-500">{{ total() }} quán</span>
-        <div class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+        <!-- Hàng thẻ đầu vừa khít màn hình, hàng sau cuộn mới thấy -->
+        <div appFitRow class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
           @for (item of items(); track item.id) {
-            <article class="flex flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)]">
-              <div class="relative flex h-36 items-center justify-center bg-[#EFEAFC] text-brand-500">
+            <article
+              class="flex h-[var(--row-h,420px)] cursor-pointer flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)] transition hover:border-brand-300 focus-visible:outline-2 focus-visible:outline-brand-500"
+              tabindex="0"
+              role="button"
+              [attr.aria-label]="'Xem chi tiết ' + item.name"
+              (click)="detail.set(item)"
+              (keydown.enter)="detail.set(item)"
+            >
+              <div class="relative flex min-h-0 flex-[0_1_75%] items-center justify-center bg-[#EFEAFC] text-brand-500">
                 @if (item.imageUrl) {
                   <img [src]="item.imageUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
                 } @else {
@@ -162,73 +164,38 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
                     {{ item.fans }} người hợp gu đã lưu
                   </span>
                 }
-              </div>
-              <div class="flex flex-1 flex-col gap-2.5 px-4 pb-4 pt-3.5">
-                <div class="flex flex-col gap-1">
-                  <h2 class="text-base font-bold tracking-tight text-slate-900">{{ item.name }}</h2>
-                  <span class="text-[13px] leading-snug text-slate-500">
-                    {{ item.address || 'Chưa có địa chỉ' }} · <span class="font-medium text-slate-600">{{ item.districtLabel }}</span>
-                  </span>
-                </div>
-                <app-vibe-tags [vibes]="item.vibes" />
-                <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[13px] text-slate-700">
-                  <span class="flex items-center gap-1">
-                    <span class="tracking-[1px] text-[#E29A2D]" aria-hidden="true">{{ stars(item.rating).on }}</span><span class="tracking-[1px] text-[#D9D3EA]" aria-hidden="true">{{ stars(item.rating).off }}</span>
-                    <span class="font-semibold">{{ item.rating }}.0</span>
-                  </span>
-                  <span>{{ priceText(item) }}</span>
-                  <span class="flex items-center gap-1 text-slate-700">
-                    <span class="text-slate-500"><app-icon name="clock" [size]="14" /></span>
-                    {{ item.openTime }}–{{ item.closeTime }}
-                  </span>
-                </div>
-                @if (item.note) {
-                  <p class="line-clamp-3 text-sm leading-relaxed text-slate-600">{{ item.note }}</p>
+                @if (canEdit()) {
+                  <div class="absolute bottom-3 right-3 flex gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
+                    <button type="button" class="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm text-slate-600 hover:text-brand-700" title="Sửa" (click)="openEdit(item)"><app-icon name="edit" [size]="14" /></button>
+                    <button type="button" class="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm text-rose-600 hover:text-rose-700" title="Xoá" (click)="pendingDelete.set(item)"><app-icon name="trash" [size]="14" /></button>
+                  </div>
                 }
-                <div class="mt-auto flex flex-wrap items-center gap-2 pt-1.5">
-                  <a
-                    [href]="mapUrl(item)"
-                    target="_blank"
-                    rel="noopener"
-                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
-                  >
-                    <app-icon name="pin" [size]="15" />Maps
-                  </a>
-                  <a
-                    [href]="directions(item)"
-                    target="_blank"
-                    rel="noopener"
-                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
-                  >
-                    <app-icon name="navigate" [size]="15" />Chỉ đường
-                  </a>
-                  <button
-                    type="button"
-                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
-                    (click)="planTarget.set({ kind: 'place', refId: item.id, name: item.name, district: item.district })"
-                  >
-                    <app-icon name="route" [size]="15" />Vào plan
+              </div>
+              <div class="flex flex-[1_0_25%] flex-col justify-between gap-2 px-3.5 pb-3 pt-2.5">
+                <div class="flex min-w-0 flex-col gap-1">
+                  <h2 class="truncate text-base font-bold tracking-tight text-slate-900" [title]="item.name">{{ item.name }}</h2>
+                  <div class="flex items-center gap-2">
+                    <span class="min-w-0 flex-1 truncate text-[13px] text-slate-500">{{ item.address || 'Chưa có địa chỉ' }} · <span class="font-medium text-slate-600">{{ item.districtLabel }}</span></span>
+                    <app-vibe-tags class="shrink-0" [vibes]="item.vibes" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-3 gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
+                  <a [href]="directions(item)" target="_blank" rel="noopener" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50"><app-icon name="navigate" [size]="14" />Chỉ đường</a>
+                  <button type="button" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50" (click)="planTarget.set({ kind: 'place', refId: item.id, name: item.name, district: item.district })">
+                    <app-icon name="route" [size]="14" />Vào plan
                   </button>
-                  @if (canEdit()) {
-                    <button type="button" class="flex min-h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-slate-600 hover:bg-brand-50" title="Sửa" (click)="openEdit(item)">
-                      <app-icon name="edit" [size]="15" />
-                    </button>
-                    <button type="button" class="flex min-h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-rose-600 hover:bg-rose-50" title="Xoá" (click)="pendingDelete.set(item)">
-                      <app-icon name="trash" [size]="15" />
-                    </button>
-                  }
                   @if (item.inMyPlace) {
-                    <span class="ml-auto flex min-h-10 items-center gap-1.5 rounded-[10px] bg-brand-100 px-3.5 text-[13px] font-semibold text-brand-800">
-                      <app-icon name="heart" [size]="15" [filled]="true" />Đã lưu
+                    <span class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] bg-brand-100 px-1.5 text-xs font-semibold text-brand-800">
+                      <app-icon name="heart" [size]="14" [filled]="true" />Đã lưu
                     </span>
                   } @else {
                     <button
                       type="button"
-                      class="ml-auto flex min-h-10 items-center gap-1.5 rounded-[10px] bg-brand-600 px-3.5 text-[13px] font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                      class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] bg-brand-600 px-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
                       [disabled]="adding() === item.id"
                       (click)="addToMyPlace(item)"
                     >
-                      <app-icon name="plus" [size]="15" [stroke]="2.4" />Lưu vào My place
+                      <app-icon name="plus" [size]="14" [stroke]="2.4" />Lưu
                     </button>
                   }
                 </div>
@@ -275,9 +242,87 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
     @if (planTarget(); as t) {
       <app-add-to-plan-dialog [kind]="t.kind" [refId]="t.refId" [name]="t.name" [district]="t.district" (closed)="planTarget.set(null)" />
     }
+
+    @if (detail(); as d) {
+      <app-modal [title]="d.name" [subtitle]="typeLabels[d.type] + ' · ' + d.districtLabel" width="max-w-lg" (dismiss)="detail.set(null)">
+        <div class="flex flex-col gap-4">
+          @if (d.imageUrl) {
+            <img [src]="d.imageUrl" alt="" class="h-52 w-full rounded-xl object-cover" />
+          }
+          <p class="flex items-start gap-1.5 text-sm text-slate-600">
+            <span class="mt-0.5 text-slate-400"><app-icon name="pin" [size]="15" /></span>{{ d.address || 'Chưa có địa chỉ' }}
+          </p>
+          <app-vibe-tags [vibes]="d.vibes" />
+          <dl class="grid grid-cols-2 gap-3 rounded-xl bg-brand-50/60 p-3 text-sm">
+            <div>
+              <dt class="text-xs text-slate-500">Đánh giá</dt>
+              <dd class="flex items-center gap-1 font-semibold text-slate-900">
+                <span class="tracking-[1px] text-[#E29A2D]" aria-hidden="true">{{ stars(d.rating).on }}</span><span class="tracking-[1px] text-[#D9D3EA]" aria-hidden="true">{{ stars(d.rating).off }}</span>{{ d.rating }}.0
+              </dd>
+            </div>
+            <div>
+              <dt class="text-xs text-slate-500">Mức giá</dt>
+              <dd class="font-semibold text-slate-900">{{ priceText(d) }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-slate-500">Giờ mở cửa</dt>
+              <dd class="font-semibold text-slate-900">{{ d.openTime }}–{{ d.closeTime }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-slate-500">{{ d.type === 'restaurant' ? 'Món' : 'Tiện ích' }}</dt>
+              <dd class="font-semibold text-slate-900">
+                @if (d.type === 'restaurant') {
+                  {{ d.cuisine || '—' }}
+                } @else {
+                  {{ amenities(d) }}
+                }
+              </dd>
+            </div>
+          </dl>
+          @if (d.note) {
+            <p class="whitespace-pre-line text-sm leading-relaxed text-slate-700">{{ d.note }}</p>
+          }
+          @if (d.fans) {
+            <p class="flex items-center gap-1.5 text-[13px] text-brand-700"><app-icon name="heart" [size]="14" />{{ d.fans }} người hợp gu đã lưu quán này</p>
+          }
+        </div>
+        <div modalFooter class="flex flex-wrap justify-end gap-2">
+          <a [href]="mapUrl(d)" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50">
+            <app-icon name="pin" [size]="15" />Maps
+          </a>
+          <a [href]="directions(d)" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50">
+            <app-icon name="navigate" [size]="15" />Chỉ đường
+          </a>
+          <button
+            type="button"
+            class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
+            (click)="detail.set(null); planTarget.set({ kind: 'place', refId: d.id, name: d.name, district: d.district })"
+          >
+            <app-icon name="route" [size]="15" />Vào plan
+          </button>
+          @if (!d.inMyPlace) {
+            <button
+              type="button"
+              class="flex min-h-10 items-center gap-1.5 rounded-[10px] bg-brand-600 px-3.5 text-[13px] font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+              [disabled]="adding() === d.id"
+              (click)="addToMyPlace(d); detail.set(null)"
+            >
+              <app-icon name="plus" [size]="15" [stroke]="2.4" />Lưu vào My place
+            </button>
+          }
+        </div>
+      </app-modal>
+    }
   `,
 })
 export class ExplorePage implements OnInit {
+  /** Wifi / đậu xe của quán, cho popup chi tiết */
+  protected amenities(d: CatalogItem): string {
+    return [d.hasWifi ? 'Wifi' : '', d.hasParking ? 'Đậu xe' : ''].filter((x) => x).join(' · ') || '—';
+  }
+
+  /** Quán đang xem chi tiết (popup) */
+  protected readonly detail = signal<CatalogItem | null>(null);
   /** Đang chọn plan để thêm quán / chỗ chơi này vào */
   protected readonly planTarget = signal<{ kind: StopKind; refId: string; name: string; district: string } | null>(null);
   private readonly catalog = inject(CatalogService);

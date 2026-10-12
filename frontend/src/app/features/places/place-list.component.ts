@@ -10,6 +10,7 @@ import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component
 import { directionsUrl } from '../../core/utils/gmap-url';
 import { IconComponent, IconName } from '../../shared/ui/icon.component';
 import { formatDistance, haversineKm, LatLng } from '../../core/utils/geo';
+import { FitRowDirective } from '../../shared/ui/fit-row.directive';
 
 type SortKey = 'rating' | 'name' | 'distance' | 'price';
 
@@ -30,25 +31,25 @@ interface PlaceRow {
 
 @Component({
   selector: 'app-place-list',
-  imports: [RouterLink, PlaceDetailComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent],
+  imports: [FitRowDirective, RouterLink, PlaceDetailComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent],
   template: `
-    <div class="flex flex-col gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
+    <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-1.5">
-          <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">My place</h1>
-          <p class="text-[13px] text-slate-500">Quán cafe, bar, quán ăn bạn đã lưu từ Khám phá quán.</p>
+          <h1 class="text-xl font-extrabold tracking-tight text-slate-900">My place</h1>
+          <p class="hidden text-[13px] text-slate-500 sm:block">Quán cafe, bar, quán ăn bạn đã lưu từ Khám phá quán.</p>
         </div>
         <a
           routerLink="/explore"
-          class="flex min-h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-brand-50"
+          class="flex min-h-9 items-center gap-2 rounded-xl border border-brand-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-brand-50"
         >
           <app-icon name="compass" [size]="18" />
           Khám phá quán
         </a>
       </header>
 
-      <div class="flex flex-wrap items-center gap-3">
-        <label class="flex min-h-10 max-w-[420px] flex-[1_1_280px] items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 text-slate-500">
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="flex min-h-9 max-w-[420px] flex-[1_1_280px] items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 text-slate-500">
           <app-icon name="search" [size]="18" />
           <span class="sr-only">Tìm quán</span>
           <input
@@ -59,7 +60,7 @@ interface PlaceRow {
             placeholder="Tìm theo tên, địa chỉ, ghi chú…"
           />
         </label>
-        <label class="flex min-h-10 items-center rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
+        <label class="flex min-h-9 items-center rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
           <span class="sr-only">Khoảng giá</span>
           <select
             [value]="price()"
@@ -72,12 +73,12 @@ interface PlaceRow {
             }
           </select>
         </label>
-        <div role="group" aria-label="Loại quán" class="flex flex-wrap gap-2">
+        <div role="group" aria-label="Loại quán" class="flex max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:flex-wrap gap-2">
           @for (t of typeFilters; track t.value) {
             <button
               type="button"
               [attr.aria-pressed]="type() === t.value"
-              class="min-h-10 rounded-full border px-4 text-sm transition"
+              class="min-h-9 rounded-full border px-3 text-[13px] transition"
               [class]="type() === t.value
                 ? 'border-brand-600 bg-brand-600 font-semibold text-white'
                 : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
@@ -133,7 +134,7 @@ interface PlaceRow {
           @if (!hasAny()) {
             <a
               routerLink="/explore"
-              class="flex min-h-10 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
+              class="flex min-h-9 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
             >
               <app-icon name="compass" [size]="18" />
               Vào Khám phá quán
@@ -142,12 +143,16 @@ interface PlaceRow {
         </app-empty-state>
       } @else {
         <span class="text-[13px] text-slate-500">{{ visible().length }} / {{ all().length }} quán</span>
-        <div class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+        <!-- Hàng thẻ đầu vừa khít màn hình, hàng sau cuộn mới thấy -->
+        <div appFitRow class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
           @for (item of visible(); track item.place.id) {
-            <article class="flex flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)]">
+            <article
+              class="flex h-[var(--row-h,420px)] cursor-pointer flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)] transition hover:border-brand-300"
+              (click)="detailing.set(item)"
+            >
               <button
                 type="button"
-                class="group relative flex h-36 cursor-pointer items-center justify-center overflow-hidden bg-[#EFEAFC] text-brand-500"
+                class="group relative flex min-h-0 flex-[0_1_75%] cursor-pointer items-center justify-center overflow-hidden bg-[#EFEAFC] text-brand-500"
                 (click)="detailing.set(item)"
                 [attr.aria-label]="'Xem chi tiết ' + item.place.name"
               >
@@ -165,65 +170,16 @@ interface PlaceRow {
                   </span>
                 }
               </button>
-              <div class="flex flex-1 flex-col gap-2.5 px-4 pb-4 pt-3.5">
-                <div class="flex flex-col gap-1">
-                  <h2 class="text-base font-bold tracking-tight text-slate-900">{{ item.place.name }}</h2>
-                  <span class="text-[13px] leading-snug text-slate-500">{{ item.place.address || 'Chưa có địa chỉ' }}</span>
+              <div class="flex flex-[1_0_25%] flex-col justify-between gap-2 px-3.5 pb-3 pt-2.5">
+                <div class="flex min-w-0 flex-col gap-1">
+                  <h2 class="truncate text-base font-bold tracking-tight text-slate-900" [title]="item.place.name">{{ item.place.name }}</h2>
+                  <span class="truncate text-[13px] text-slate-500">{{ item.place.address || 'Chưa có địa chỉ' }}</span>
                 </div>
-                <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[13px] text-slate-700">
-                  <span class="flex items-center gap-1">
-                    <span class="tracking-[1px] text-[#E29A2D]" aria-hidden="true">{{ stars(item.place.rating).on }}</span><span class="tracking-[1px] text-[#D9D3EA]" aria-hidden="true">{{ stars(item.place.rating).off }}</span>
-                    <span class="font-semibold">{{ item.place.rating }}.0</span>
-                  </span>
-                  <span>{{ priceText(item.place.priceRange) }}</span>
-                  <span class="flex items-center gap-1">
-                    <span class="text-slate-500"><app-icon name="clock" [size]="14" /></span>
-                    {{ item.place.openTime }}–{{ item.place.closeTime }}
-                  </span>
-                </div>
-                @if (item.place.cuisine || item.place.hasWifi || item.place.hasParking) {
-                  <div class="flex flex-wrap gap-1.5">
-                    @if (item.place.cuisine) {
-                      <span class="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-800">{{ item.place.cuisine }}</span>
-                    }
-                    @if (item.place.hasWifi) {
-                      <span class="flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-800">
-                        <app-icon name="wifi" [size]="13" />Wifi
-                      </span>
-                    }
-                    @if (item.place.hasParking) {
-                      <span class="flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-800">
-                        <app-icon name="parking" [size]="13" />Đậu xe
-                      </span>
-                    }
-                  </div>
-                }
-                @if (item.place.note) {
-                  <p class="line-clamp-2 text-sm leading-relaxed text-slate-600">{{ item.place.note }}</p>
-                }
-                <div class="mt-auto flex flex-wrap items-center gap-2 pt-1.5">
-                  <a
-                    [href]="directions(item.place)"
-                    target="_blank"
-                    rel="noopener"
-                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
-                  >
-                    <app-icon name="navigate" [size]="15" />Chỉ đường
-                  </a>
-                  <button
-                    type="button"
-                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
-                    (click)="detailing.set(item)"
-                  >
-                    <app-icon name="eye" [size]="15" />Chi tiết
-                  </button>
-                  <button
-                    type="button"
-                    class="ml-auto flex min-h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-rose-600 hover:bg-rose-50"
-                    title="Bỏ khỏi My place"
-                    (click)="pendingRemove.set(item.place)"
-                  >
-                    <app-icon name="trash" [size]="15" />
+                <div class="grid grid-cols-3 gap-1.5" (click)="$event.stopPropagation()">
+                  <a [href]="directions(item.place)" target="_blank" rel="noopener" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50"><app-icon name="navigate" [size]="14" />Chỉ đường</a>
+                  <button type="button" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50" (click)="detailing.set(item)"><app-icon name="eye" [size]="14" />Chi tiết</button>
+                  <button type="button" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50" title="Bỏ khỏi My place" (click)="pendingRemove.set(item.place)">
+                    <app-icon name="trash" [size]="14" />Bỏ
                   </button>
                 </div>
               </div>

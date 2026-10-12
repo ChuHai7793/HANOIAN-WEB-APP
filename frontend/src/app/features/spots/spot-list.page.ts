@@ -21,6 +21,7 @@ import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
 import { AddToPlanDialogComponent } from '../plans/add-to-plan-dialog.component';
 import { StopKind } from '../../core/models/plan.model';
 import { ModalComponent } from '../../shared/ui/modal.component';
+import { FitRowDirective } from '../../shared/ui/fit-row.directive';
 
 /** Lọc theo ngân sách: giá thấp nhất của chỗ chơi không quá mức này. */
 const BUDGETS: { value: number | null; label: string }[] = [
@@ -42,20 +43,20 @@ function nowHHmm(): string {
  */
 @Component({
   selector: 'app-spot-list-page',
-  imports: [ModalComponent, AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
+  imports: [FitRowDirective, ModalComponent, AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
   template: `
-    <div class="flex flex-col gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
+    <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-1.5">
-          <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Tìm chỗ chơi</h1>
-          <p class="text-[13px] text-slate-500">
+          <h1 class="text-xl font-extrabold tracking-tight text-slate-900">Tìm chỗ chơi</h1>
+          <p class="hidden text-[13px] text-slate-500 sm:block">
             Music box, workshop, bảo tàng, dạo phố… những chỗ hẹn hò ở Hà Nội ngoài quán xá.
           </p>
         </div>
         @if (canEdit()) {
           <button
             type="button"
-            class="flex min-h-10 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
+            class="flex min-h-9 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
             (click)="openCreate()"
           >
             <app-icon name="plus" [size]="18" [stroke]="2.4" />
@@ -64,8 +65,8 @@ function nowHHmm(): string {
         }
       </header>
 
-      <div class="flex flex-wrap items-center gap-3">
-        <label class="flex min-h-10 max-w-[420px] flex-[1_1_280px] items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 text-slate-500">
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="flex min-h-9 max-w-[420px] flex-[1_1_280px] items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 text-slate-500">
           <app-icon name="search" [size]="18" />
           <span class="sr-only">Tìm chỗ chơi</span>
           <input
@@ -76,7 +77,7 @@ function nowHHmm(): string {
             placeholder="Tìm theo tên, địa chỉ…"
           />
         </label>
-        <label class="flex min-h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
+        <label class="flex min-h-9 items-center gap-2 rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
           <span class="text-brand-600"><app-icon name="pin" [size]="18" /></span>
           <span class="sr-only">Khu vực</span>
           <select
@@ -90,7 +91,7 @@ function nowHHmm(): string {
             }
           </select>
         </label>
-        <label class="flex min-h-10 items-center rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
+        <label class="flex min-h-9 items-center rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
           <span class="sr-only">Ngân sách</span>
           <select
             [value]="budgetIndex()"
@@ -105,7 +106,7 @@ function nowHHmm(): string {
         <button
           type="button"
           [attr.aria-pressed]="openNow()"
-          class="flex min-h-10 items-center gap-1.5 rounded-xl border px-3.5 text-sm transition"
+          class="flex min-h-9 items-center gap-1.5 rounded-xl border px-3 text-[13px] transition"
           [class]="openNow() ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white text-slate-700 hover:bg-brand-50'"
           (click)="openNow.set(!openNow()); reload()"
         >
@@ -114,7 +115,7 @@ function nowHHmm(): string {
         <button
           type="button"
           [attr.aria-pressed]="rainy()"
-          class="flex min-h-10 items-center gap-1.5 rounded-xl border px-3.5 text-sm transition"
+          class="flex min-h-9 items-center gap-1.5 rounded-xl border px-3 text-[13px] transition"
           [class]="rainy() ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white text-slate-700 hover:bg-brand-50'"
           (click)="rainy.set(!rainy()); reload()"
         >
@@ -122,11 +123,11 @@ function nowHHmm(): string {
         </button>
       </div>
 
-      <div role="group" aria-label="Nhóm chỗ chơi" class="-mt-2 flex flex-wrap gap-2">
+      <div role="group" aria-label="Nhóm chỗ chơi" class="-mt-1 flex max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:flex-wrap gap-1.5">
         <button
           type="button"
           [attr.aria-pressed]="category() === ''"
-          class="min-h-10 rounded-full border px-4 text-sm transition"
+          class="min-h-9 rounded-full border px-3 text-[13px] transition"
           [class]="category() === '' ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
           (click)="category.set(''); reload(false)"
         >
@@ -136,7 +137,7 @@ function nowHHmm(): string {
           <button
             type="button"
             [attr.aria-pressed]="category() === c.value"
-            class="min-h-10 rounded-full border px-4 text-sm transition"
+            class="min-h-9 rounded-full border px-3 text-[13px] transition"
             [class]="category() === c.value ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
             (click)="category.set(c.value); reload(false)"
           >
@@ -153,17 +154,18 @@ function nowHHmm(): string {
         </div>
       } @else {
         <span class="text-[13px] text-slate-500">{{ total() }} chỗ chơi</span>
-        <div class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+        <!-- Hàng thẻ đầu vừa khít màn hình, hàng sau cuộn mới thấy -->
+        <div appFitRow class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
           @for (item of items(); track item.id) {
             <article
-              class="flex cursor-pointer flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)] transition hover:border-brand-300 focus-visible:outline-2 focus-visible:outline-brand-500"
+              class="flex h-[var(--row-h,420px)] cursor-pointer flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)] transition hover:border-brand-300 focus-visible:outline-2 focus-visible:outline-brand-500"
               tabindex="0"
               role="button"
               [attr.aria-label]="'Xem chi tiết ' + item.name"
               (click)="detail.set(item)"
               (keydown.enter)="detail.set(item)"
             >
-              <div class="relative flex h-36 items-center justify-center bg-[#EFEAFC] text-brand-500">
+              <div class="relative flex min-h-0 flex-[0_1_75%] items-center justify-center bg-[#EFEAFC] text-brand-500">
                 @if (item.imageUrl) {
                   <img [src]="item.imageUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
                 } @else {
@@ -175,60 +177,32 @@ function nowHHmm(): string {
                 <span class="absolute right-3 top-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">
                   {{ item.districtLabel }}
                 </span>
+                @if (canEdit()) {
+                  <div class="absolute bottom-3 right-3 flex gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
+                    <button type="button" class="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm text-slate-600 hover:text-brand-700" title="Sửa" (click)="openEdit(item)"><app-icon name="edit" [size]="14" /></button>
+                    <button type="button" class="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm text-rose-600 hover:text-rose-700" title="Xoá" (click)="pendingDelete.set(item)"><app-icon name="trash" [size]="14" /></button>
+                  </div>
+                }
                 @if (item.needsBooking) {
                   <span class="absolute bottom-3 left-3 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
                     Cần đặt trước
                   </span>
                 }
               </div>
-              <div class="flex flex-1 flex-col gap-2.5 px-4 pb-4 pt-3.5">
-                <div class="flex flex-col gap-1">
-                  <h2 class="text-base font-bold tracking-tight text-slate-900">{{ item.name }}</h2>
-                  <span class="text-[13px] leading-snug text-slate-500">{{ item.address || 'Chưa có địa chỉ' }}</span>
+              <div class="flex flex-[1_0_25%] flex-col justify-between gap-2 px-3.5 pb-3 pt-2.5">
+                <div class="flex min-w-0 flex-col gap-1">
+                  <h2 class="truncate text-base font-bold tracking-tight text-slate-900" [title]="item.name">{{ item.name }}</h2>
+                  <div class="flex items-center gap-2">
+                    <span class="min-w-0 flex-1 truncate text-[13px] text-slate-500">{{ item.address || 'Chưa có địa chỉ' }}</span>
+                    <app-vibe-tags class="shrink-0" [vibes]="item.vibes" />
+                  </div>
                 </div>
-                <app-vibe-tags [vibes]="item.vibes" />
-                <div class="mt-auto flex flex-wrap items-center gap-2 pt-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
-                  <a
-                    [href]="mapUrl(item)"
-                    target="_blank"
-                    rel="noopener"
-                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
-                  >
-                    <app-icon name="pin" [size]="15" />Maps
-                  </a>
-                  <a
-                    [href]="directions(item)"
-                    target="_blank"
-                    rel="noopener"
-                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
-                  >
-                    <app-icon name="navigate" [size]="15" />Chỉ đường
-                  </a>
-                  <button
-                    type="button"
-                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
-                    (click)="planTarget.set({ kind: 'spot', refId: item.id, name: item.name, district: item.district })"
-                  >
-                    <app-icon name="route" [size]="15" />Vào plan
+                <div class="grid grid-cols-3 gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
+                  <a [href]="mapUrl(item)" target="_blank" rel="noopener" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50"><app-icon name="pin" [size]="14" />Maps</a>
+                  <a [href]="directions(item)" target="_blank" rel="noopener" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50"><app-icon name="navigate" [size]="14" />Chỉ đường</a>
+                  <button type="button" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50" (click)="planTarget.set({ kind: 'spot', refId: item.id, name: item.name, district: item.district })">
+                    <app-icon name="route" [size]="14" />Vào plan
                   </button>
-                  @if (canEdit()) {
-                    <button type="button" class="flex min-h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-slate-600 hover:bg-brand-50" title="Sửa" (click)="openEdit(item)">
-                      <app-icon name="edit" [size]="15" />
-                    </button>
-                    <button type="button" class="flex min-h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-rose-600 hover:bg-rose-50" title="Xoá" (click)="pendingDelete.set(item)">
-                      <app-icon name="trash" [size]="15" />
-                    </button>
-                  }
-                  @if (item.bookingUrl) {
-                    <a
-                      [href]="item.bookingUrl"
-                      target="_blank"
-                      rel="noopener"
-                      class="ml-auto flex min-h-10 items-center gap-1.5 rounded-[10px] bg-brand-600 px-3.5 text-[13px] font-semibold text-white hover:bg-brand-700"
-                    >
-                      <app-icon name="calendar" [size]="15" />Đặt chỗ
-                    </a>
-                  }
                 </div>
               </div>
             </article>
