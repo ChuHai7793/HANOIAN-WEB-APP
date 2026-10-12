@@ -1,3 +1,4 @@
+import { PlaceType, PriceRange } from './place.model';
 import { Gender } from './profile.model';
 
 export type DatingInterest = 'male' | 'female' | 'all';
@@ -16,7 +17,20 @@ export interface DatingSettings {
 
 export type DatingSettingsRequest = Omit<DatingSettings, 'missing' | 'banned'>;
 
-/** Một thẻ hồ sơ để quẹt, hoặc người trong một match. */
+/** Quán cả hai cùng lưu trong My place. `district`: tên quận để hiển thị. */
+export interface SharedPlace {
+  catalogId: string;
+  name: string;
+  type: PlaceType;
+  district: string;
+  priceRange: PriceRange;
+}
+
+/**
+ * Một thẻ hồ sơ để quẹt, hoặc người trong một match, nhìn từ phía mình. `sharedPlaces`: quán cùng lưu
+ * (chỉ phần giao nhau); `fit`: % hợp gu theo số quán cùng lưu (0 = chưa có quán chung); `superLikedMe`:
+ * người này đã siêu thích mình.
+ */
 export interface Candidate {
   userId: string;
   displayName: string;
@@ -27,6 +41,15 @@ export interface Candidate {
   avatarUrl: string | null;
   photos: string[];
   interests: string[];
+  sharedPlaces: SharedPlace[];
+  fit: number;
+  superLikedMe: boolean;
+}
+
+/** Trong ngày (giờ Việt Nam): số người đã thích, số lượt siêu thích còn lại. */
+export interface TodayStats {
+  liked: number;
+  superLikesLeft: number;
 }
 
 export interface Match {

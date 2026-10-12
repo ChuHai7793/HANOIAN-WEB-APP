@@ -10,7 +10,9 @@ export type RealtimeEvent =
   | { type: 'message'; data: { matchId: string; message: ChatMessage } }
   | { type: 'read'; data: { matchId: string; readAt: string } }
   | { type: 'match'; data: Match }
-  | { type: 'unmatch'; data: { matchId: string } };
+  | { type: 'unmatch'; data: { matchId: string } }
+  /** Có người vừa siêu thích mình (không nêu tên) */
+  | { type: 'super_like'; data: Record<string, never> };
 
 /** Server gửi nhịp tim 25 giây/lần; im lâu hơn thế này coi như kết nối đã chết. */
 const SILENCE_MS = 60_000;
@@ -131,7 +133,7 @@ export class RealtimeService {
       this.events$.next({ type: 'ready' });
       return;
     }
-    if (type !== 'message' && type !== 'read' && type !== 'match' && type !== 'unmatch') return;
+    if (type !== 'message' && type !== 'read' && type !== 'match' && type !== 'unmatch' && type !== 'super_like') return;
     try {
       this.events$.next({ type, data: JSON.parse(data) } as RealtimeEvent);
     } catch {

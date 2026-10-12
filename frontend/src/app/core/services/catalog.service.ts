@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE } from '../api/api';
 import { SILENT_CODES } from '../api/http-context';
-import { CatalogItem, CatalogPage, DistrictOption } from '../models/catalog.model';
+import { CatalogItem, CatalogPage, DistrictOption, TypeCounts } from '../models/catalog.model';
 import { Place, PlaceType } from '../models/place.model';
 
 export interface CatalogQuery {
@@ -34,6 +34,14 @@ export class CatalogService {
       if (value !== undefined && value !== null && value !== '') params = params.set(key, String(value));
     }
     return firstValueFrom(this.http.get<CatalogPage>(`${API_BASE}/catalog`, { params }));
+  }
+
+  /** Số quán theo loại, theo từ khoá và khu vực (không theo loại). */
+  counts(query: Pick<CatalogQuery, 'q' | 'district'>): Promise<TypeCounts> {
+    let params = new HttpParams();
+    if (query.q) params = params.set('q', query.q);
+    if (query.district) params = params.set('district', query.district);
+    return firstValueFrom(this.http.get<TypeCounts>(`${API_BASE}/catalog/counts`, { params }));
   }
 
   districts(): Promise<DistrictOption[]> {

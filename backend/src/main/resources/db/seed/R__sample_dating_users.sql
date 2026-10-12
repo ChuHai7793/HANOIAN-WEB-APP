@@ -82,6 +82,29 @@ INSERT INTO profile_interests (user_id, position, interest) VALUES
   ('00000000-0000-4000-8000-000000000109', 0, 'Làm bánh'),    ('00000000-0000-4000-8000-000000000109', 1, 'Tiếng Anh'), ('00000000-0000-4000-8000-000000000109', 2, 'Đọc sách'),
   ('00000000-0000-4000-8000-000000000110', 0, 'Chạy bộ'),     ('00000000-0000-4000-8000-000000000110', 1, 'Yoga'),      ('00000000-0000-4000-8000-000000000110', 2, 'Du lịch');
 
+-- My place: chép quán từ "Khám phá quán" mẫu (id 4000...NN của R__demo_data.sql) để có "Cùng lưu" và
+-- "Hợp gu %". Tuấn hợp gu nhất với Linh (3 quán chung), Trang (2), Mai (1); Khoa và Ngọc trùng cả 3 quán.
+-- R__demo_data.sql chạy lại thì quán mẫu bị tạo lại, bản sao ở đây mất liên kết cho tới khi file này chạy lại.
+INSERT INTO places (id, user_id, catalog_id, type, name, address, price_range, rating, open_time, close_time,
+                    image_url, note, google_maps_url, lat, lng, has_wifi, has_parking, cuisine,
+                    created_at, updated_at, version)
+SELECT gen_random_uuid(), ('00000000-0000-4000-8000-000000000' || s.u)::uuid, c.id, c.type, c.name, c.address,
+       c.price_range, c.rating, c.open_time, c.close_time, c.image_url, c.note, c.google_maps_url, c.lat, c.lng,
+       c.has_wifi, c.has_parking, c.cuisine, '2026-01-01 00:00:00', '2026-01-01 00:00:00', 0
+FROM (VALUES
+  ('101', '01'), ('101', '02'), ('101', '03'), ('101', '07'), ('101', '09'),  -- Tuấn
+  ('102', '03'), ('102', '12'), ('102', '13'), ('102', '15'),                 -- Hoàng
+  ('103', '01'), ('103', '03'), ('103', '04'), ('103', '10'),                 -- Đức
+  ('104', '11'), ('104', '12'), ('104', '14'), ('104', '16'),                 -- Khoa
+  ('105', '05'), ('105', '06'),                                               -- Long
+  ('106', '01'), ('106', '03'), ('106', '07'), ('106', '10'),                 -- Linh
+  ('107', '02'), ('107', '04'), ('107', '05'), ('107', '09'),                 -- Trang
+  ('108', '11'), ('108', '12'), ('108', '14'),                                -- Ngọc
+  ('109', '01'), ('109', '08'), ('109', '10'), ('109', '15'),                 -- Mai
+  ('110', '13'), ('110', '16')                                                -- Hà
+) AS s(u, n)
+JOIN place_catalog c ON c.id = ('40000000-0000-4000-8000-0000000000' || s.n)::uuid;
+
 -- Lượt thích sẵn để thử match ngay: Linh, Trang đã thích Tuấn; Hoàng, Đức đã thích Linh.
 -- Đăng nhập Tuấn (hoặc Linh) rồi quẹt phải những người này là thành match.
 INSERT INTO swipes (swiper_id, target_id, liked, created_at) VALUES

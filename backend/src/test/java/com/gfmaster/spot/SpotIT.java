@@ -89,6 +89,19 @@ class SpotIT extends ApiTestSupport {
   }
 
   @Test
+  void countsPerCategoryFollowOtherFilters() throws Exception {
+    postAs(admin, "/api/v1/admin/spots", museum("Bảo tàng", null)).andExpect(status().isCreated());
+    postAs(admin, "/api/v1/admin/spots", lake()).andExpect(status().isCreated());
+
+    getAs(guest, "/api/v1/spots/counts")
+        .andExpect(jsonPath("$.all").value(2))
+        .andExpect(jsonPath("$.museum").value(1))
+        .andExpect(jsonPath("$.outdoor").value(1))
+        .andExpect(jsonPath("$.workshop").value(0));
+    getAs(guest, "/api/v1/spots/counts?maxPrice=0").andExpect(jsonPath("$.all").value(1)).andExpect(jsonPath("$.museum").value(0));
+  }
+
+  @Test
   void rejectsInvalidPriceAndHalfOpeningHours() throws Exception {
     postAs(
             admin,

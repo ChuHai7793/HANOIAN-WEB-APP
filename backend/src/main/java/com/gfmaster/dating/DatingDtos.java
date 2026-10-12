@@ -1,6 +1,8 @@
 package com.gfmaster.dating;
 
 import com.gfmaster.profile.DatingInterest;
+import com.gfmaster.place.PlaceType;
+import com.gfmaster.place.PriceRange;
 import com.gfmaster.profile.Gender;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -36,7 +38,12 @@ public final class DatingDtos {
       @Min(18) @Max(99) int ageMax,
       boolean sameCityOnly) {}
 
-  /** Một thẻ hồ sơ để quẹt (hoặc người trong một match). */
+  /**
+   * Một thẻ hồ sơ để quẹt (hoặc người trong một match), nhìn từ phía người đang xem.
+   * {@code sharedPlaces}: quán cả hai cùng lưu trong My place (chỉ phần giao nhau, không lộ quán chỉ người kia
+   * lưu); {@code fit}: % hợp gu tính từ số quán cùng lưu (0 = chưa có quán chung); {@code superLikedMe}: người
+   * này đã siêu thích người đang xem.
+   */
   public record Candidate(
       UUID userId,
       String displayName,
@@ -46,9 +53,22 @@ public final class DatingDtos {
       String bio,
       String avatarUrl,
       List<String> photos,
-      List<String> interests) {}
+      List<String> interests,
+      List<SharedPlace> sharedPlaces,
+      int fit,
+      boolean superLikedMe) {}
 
-  public record SwipeRequest(@NotNull UUID targetId, boolean liked) {}
+  /** Quán cùng lưu: {@code district} là tên quận để hiển thị. */
+  public record SharedPlace(UUID catalogId, String name, PlaceType type, String district, PriceRange priceRange) {}
+
+  /** {@code superLike}: siêu thích (giới hạn lượt mỗi ngày), chỉ đi cùng {@code liked = true}. */
+  public record SwipeRequest(@NotNull UUID targetId, boolean liked, Boolean superLike) {}
+
+  /** Trong ngày (giờ Việt Nam): số người đã thích, số lượt siêu thích còn lại. */
+  public record TodayStats(int liked, int superLikesLeft) {}
+
+  /** Báo người nhận có người vừa siêu thích họ (không nêu tên, vẫn phải quẹt để biết). */
+  public record SuperLikeEvent() {}
 
   /**
    * Một match. {@code lastMessage}: tin nhắn gần nhất (null nếu chưa nhắn); {@code unread}: số tin người kia

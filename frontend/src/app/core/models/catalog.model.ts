@@ -2,13 +2,18 @@ import { Place, PlaceType } from './place.model';
 
 /**
  * Một quán trong "Khám phá quán" (admin nhập): đủ thông tin như một quán trong My place, thêm khu vực.
- * `inMyPlace`: người đang xem đã add quán này vào My place chưa.
+ * `inMyPlace`: người đang xem đã add quán này vào My place chưa. `fans`: số "người hợp gu đã lưu" (null
+ * khi mình chưa bật Tìm đối tượng).
  */
 export interface CatalogItem extends Omit<Place, 'district'> {
   district: string;
   districtLabel: string;
   inMyPlace: boolean;
+  fans: number | null;
 }
+
+/** Số quán theo loại cho chip lọc; `all` là tổng. */
+export type TypeCounts = Record<'all' | PlaceType, number>;
 
 export interface CatalogPage {
   items: CatalogItem[];

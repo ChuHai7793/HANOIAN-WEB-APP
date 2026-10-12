@@ -6,6 +6,7 @@ import com.gfmaster.spot.SpotDtos.SpotPage;
 import com.gfmaster.spot.SpotDtos.SpotRequest;
 import jakarta.validation.Valid;
 import java.time.LocalTime;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -43,6 +44,16 @@ public class SpotController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "30") int size) {
     return spots.search(q, category, district, maxPrice, indoor, openAt, page, size);
+  }
+
+  @GetMapping("/api/v1/spots/counts")
+  public Map<String, Long> counts(
+      @RequestParam(required = false) String q,
+      @RequestParam(required = false) CatalogDistrict district,
+      @RequestParam(required = false) Integer maxPrice,
+      @RequestParam(required = false) Boolean indoor,
+      @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime openAt) {
+    return spots.counts(q, district, maxPrice, indoor, openAt);
   }
 
   @PostMapping("/api/v1/admin/spots")

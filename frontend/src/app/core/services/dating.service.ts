@@ -15,6 +15,7 @@ import {
   Match,
   ReportReason,
   SwipeResult,
+  TodayStats,
 } from '../models/dating.model';
 
 /** "Tìm đối tượng" của người đang đăng nhập. */
@@ -35,15 +36,23 @@ export class DatingService {
     return firstValueFrom(this.http.get<Candidate[]>(`${this.base}/deck`));
   }
 
-  /** ALREADY_SWIPED (quẹt ở tab khác) do trang tự bỏ qua, không hiện toast. */
-  swipe(targetId: string, liked: boolean): Promise<SwipeResult> {
+  /**
+   * ALREADY_SWIPED (quẹt ở tab khác) và SUPER_LIKE_LIMIT (hết lượt siêu thích) do trang tự xử lý, không
+   * hiện toast chung.
+   */
+  swipe(targetId: string, liked: boolean, superLike = false): Promise<SwipeResult> {
     return firstValueFrom(
       this.http.post<SwipeResult>(
         `${this.base}/swipes`,
-        { targetId, liked },
-        { context: new HttpContext().set(SILENT_CODES, ['ALREADY_SWIPED']) },
+        { targetId, liked, superLike },
+        { context: new HttpContext().set(SILENT_CODES, ['ALREADY_SWIPED', 'SUPER_LIKE_LIMIT']) },
       ),
     );
+  }
+
+  /** Số đã thích hôm nay và lượt siêu thích còn lại. */
+  today(): Promise<TodayStats> {
+    return firstValueFrom(this.http.get<TodayStats>(`${this.base}/today`));
   }
 
   /** NOT_FOUND (không còn lượt để hoàn tác) do trang tự báo. */

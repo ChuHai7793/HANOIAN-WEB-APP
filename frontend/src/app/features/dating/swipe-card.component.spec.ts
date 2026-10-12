@@ -12,26 +12,35 @@ const LAN: Candidate = {
   avatarUrl: '/uploads/a.webp',
   photos: ['/uploads/b.webp', '/uploads/a.webp'],
   interests: ['cafe'],
+  sharedPlaces: [
+    { catalogId: 'c1', name: 'Cafe Cuối Ngõ', type: 'cafe', district: 'Cầu Giấy', priceRange: 'cheap' },
+    { catalogId: 'c2', name: 'Echoes Café', type: 'cafe', district: 'Ba Đình', priceRange: 'medium' },
+    { catalogId: 'c3', name: 'Phát Ký', type: 'restaurant', district: 'Hoàn Kiếm', priceRange: 'medium' },
+  ],
+  fit: 75,
+  superLikedMe: false,
 };
 
 describe('SwipeCardComponent', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  function create() {
+  function create(canSuperLike = false) {
     const fixture = TestBed.createComponent(SwipeCardComponent);
     fixture.componentRef.setInput('candidate', LAN);
+    fixture.componentRef.setInput('canSuperLike', canSuperLike);
     fixture.detectChanges();
-    const emitted: boolean[] = [];
+    const emitted: (boolean | 'super')[] = [];
     fixture.componentInstance.swiped.subscribe((v) => emitted.push(v));
-    const card = (fixture.nativeElement as HTMLElement).querySelector('div')!;
+    fixture.componentInstance.superSwiped.subscribe(() => emitted.push('super'));
+    const card = (fixture.nativeElement as HTMLElement).querySelector('article')!;
     return { fixture, card, emitted };
   }
 
-  function drag(card: HTMLElement, dx: number) {
-    card.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100 }));
-    card.dispatchEvent(new PointerEvent('pointermove', { clientX: 100 + dx }));
-    card.dispatchEvent(new PointerEvent('pointerup', { clientX: 100 + dx }));
+  function drag(card: HTMLElement, dx: number, dy = 0) {
+    card.dispatchEvent(new PointerEvent('pointerdown', { clientX: 100, clientY: 300 }));
+    card.dispatchEvent(new PointerEvent('pointermove', { clientX: 100 + dx, clientY: 300 + dy }));
+    card.dispatchEvent(new PointerEvent('pointerup', { clientX: 100 + dx, clientY: 300 + dy }));
   }
 
   it('kéo phải quá ngưỡng là thích, kéo trái là bỏ qua', () => {
@@ -52,7 +61,7 @@ describe('SwipeCardComponent', () => {
     vi.advanceTimersByTime(250);
     fixture.detectChanges();
     expect(emitted).toEqual([]);
-    expect(card.style.transform).toContain('translateX(0px)');
+    expect(card.style.transform).toContain('translate(0px, 0px)');
   });
 
   it('nút ✖️/❤️ của trang gọi fling: thẻ bay ra rồi báo quẹt', () => {
@@ -60,6 +69,28 @@ describe('SwipeCardComponent', () => {
     fixture.componentInstance.fling(true);
     vi.advanceTimersByTime(250);
     expect(emitted).toEqual([true]);
+  });
+
+  it('kéo lên là siêu thích khi còn lượt; hết lượt thì thẻ trở lại', () => {
+    const { card, emitted } = create(true);
+    drag(card, 10, -150);
+    vi.advanceTimersByTime(250);
+    expect(emitted).toEqual(['super']);
+
+    const none = create(false);
+    drag(none.card, 10, -150);
+    vi.advanceTimersByTime(250);
+    none.fixture.detectChanges();
+    expect(none.emitted).toEqual([]);
+    expect(none.card.style.transform).toContain('translate(0px, 0px)');
+  });
+
+  it('hiện hợp gu và tối đa 2 quán cùng lưu, còn lại gộp "+N"', () => {
+    const { fixture } = create();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Hợp gu 75%');
+    expect(text).toContain('Cùng lưu Cafe Cuối Ngõ, Echoes Café +1');
+    expect(text).not.toContain('Phát Ký');
   });
 
   it('ảnh đại diện đứng đầu, không lặp ảnh', () => {

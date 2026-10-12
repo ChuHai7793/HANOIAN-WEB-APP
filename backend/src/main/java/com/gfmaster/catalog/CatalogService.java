@@ -6,6 +6,7 @@ import com.gfmaster.catalog.CatalogDtos.CatalogRequest;
 import com.gfmaster.catalog.CatalogDtos.DistrictOption;
 import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
+import com.gfmaster.dating.DatingRepository;
 import com.gfmaster.place.PlaceRepository;
 import com.gfmaster.place.PlaceService;
 import com.gfmaster.place.PlaceType;
@@ -15,7 +16,9 @@ import com.gfmaster.upload.storage.ImageUrls;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -40,18 +43,36 @@ public class CatalogService {
   private final PlaceRepository places;
   private final PlaceService placeService;
   private final ImageUrls imageUrls;
+  private final DatingRepository dating;
 
   public CatalogService(
-      CatalogPlaceRepository catalog, PlaceRepository places, PlaceService placeService, ImageUrls imageUrls) {
+      CatalogPlaceRepository catalog,
+      PlaceRepository places,
+      PlaceService placeService,
+      ImageUrls imageUrls,
+      DatingRepository dating) {
     this.catalog = catalog;
     this.places = places;
     this.placeService = placeService;
     this.imageUrls = imageUrls;
+    this.dating = dating;
   }
 
   @Transactional(readOnly = true)
   public List<DistrictOption> districts() {
     return Arrays.stream(CatalogDistrict.values()).map(d -> new DistrictOption(d.name(), d.label())).toList();
+  }
+
+  /**
+   * Số quán theo từng loại cho chip lọc ("Cafe · 10"), theo từ khoá và khu vực đang chọn (không theo loại,
+   * nếu không chip khác luôn bằng 0). Khoá {@code all} là tổng.
+   */
+  @Transactional(readOnly = true)
+  public Map<String, Long> counts(String q, CatalogDistrict district) {
+    Map<String, Long> out = new LinkedHashMap<>();
+    out.put("all", catalog.count(filter(q, null, district)));
+    for (PlaceType t : PlaceType.values()) out.put(t.name(), catalog.count(filter(q, t, district)));
+    return out;
   }
 
   /** {@code userId}: người đang xem, để đánh dấu quán đã có trong My place của họ. */
@@ -64,25 +85,30 @@ public class CatalogService {
             PageRequest.of(Math.max(page, 0), pageSize, Sort.by("name").and(Sort.by("id"))));
     List<UUID> ids = result.getContent().stream().map(CatalogPlace::getId).toList();
     Set<UUID> saved = ids.isEmpty() ? Set.of() : new HashSet<>(places.findCatalogIdsInMyPlace(userId, ids));
-    List<CatalogItem> items = result.getContent().stream().map(c -> toItem(c, saved.contains(c.getId()))).toList();
+    // "Người hợp gu đã lưu": chỉ khi người xem đang bật Tìm đối tượng
+    Map<UUID, Integer> fans = dating.canSeeDeck(userId) ? dating.fansOf(userId, ids) : null;
+    List<CatalogItem> items =
+        result.getContent().stream()
+            .map(c -> toItem(c, saved.contains(c.getId()), fans == null ? null : fans.getOrDefault(c.getId(), 0)))
+            .toList();
     return new CatalogPage(items, result.getTotalElements(), result.getNumber(), pageSize);
   }
 
   public CatalogItem create(CatalogRequest req) {
     CatalogPlace c = new CatalogPlace();
     apply(req, c);
-    return toItem(catalog.saveAndFlush(c), false);
+    return toItem(catalog.saveAndFlush(c), false, null);
   }
 
   public CatalogItem update(UUID id, CatalogRequest req) {
     CatalogPlace c = load(id);
     if (!Objects.equals(c.getVersion(), req.version())) {
-      throw new ApiException(ErrorCode.VERSION_CONFLICT).with("current", toItem(c, false));
+      throw new ApiException(ErrorCode.VERSION_CONFLICT).with("current", toItem(c, false, null));
     }
     apply(req, c);
     CatalogPlace saved = catalog.saveAndFlush(c);
     placeService.syncCatalogCopies(id, toPlaceRequest(saved));
-    return toItem(saved, false);
+    return toItem(saved, false, null);
   }
 
   /** Bản sao trong My place của mọi người vẫn giữ (places.catalog_id thành NULL). */
@@ -159,7 +185,7 @@ public class CatalogService {
     return spec;
   }
 
-  private CatalogItem toItem(CatalogPlace c, boolean inMyPlace) {
+  private CatalogItem toItem(CatalogPlace c, boolean inMyPlace, Integer fans) {
     return new CatalogItem(
         c.getId(),
         c.getType(),
@@ -182,6 +208,7 @@ public class CatalogService {
         c.getVersion(),
         c.getCreatedAt(),
         c.getUpdatedAt(),
-        inMyPlace);
+        inMyPlace,
+        fans);
   }
 }

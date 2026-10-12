@@ -15,6 +15,7 @@ import { SpotRequest, SpotService } from '../../core/services/spot.service';
 import { ToastService } from '../../core/services/toast.service';
 import { directionsUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
 import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component';
+import { IconComponent } from '../../shared/ui/icon.component';
 import { SpotFormComponent } from './spot-form.component';
 
 /** Lọc theo ngân sách: giá thấp nhất của chỗ chơi không quá mức này. */
@@ -37,83 +38,105 @@ function nowHHmm(): string {
  */
 @Component({
   selector: 'app-spot-list-page',
-  imports: [SpotFormComponent, ConfirmDialogComponent],
+  imports: [SpotFormComponent, ConfirmDialogComponent, IconComponent],
   template: `
-    <div class="p-4 sm:p-6 lg:p-8">
-      <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 class="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <span>🎡</span> Tìm chỗ chơi
-          </h1>
-          <p class="mt-1 text-sm text-slate-500">
+    <div class="flex flex-col gap-6 px-4 pb-14 pt-6 sm:px-6 lg:px-10 lg:pt-8">
+      <header class="flex flex-wrap items-end justify-between gap-4">
+        <div class="flex flex-col gap-1.5">
+          <h1 class="text-[32px] font-extrabold tracking-tight text-slate-900">Tìm chỗ chơi</h1>
+          <p class="text-[15px] text-slate-500">
             Music box, workshop, bảo tàng, dạo phố… những chỗ hẹn hò ở Hà Nội ngoài quán xá.
           </p>
         </div>
         @if (canEdit()) {
           <button
             type="button"
-            class="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+            class="flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
             (click)="openCreate()"
           >
-            + Thêm chỗ chơi
+            <app-icon name="plus" [size]="18" [stroke]="2.4" />
+            Thêm chỗ chơi
           </button>
         }
-      </div>
+      </header>
 
-      <div class="mb-3 flex flex-wrap items-center gap-2">
-        <input
-          type="search"
-          [value]="q()"
-          (input)="onSearch($any($event.target).value)"
-          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 sm:w-72"
-          placeholder="Tìm theo tên, địa chỉ…"
-        />
-        <select
-          [value]="district()"
-          (change)="district.set($any($event.target).value); reload()"
-          class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500"
-        >
-          <option value="">Mọi khu vực</option>
-          @for (d of districts(); track d.code) {
-            <option [value]="d.code">{{ d.label }}</option>
-          }
-        </select>
-        <select
-          [value]="budgetIndex()"
-          (change)="budgetIndex.set(+$any($event.target).value); reload()"
-          class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500"
-        >
-          @for (b of budgets; track $index) {
-            <option [value]="$index">{{ b.label }}</option>
-          }
-        </select>
-        <label class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
-          <input type="checkbox" [checked]="openNow()" (change)="openNow.set(!openNow()); reload()" class="h-4 w-4 accent-brand-600" />
-          Đang mở cửa
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="flex min-h-11 max-w-[420px] flex-[1_1_280px] items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 text-slate-500">
+          <app-icon name="search" [size]="18" />
+          <span class="sr-only">Tìm chỗ chơi</span>
+          <input
+            type="search"
+            [value]="q()"
+            (input)="onSearch($any($event.target).value)"
+            class="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+            placeholder="Tìm theo tên, địa chỉ…"
+          />
         </label>
-        <label class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
-          <input type="checkbox" [checked]="rainy()" (change)="rainy.set(!rainy()); reload()" class="h-4 w-4 accent-brand-600" />
-          ☔ Ngày mưa
+        <label class="flex min-h-11 items-center gap-2 rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
+          <span class="text-brand-600"><app-icon name="pin" [size]="18" /></span>
+          <span class="sr-only">Khu vực</span>
+          <select
+            [value]="district()"
+            (change)="district.set($any($event.target).value); reload()"
+            class="cursor-pointer bg-transparent text-sm text-slate-900 outline-none"
+          >
+            <option value="">Mọi khu vực</option>
+            @for (d of districts(); track d.code) {
+              <option [value]="d.code">{{ d.label }}</option>
+            }
+          </select>
         </label>
-      </div>
-
-      <div class="mb-5 flex flex-wrap gap-2">
+        <label class="flex min-h-11 items-center rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
+          <span class="sr-only">Ngân sách</span>
+          <select
+            [value]="budgetIndex()"
+            (change)="budgetIndex.set(+$any($event.target).value); reload()"
+            class="cursor-pointer bg-transparent text-sm text-slate-900 outline-none"
+          >
+            @for (b of budgets; track $index) {
+              <option [value]="$index">{{ b.label }}</option>
+            }
+          </select>
+        </label>
         <button
           type="button"
-          class="rounded-full px-3.5 py-1.5 text-xs font-medium transition"
-          [class]="category() === '' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
-          (click)="category.set(''); reload()"
+          [attr.aria-pressed]="openNow()"
+          class="flex min-h-11 items-center gap-1.5 rounded-xl border px-3.5 text-sm transition"
+          [class]="openNow() ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white text-slate-700 hover:bg-brand-50'"
+          (click)="openNow.set(!openNow()); reload()"
         >
-          Tất cả
+          <app-icon name="clock" [size]="16" />Đang mở cửa
+        </button>
+        <button
+          type="button"
+          [attr.aria-pressed]="rainy()"
+          class="flex min-h-11 items-center gap-1.5 rounded-xl border px-3.5 text-sm transition"
+          [class]="rainy() ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white text-slate-700 hover:bg-brand-50'"
+          (click)="rainy.set(!rainy()); reload()"
+        >
+          ☔ Ngày mưa
+        </button>
+      </div>
+
+      <div role="group" aria-label="Nhóm chỗ chơi" class="-mt-2 flex flex-wrap gap-2">
+        <button
+          type="button"
+          [attr.aria-pressed]="category() === ''"
+          class="min-h-10 rounded-full border px-4 text-sm transition"
+          [class]="category() === '' ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
+          (click)="category.set(''); reload(false)"
+        >
+          Tất cả@if (counts(); as n) { · {{ n['all'] }}}
         </button>
         @for (c of categories; track c.value) {
           <button
             type="button"
-            class="rounded-full px-3.5 py-1.5 text-xs font-medium transition"
-            [class]="category() === c.value ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
-            (click)="category.set(c.value); reload()"
+            [attr.aria-pressed]="category() === c.value"
+            class="min-h-10 rounded-full border px-4 text-sm transition"
+            [class]="category() === c.value ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
+            (click)="category.set(c.value); reload(false)"
           >
-            {{ c.icon }} {{ c.label }}
+            {{ c.icon }} {{ c.label }}@if (counts(); as n) { · {{ n[c.value] }}}
           </button>
         }
       </div>
@@ -121,76 +144,90 @@ function nowHHmm(): string {
       @if (loading() && items().length === 0) {
         <p class="text-sm text-slate-500">Đang tải…</p>
       } @else if (items().length === 0) {
-        <p class="text-sm text-slate-500">
-          {{ hasFilter() ? 'Không tìm thấy chỗ nào hợp bộ lọc.' : 'Chưa có chỗ chơi nào.' }}
-        </p>
+        <div class="rounded-[20px] border border-dashed border-brand-300 bg-white px-6 py-12 text-center text-[15px] text-slate-500">
+          {{ hasFilter() ? 'Không tìm thấy chỗ nào hợp bộ lọc. Thử bỏ bớt bộ lọc nhé.' : 'Chưa có chỗ chơi nào.' }}
+        </div>
       } @else {
-        <p class="mb-3 text-xs text-slate-400">{{ total() }} chỗ chơi</p>
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <span class="text-[13px] text-slate-500">{{ total() }} chỗ chơi</span>
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-6">
           @for (item of items(); track item.id) {
-            <article class="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              @if (item.imageUrl) {
-                <img [src]="item.imageUrl" alt="" class="h-36 w-full object-cover" loading="lazy" />
-              }
-              <div class="flex flex-1 flex-col p-4">
-                <div class="flex items-start gap-2">
-                  <span class="text-xl">{{ cat(item).icon }}</span>
-                  <div class="min-w-0 flex-1">
-                    <p class="font-semibold text-slate-900">{{ item.name }}</p>
-                    <p class="text-xs text-slate-500">
-                      {{ cat(item).label }} · {{ item.address || 'Chưa có địa chỉ' }} · {{ item.districtLabel }}
-                    </p>
-                  </div>
+            <article class="flex flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)]">
+              <div class="relative flex h-44 items-center justify-center bg-[#EFEAFC] text-5xl">
+                @if (item.imageUrl) {
+                  <img [src]="item.imageUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
+                } @else {
+                  <span aria-hidden="true">{{ cat(item).icon }}</span>
+                }
+                <span class="absolute left-3 top-3 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-brand-800">
+                  {{ cat(item).label }}
+                </span>
+                <span class="absolute right-3 top-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">
+                  {{ item.districtLabel }}
+                </span>
+                @if (item.needsBooking) {
+                  <span class="absolute bottom-3 left-3 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                    Cần đặt trước
+                  </span>
+                }
+              </div>
+              <div class="flex flex-1 flex-col gap-2.5 px-5 pb-5 pt-[18px]">
+                <div class="flex flex-col gap-1">
+                  <h2 class="text-lg font-bold tracking-tight text-slate-900">{{ item.name }}</h2>
+                  <span class="text-[13px] leading-snug text-slate-500">{{ item.address || 'Chưa có địa chỉ' }}</span>
                 </div>
-                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                  <span class="font-medium" [class]="item.priceFrom === 0 && !item.priceTo ? 'text-emerald-600' : 'text-slate-700'">
+                <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[13px] text-slate-700">
+                  <span class="font-semibold" [class]="item.priceFrom === 0 && !item.priceTo ? 'text-emerald-600' : 'text-slate-900'">
                     {{ price(item) }}
                   </span>
-                  <span>🕐 {{ item.openTime ? item.openTime + '–' + item.closeTime : 'Không giờ cố định' }}</span>
+                  <span class="flex items-center gap-1">
+                    <span class="text-slate-500"><app-icon name="clock" [size]="14" /></span>
+                    {{ item.openTime ? item.openTime + '–' + item.closeTime : 'Không giờ cố định' }}
+                  </span>
                   @if (item.durationMin) {
                     <span>⏱ {{ duration(item.durationMin) }}</span>
                   }
-                  <span>{{ item.indoor ? '🏠 Trong nhà' : '🌤 Ngoài trời' }}</span>
+                  <span>{{ item.indoor ? 'Trong nhà' : 'Ngoài trời' }}</span>
                 </div>
-                @if (item.needsBooking) {
-                  <p class="mt-2">
-                    <span class="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">📅 Cần đặt trước</span>
-                  </p>
-                }
                 @if (item.description) {
-                  <p class="mt-2 line-clamp-3 text-xs text-slate-600">{{ item.description }}</p>
+                  <p class="line-clamp-3 text-sm leading-relaxed text-slate-600">{{ item.description }}</p>
                 }
                 @if (item.hoursNote) {
-                  <p class="mt-1 text-xs italic text-slate-500">{{ item.hoursNote }}</p>
+                  <p class="text-[13px] italic text-slate-500">{{ item.hoursNote }}</p>
                 }
-                <div class="mt-auto flex flex-wrap items-center gap-2 pt-3 text-xs">
+                <div class="mt-auto flex flex-wrap items-center gap-2 pt-1.5">
                   <a
                     [href]="mapUrl(item)"
                     target="_blank"
                     rel="noopener"
-                    class="rounded-lg border border-slate-200 px-2.5 py-1.5 font-medium text-slate-600 hover:bg-slate-50"
-                    >🗺️ Maps</a
+                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
                   >
+                    <app-icon name="pin" [size]="15" />Maps
+                  </a>
                   <a
                     [href]="directions(item)"
                     target="_blank"
                     rel="noopener"
-                    class="rounded-lg border border-slate-200 px-2.5 py-1.5 font-medium text-slate-600 hover:bg-slate-50"
-                    >🧭 Chỉ đường</a
+                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
                   >
+                    <app-icon name="navigate" [size]="15" />Chỉ đường
+                  </a>
+                  @if (canEdit()) {
+                    <button type="button" class="flex min-h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-slate-600 hover:bg-brand-50" title="Sửa" (click)="openEdit(item)">
+                      <app-icon name="edit" [size]="15" />
+                    </button>
+                    <button type="button" class="flex min-h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-rose-600 hover:bg-rose-50" title="Xoá" (click)="pendingDelete.set(item)">
+                      <app-icon name="trash" [size]="15" />
+                    </button>
+                  }
                   @if (item.bookingUrl) {
                     <a
                       [href]="item.bookingUrl"
                       target="_blank"
                       rel="noopener"
-                      class="rounded-lg bg-brand-600 px-2.5 py-1.5 font-semibold text-white hover:bg-brand-700"
-                      >Đặt chỗ</a
+                      class="ml-auto flex min-h-10 items-center gap-1.5 rounded-[10px] bg-brand-600 px-3.5 text-[13px] font-semibold text-white hover:bg-brand-700"
                     >
-                  }
-                  @if (canEdit()) {
-                    <span class="flex-1"></span>
-                    <button type="button" class="rounded-lg border border-slate-200 px-2 py-1.5 hover:bg-slate-50" title="Sửa" (click)="openEdit(item)">✏️</button>
-                    <button type="button" class="rounded-lg border border-slate-200 px-2 py-1.5 text-rose-600 hover:bg-rose-50" title="Xoá" (click)="pendingDelete.set(item)">🗑️</button>
+                      <app-icon name="calendar" [size]="15" />Đặt chỗ
+                    </a>
                   }
                 </div>
               </div>
@@ -198,10 +235,10 @@ function nowHHmm(): string {
           }
         </div>
         @if (items().length < total()) {
-          <div class="mt-5 text-center">
+          <div class="text-center">
             <button
               type="button"
-              class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+              class="min-h-11 rounded-xl border border-brand-200 bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-brand-50 disabled:opacity-60"
               [disabled]="loading()"
               (click)="loadMore()"
             >
@@ -247,6 +284,8 @@ export class SpotListPage implements OnInit {
   protected readonly rainy = signal(false);
   protected readonly districts = signal<DistrictOption[]>([]);
   protected readonly items = signal<SpotItem[]>([]);
+  /** Số chỗ chơi theo nhóm cho chip (theo mọi bộ lọc trừ nhóm) */
+  protected readonly counts = signal<Record<string, number> | null>(null);
   protected readonly total = signal(0);
   protected readonly loading = signal(false);
 
@@ -275,9 +314,29 @@ export class SpotListPage implements OnInit {
     this.searchTimer = setTimeout(() => void this.reload(), 300);
   }
 
-  protected async reload(): Promise<void> {
+  /** {@code withCounts}: tính lại số trên chip (đổi nhóm thì không cần, số không theo nhóm). */
+  protected async reload(withCounts = true): Promise<void> {
     this.page = 0;
+    if (withCounts) {
+      const filter = this.filter();
+      const key = JSON.stringify(filter);
+      void this.spots.counts(filter).then((c) => {
+        // Bỏ kết quả cũ nếu bộ lọc đã đổi trong lúc chờ
+        if (key === JSON.stringify(this.filter())) this.counts.set(c);
+      });
+    }
     await this.load(false);
+  }
+
+  /** Bộ lọc hiện tại, trừ nhóm và trang */
+  private filter() {
+    return {
+      q: this.q().trim(),
+      district: this.district(),
+      maxPrice: BUDGETS[this.budgetIndex()].value,
+      indoor: this.rainy() ? true : null,
+      openAt: this.openNow() ? nowHHmm() : '',
+    };
   }
 
   protected async loadMore(): Promise<void> {
@@ -289,16 +348,7 @@ export class SpotListPage implements OnInit {
     const seq = ++this.requestSeq;
     this.loading.set(true);
     try {
-      const res = await this.spots.search({
-        q: this.q().trim(),
-        category: this.category(),
-        district: this.district(),
-        maxPrice: BUDGETS[this.budgetIndex()].value,
-        indoor: this.rainy() ? true : null,
-        openAt: this.openNow() ? nowHHmm() : '',
-        page: this.page,
-        size: 30,
-      });
+      const res = await this.spots.search({ ...this.filter(), category: this.category(), page: this.page, size: 30 });
       if (seq !== this.requestSeq) return;
       this.items.set(append ? [...this.items(), ...res.items] : res.items);
       this.total.set(res.total);

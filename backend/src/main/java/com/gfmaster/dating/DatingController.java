@@ -11,6 +11,7 @@ import com.gfmaster.dating.DatingDtos.ReportRequest;
 import com.gfmaster.dating.DatingDtos.SendMessageRequest;
 import com.gfmaster.dating.DatingDtos.SwipeRequest;
 import com.gfmaster.dating.DatingDtos.SwipeResult;
+import com.gfmaster.dating.DatingDtos.TodayStats;
 import com.gfmaster.dating.DatingDtos.UndoResult;
 import com.gfmaster.realtime.SseHub;
 import jakarta.servlet.http.HttpServletResponse;
@@ -61,9 +62,14 @@ public class DatingController {
     return service.deck(me);
   }
 
+  @GetMapping("/today")
+  public TodayStats today(@CurrentUser UUID me) {
+    return service.today(me);
+  }
+
   @PostMapping("/swipes")
   public SwipeResult swipe(@CurrentUser UUID me, @Valid @RequestBody SwipeRequest request) {
-    return service.swipe(me, request.targetId(), request.liked());
+    return service.swipe(me, request.targetId(), request.liked(), Boolean.TRUE.equals(request.superLike()));
   }
 
   @DeleteMapping("/swipes/last")

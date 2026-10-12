@@ -1,14 +1,15 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { errorCode, problemOf } from '../../core/api/api';
 import { AuthService } from '../../core/auth/auth.service';
-import { CatalogItem, DistrictOption, MY_PLACE_GROUP } from '../../core/models/catalog.model';
-import { Place, PLACE_ICONS, PlaceType, priceLabel } from '../../core/models/place.model';
+import { CatalogItem, DistrictOption, MY_PLACE_GROUP, TypeCounts } from '../../core/models/catalog.model';
+import { Place, PlaceType, priceLabel } from '../../core/models/place.model';
 import { CatalogRequest, CatalogService } from '../../core/services/catalog.service';
 import { PlaceService } from '../../core/services/place.service';
 import { ToastService } from '../../core/services/toast.service';
 import { directionsUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
 import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component';
-import { RatingStarsComponent } from '../../shared/ui/rating-stars.component';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { IconComponent, IconName } from '../../shared/ui/icon.component';
 import { PlaceFormComponent } from '../places/place-form.component';
 import { BAR_CONFIG, CAFE_CONFIG, PlaceTypeConfig, RESTAURANT_CONFIG } from '../places/place.config';
 
@@ -20,10 +21,13 @@ const CONFIGS: Record<PlaceType, PlaceTypeConfig> = {
 
 const TYPE_FILTERS: { value: PlaceType | ''; label: string }[] = [
   { value: '', label: 'Tất cả' },
-  { value: 'cafe', label: '☕ Cafe' },
-  { value: 'bar', label: '🍸 Bar' },
-  { value: 'restaurant', label: '🍜 Quán ăn' },
+  { value: 'cafe', label: 'Cafe' },
+  { value: 'bar', label: 'Bar' },
+  { value: 'restaurant', label: 'Quán ăn' },
 ];
+
+const TYPE_LABELS: Record<PlaceType, string> = { cafe: 'Cafe', bar: 'Bar', restaurant: 'Quán ăn' };
+const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', restaurant: 'utensils' };
 
 /**
  * "Khám phá quán": danh mục quán do admin nhập. Mọi người xem, lọc theo khu vực và loại, rồi "Add vào
@@ -31,26 +35,25 @@ const TYPE_FILTERS: { value: PlaceType | ''; label: string }[] = [
  */
 @Component({
   selector: 'app-explore-page',
-  imports: [PlaceFormComponent, RatingStarsComponent, ConfirmDialogComponent],
+  imports: [PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
-    <div class="p-4 sm:p-6 lg:p-8">
-      <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 class="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <span>🔎</span> Khám phá quán
-          </h1>
-          <p class="mt-1 text-sm text-slate-500">
-            Quán cafe, bar, quán ăn ở Hà Nội. Ưng quán nào thì "Add vào My place".
+    <div class="flex flex-col gap-6 px-4 pb-14 pt-6 sm:px-6 lg:px-10 lg:pt-8">
+      <header class="flex flex-wrap items-end justify-between gap-4">
+        <div class="flex flex-col gap-1.5">
+          <h1 class="text-[32px] font-extrabold tracking-tight text-slate-900">Khám phá quán</h1>
+          <p class="text-[15px] text-slate-500">
+            Quán cafe, bar, quán ăn ở Hà Nội. Ưng quán nào thì lưu vào My place.
           </p>
         </div>
         @if (canEdit()) {
           <div class="relative">
             <button
               type="button"
-              class="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+              class="flex min-h-11 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
               (click)="typeMenuOpen.set(!typeMenuOpen())"
             >
-              + Thêm mới
+              <app-icon name="plus" [size]="18" [stroke]="2.4" />
+              Thêm quán
             </button>
             @if (typeMenuOpen()) {
               <div class="absolute right-0 z-30 mt-1 w-44 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
@@ -67,100 +70,153 @@ const TYPE_FILTERS: { value: PlaceType | ''; label: string }[] = [
             }
           </div>
         }
-      </div>
+      </header>
 
-      <div class="mb-5 flex flex-wrap items-center gap-2">
-        <input
-          type="search"
-          [value]="q()"
-          (input)="onSearch($any($event.target).value)"
-          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 sm:w-72"
-          placeholder="Tìm theo tên, địa chỉ…"
-        />
-        <select
-          [value]="district()"
-          (change)="district.set($any($event.target).value); reload()"
-          class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500"
+      <!-- Cầu nối: có quán ưng ý thì đi tìm người hẹn -->
+      <section class="flex flex-wrap items-center gap-5 rounded-[20px] border border-brand-200 bg-brand-100 px-6 py-5">
+        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white text-brand-600">
+          <app-icon name="heart" [size]="28" />
+        </div>
+        <div class="flex min-w-0 flex-[1_1_320px] flex-col gap-1">
+          <span class="text-[17px] font-bold text-slate-900">Đã có quán ưng ý? Giờ tìm người đi cùng.</span>
+          <span class="text-sm text-slate-600">Bật Tìm đối tượng, quẹt và match rồi hẹn nhau ở quán bạn thích.</span>
+        </div>
+        <a
+          routerLink="/dating"
+          class="flex min-h-11 items-center gap-2 rounded-xl border border-brand-300 bg-white px-5 text-sm font-semibold text-brand-800 transition hover:bg-brand-50"
         >
-          <option value="">Mọi khu vực</option>
-          @for (d of districts(); track d.code) {
-            <option [value]="d.code">{{ d.label }}</option>
-          }
-        </select>
-        @for (t of typeFilters; track t.value) {
-          <button
-            type="button"
-            class="rounded-full px-3.5 py-1.5 text-xs font-medium transition"
-            [class]="type() === t.value ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
-            (click)="type.set(t.value); reload()"
+          Bắt đầu quẹt
+          <app-icon name="arrowRight" [size]="16" [stroke]="2.4" />
+        </a>
+      </section>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="flex min-h-11 max-w-[420px] flex-[1_1_280px] items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 text-slate-500">
+          <app-icon name="search" [size]="18" />
+          <span class="sr-only">Tìm quán</span>
+          <input
+            type="search"
+            [value]="q()"
+            (input)="onSearch($any($event.target).value)"
+            class="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+            placeholder="Tìm theo tên, địa chỉ…"
+          />
+        </label>
+        <label class="flex min-h-11 items-center gap-2 rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
+          <span class="text-brand-600"><app-icon name="pin" [size]="18" /></span>
+          <span class="sr-only">Khu vực</span>
+          <select
+            [value]="district()"
+            (change)="district.set($any($event.target).value); reload()"
+            class="cursor-pointer bg-transparent text-sm text-slate-900 outline-none"
           >
-            {{ t.label }}
-          </button>
-        }
+            <option value="">Mọi khu vực</option>
+            @for (d of districts(); track d.code) {
+              <option [value]="d.code">{{ d.label }}</option>
+            }
+          </select>
+        </label>
+        <div role="group" aria-label="Loại quán" class="flex flex-wrap gap-2">
+          @for (t of typeFilters; track t.value) {
+            <button
+              type="button"
+              [attr.aria-pressed]="type() === t.value"
+              class="min-h-10 rounded-full border px-4 text-sm transition"
+              [class]="type() === t.value
+                ? 'border-brand-600 bg-brand-600 font-semibold text-white'
+                : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
+              (click)="type.set(t.value); reload(false)"
+            >
+              {{ t.label }}@if (counts(); as n) { · {{ n[t.value || 'all'] }}}
+            </button>
+          }
+        </div>
       </div>
 
       @if (loading() && items().length === 0) {
         <p class="text-sm text-slate-500">Đang tải…</p>
       } @else if (items().length === 0) {
-        <p class="text-sm text-slate-500">
-          {{ q() || type() || district() ? 'Không tìm thấy quán nào.' : 'Chưa có quán nào trong danh mục.' }}
-        </p>
+        <div class="rounded-[20px] border border-dashed border-brand-300 bg-white px-6 py-12 text-center text-[15px] text-slate-500">
+          {{ q() || type() || district() ? 'Không tìm thấy quán phù hợp. Thử từ khoá khác nhé.' : 'Chưa có quán nào trong danh mục.' }}
+        </div>
       } @else {
-        <p class="mb-3 text-xs text-slate-400">{{ total() }} quán</p>
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <span class="text-[13px] text-slate-500">{{ total() }} quán</span>
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-6">
           @for (item of items(); track item.id) {
-            <article class="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              @if (item.imageUrl) {
-                <img [src]="item.imageUrl" alt="" class="h-36 w-full object-cover" loading="lazy" />
-              }
-              <div class="flex flex-1 flex-col p-4">
-                <div class="flex items-start gap-2">
-                  <span class="text-xl">{{ icons[item.type] }}</span>
-                  <div class="min-w-0 flex-1">
-                    <p class="font-semibold text-slate-900">{{ item.name }}</p>
-                    <p class="text-xs text-slate-500">
-                      {{ item.address || 'Chưa có địa chỉ' }} · {{ item.districtLabel }}
-                    </p>
-                  </div>
+            <article class="flex flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)]">
+              <div class="relative flex h-44 items-center justify-center bg-[#EFEAFC] text-brand-500">
+                @if (item.imageUrl) {
+                  <img [src]="item.imageUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
+                } @else {
+                  <app-icon [name]="typeIcons[item.type]" [size]="40" [stroke]="1.5" />
+                }
+                <span class="absolute left-3 top-3 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-brand-800">
+                  {{ typeLabels[item.type] }}
+                </span>
+                @if (item.fans) {
+                  <span class="absolute right-3 top-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">
+                    {{ item.fans }} người hợp gu đã lưu
+                  </span>
+                }
+              </div>
+              <div class="flex flex-1 flex-col gap-2.5 px-5 pb-5 pt-[18px]">
+                <div class="flex flex-col gap-1">
+                  <h2 class="text-lg font-bold tracking-tight text-slate-900">{{ item.name }}</h2>
+                  <span class="text-[13px] leading-snug text-slate-500">
+                    {{ item.address || 'Chưa có địa chỉ' }} · <span class="font-medium text-slate-600">{{ item.districtLabel }}</span>
+                  </span>
                 </div>
-                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  <app-rating-stars [value]="item.rating" />
+                <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[13px] text-slate-700">
+                  <span class="flex items-center gap-1">
+                    <span class="tracking-[1px] text-[#E29A2D]" aria-hidden="true">{{ stars(item.rating).on }}</span><span class="tracking-[1px] text-[#D9D3EA]" aria-hidden="true">{{ stars(item.rating).off }}</span>
+                    <span class="font-semibold">{{ item.rating }}.0</span>
+                  </span>
                   <span>{{ priceText(item) }}</span>
-                  <span>🕐 {{ item.openTime }}–{{ item.closeTime }}</span>
+                  <span class="flex items-center gap-1 text-slate-700">
+                    <span class="text-slate-500"><app-icon name="clock" [size]="14" /></span>
+                    {{ item.openTime }}–{{ item.closeTime }}
+                  </span>
                 </div>
                 @if (item.note) {
-                  <p class="mt-2 line-clamp-2 text-xs text-slate-600">{{ item.note }}</p>
+                  <p class="line-clamp-3 text-sm leading-relaxed text-slate-600">{{ item.note }}</p>
                 }
-                <div class="mt-auto flex flex-wrap items-center gap-2 pt-3 text-xs">
+                <div class="mt-auto flex flex-wrap items-center gap-2 pt-1.5">
                   <a
                     [href]="mapUrl(item)"
                     target="_blank"
                     rel="noopener"
-                    class="rounded-lg border border-slate-200 px-2.5 py-1.5 font-medium text-slate-600 hover:bg-slate-50"
-                    >🗺️ Maps</a
+                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
                   >
+                    <app-icon name="pin" [size]="15" />Maps
+                  </a>
                   <a
                     [href]="directions(item)"
                     target="_blank"
                     rel="noopener"
-                    class="rounded-lg border border-slate-200 px-2.5 py-1.5 font-medium text-slate-600 hover:bg-slate-50"
-                    >🧭 Chỉ đường</a
+                    class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
                   >
+                    <app-icon name="navigate" [size]="15" />Chỉ đường
+                  </a>
                   @if (canEdit()) {
-                    <button type="button" class="rounded-lg border border-slate-200 px-2 py-1.5 hover:bg-slate-50" title="Sửa" (click)="openEdit(item)">✏️</button>
-                    <button type="button" class="rounded-lg border border-slate-200 px-2 py-1.5 text-rose-600 hover:bg-rose-50" title="Xoá" (click)="pendingDelete.set(item)">🗑️</button>
+                    <button type="button" class="flex min-h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-slate-600 hover:bg-brand-50" title="Sửa" (click)="openEdit(item)">
+                      <app-icon name="edit" [size]="15" />
+                    </button>
+                    <button type="button" class="flex min-h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-rose-600 hover:bg-rose-50" title="Xoá" (click)="pendingDelete.set(item)">
+                      <app-icon name="trash" [size]="15" />
+                    </button>
                   }
-                  <span class="flex-1"></span>
                   @if (item.inMyPlace) {
-                    <span class="font-medium text-emerald-600">✓ Đã có trong My place</span>
+                    <span class="ml-auto flex min-h-10 items-center gap-1.5 rounded-[10px] bg-brand-100 px-3.5 text-[13px] font-semibold text-brand-800">
+                      <app-icon name="heart" [size]="15" [filled]="true" />Đã lưu
+                    </span>
                   } @else {
                     <button
                       type="button"
-                      class="rounded-lg bg-brand-600 px-2.5 py-1.5 font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                      class="ml-auto flex min-h-10 items-center gap-1.5 rounded-[10px] bg-brand-600 px-3.5 text-[13px] font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
                       [disabled]="adding() === item.id"
                       (click)="addToMyPlace(item)"
                     >
-                      + Add vào My place
+                      <app-icon name="plus" [size]="15" [stroke]="2.4" />Lưu vào My place
                     </button>
                   }
                 </div>
@@ -169,10 +225,10 @@ const TYPE_FILTERS: { value: PlaceType | ''; label: string }[] = [
           }
         </div>
         @if (items().length < total()) {
-          <div class="mt-5 text-center">
+          <div class="text-center">
             <button
               type="button"
-              class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+              class="min-h-11 rounded-xl border border-brand-200 bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-brand-50 disabled:opacity-60"
               [disabled]="loading()"
               (click)="loadMore()"
             >
@@ -208,7 +264,8 @@ export class ExplorePage implements OnInit {
   private readonly placeService = inject(PlaceService);
   private readonly toast = inject(ToastService);
 
-  protected readonly icons = PLACE_ICONS;
+  protected readonly typeLabels = TYPE_LABELS;
+  protected readonly typeIcons = TYPE_ICONS;
   protected readonly configs = CONFIGS;
   protected readonly typeFilters = TYPE_FILTERS;
   protected readonly newTypes = TYPE_FILTERS.filter((t) => t.value !== '') as { value: PlaceType; label: string }[];
@@ -219,6 +276,8 @@ export class ExplorePage implements OnInit {
   protected readonly district = signal('');
   protected readonly districts = signal<DistrictOption[]>([]);
   protected readonly items = signal<CatalogItem[]>([]);
+  /** Số quán theo loại cho chip (theo từ khoá + khu vực) */
+  protected readonly counts = signal<TypeCounts | null>(null);
   protected readonly total = signal(0);
   protected readonly loading = signal(false);
   /** id quán đang được add vào My place */
@@ -236,8 +295,12 @@ export class ExplorePage implements OnInit {
   /** Bỏ kết quả của lần tải cũ nếu người dùng đã đổi bộ lọc */
   private requestSeq = 0;
 
+  private readonly route = inject(ActivatedRoute);
+
   async ngOnInit(): Promise<void> {
     void this.catalog.districts().then((d) => this.districts.set(d));
+    // Mở từ "Gợi ý điểm hẹn" của Tìm đối tượng: /explore?q=<tên quán>
+    this.q.set(this.route.snapshot.queryParamMap.get('q') ?? '');
     await this.reload();
   }
 
@@ -247,8 +310,16 @@ export class ExplorePage implements OnInit {
     this.searchTimer = setTimeout(() => void this.reload(), 300);
   }
 
-  protected async reload(): Promise<void> {
+  /** {@code withCounts}: tính lại số trên chip (đổi loại thì không cần, số không theo loại). */
+  protected async reload(withCounts = true): Promise<void> {
     this.page = 0;
+    if (withCounts) {
+      const filter = { q: this.q().trim(), district: this.district() };
+      void this.catalog.counts(filter).then((c) => {
+        // Bỏ kết quả cũ nếu bộ lọc đã đổi trong lúc chờ
+        if (filter.q === this.q().trim() && filter.district === this.district()) this.counts.set(c);
+      });
+    }
     await this.load(false);
   }
 
@@ -274,6 +345,11 @@ export class ExplorePage implements OnInit {
     } finally {
       if (seq === this.requestSeq) this.loading.set(false);
     }
+  }
+
+  /** 4 → { on: '★★★★', off: '★' } */
+  protected stars(rating: number): { on: string; off: string } {
+    return { on: '★'.repeat(rating), off: '★'.repeat(5 - rating) };
   }
 
   protected priceText(item: CatalogItem): string {

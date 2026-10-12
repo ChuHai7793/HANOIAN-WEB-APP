@@ -10,8 +10,10 @@ import com.gfmaster.upload.storage.ImageUrls;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 import java.time.LocalTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -57,6 +59,18 @@ public class SpotService {
             PageRequest.of(Math.max(page, 0), pageSize, Sort.by("name").and(Sort.by("id"))));
     List<SpotItem> items = result.getContent().stream().map(this::toItem).toList();
     return new SpotPage(items, result.getTotalElements(), result.getNumber(), pageSize);
+  }
+
+  /** Số chỗ chơi theo từng nhóm cho chip lọc, theo mọi bộ lọc khác đang chọn. Khoá {@code all} là tổng. */
+  @Transactional(readOnly = true)
+  public Map<String, Long> counts(
+      String q, CatalogDistrict district, Integer maxPrice, Boolean indoor, LocalTime openAt) {
+    Map<String, Long> out = new LinkedHashMap<>();
+    out.put("all", spots.count(filter(q, null, district, maxPrice, indoor, openAt)));
+    for (SpotCategory c : SpotCategory.values()) {
+      out.put(c.name(), spots.count(filter(q, c, district, maxPrice, indoor, openAt)));
+    }
+    return out;
   }
 
   public SpotItem create(SpotRequest req) {

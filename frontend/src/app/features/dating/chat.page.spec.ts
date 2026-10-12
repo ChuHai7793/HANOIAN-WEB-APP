@@ -21,7 +21,7 @@ const msg = (id: string, at: string, mine: boolean, readAt: string | null = null
 
 const match: Match = {
   id: 'm1',
-  user: { userId: 'lan', displayName: 'Lan', age: 24, gender: 'female', city: 'Hà Nội', bio: '', avatarUrl: null, photos: [], interests: [] },
+  user: { userId: 'lan', displayName: 'Lan', age: 24, gender: 'female', city: 'Hà Nội', bio: '', avatarUrl: null, photos: [], interests: [], sharedPlaces: [], fit: 0, superLikedMe: false },
   matchedAt: '2026-10-01T10:00:00Z',
   lastMessage: null,
   unread: 1,

@@ -9,7 +9,9 @@ import com.gfmaster.dating.DatingDtos.MatchView;
 import com.gfmaster.dating.DatingDtos.MessageEvent;
 import com.gfmaster.dating.DatingDtos.MessageView;
 import com.gfmaster.dating.DatingDtos.ReadEvent;
+import com.gfmaster.dating.DatingDtos.SuperLikeEvent;
 import com.gfmaster.dating.DatingDtos.SwipeResult;
+import com.gfmaster.dating.DatingDtos.TodayStats;
 import com.gfmaster.dating.DatingDtos.UndoResult;
 import com.gfmaster.dating.DatingDtos.UnmatchEvent;
 import com.gfmaster.dating.DatingRepository.LastSwipe;
@@ -24,6 +26,8 @@ import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,15 +41,23 @@ public class DatingService {
 
   static final int MIN_AGE = 18;
   static final int DECK_SIZE = 10;
+  /** Lấy rộng hơn số thẻ trả về để xếp lại theo hợp gu */
+  static final int DECK_POOL = 60;
 
   private final UserProfileRepository profiles;
   private final DatingRepository dating;
   private final RealtimeEvents events;
+  private final int superLikesPerDay;
 
-  public DatingService(UserProfileRepository profiles, DatingRepository dating, RealtimeEvents events) {
+  public DatingService(
+      UserProfileRepository profiles,
+      DatingRepository dating,
+      RealtimeEvents events,
+      @Value("${gfm.dating.super-likes-per-day:1}") int superLikesPerDay) {
     this.profiles = profiles;
     this.dating = dating;
     this.events = events;
+    this.superLikesPerDay = superLikesPerDay;
   }
 
   @Transactional(readOnly = true)
@@ -79,18 +91,36 @@ public class DatingService {
   @Transactional(readOnly = true)
   public List<Candidate> deck(UUID me) {
     requireEnabled(me);
-    return dating.deck(me, DECK_SIZE);
+    return dating.deck(me, DECK_POOL, DECK_SIZE);
   }
 
-  public SwipeResult swipe(UUID me, UUID target, boolean liked) {
+  /** Trong ngày (giờ Việt Nam): số người đã thích, số lượt siêu thích còn lại. */
+  @Transactional(readOnly = true)
+  public TodayStats today(UUID me) {
+    return new TodayStats(dating.likedToday(me), Math.max(0, superLikesPerDay - dating.superLikesToday(me)));
+  }
+
+  /**
+   * Quẹt. {@code superLike}: siêu thích (phải đi cùng thích), mỗi ngày {@code gfm.dating.super-likes-per-day}
+   * lượt; người nhận được báo realtime (không nêu tên) và thấy người này đầu tiên trên thẻ.
+   */
+  public SwipeResult swipe(UUID me, UUID target, boolean liked, boolean superLike) {
     requireEnabled(me);
+    if (superLike && !liked) throw new ApiException(ErrorCode.VALIDATION_FAILED, "Siêu thích phải là thích.");
     if (me.equals(target) || !dating.isVisibleTo(me, target)) throw ApiException.notFound();
-    if (!dating.insertSwipe(me, target, liked)) throw new ApiException(ErrorCode.ALREADY_SWIPED);
-    if (!liked || !dating.liked(target, me)) return new SwipeResult(false, null);
+    if (superLike) {
+      // Khoá hồ sơ của mình rồi mới đếm: hai lượt bấm đồng thời không vượt giới hạn
+      dating.lockProfile(me);
+      if (dating.superLikesToday(me) >= superLikesPerDay) throw new ApiException(ErrorCode.SUPER_LIKE_LIMIT);
+    }
+    if (!dating.insertSwipe(me, target, liked, superLike)) throw new ApiException(ErrorCode.ALREADY_SWIPED);
+    boolean matched = liked && dating.liked(target, me);
+    if (superLike && !matched) events.send(target, "super_like", new SuperLikeEvent());
+    if (!matched) return new SwipeResult(false, null);
     MatchRow match = dating.upsertMatch(me, target);
     // Người kia thấy match mới ngay (mình thì nhận trong response)
-    dating.card(me).ifPresent(c -> events.send(target, "match", new MatchView(match.id(), c, match.createdAt(), null, 0)));
-    return new SwipeResult(true, new MatchView(match.id(), card(target), match.createdAt(), null, 0));
+    events.send(target, "match", new MatchView(match.id(), card(target, me), match.createdAt(), null, 0));
+    return new SwipeResult(true, new MatchView(match.id(), card(me, target), match.createdAt(), null, 0));
   }
 
   /** Bỏ lượt quẹt gần nhất. Lượt thích đã tạo match thì không hoàn tác được. */
@@ -99,13 +129,20 @@ public class DatingService {
     LastSwipe last = dating.lastSwipe(me).orElseThrow(ApiException::notFound);
     if (last.liked() && dating.matched(me, last.targetId())) throw new ApiException(ErrorCode.CANNOT_UNDO_MATCH);
     dating.deleteSwipe(me, last.targetId());
-    return new UndoResult(card(last.targetId()));
+    return new UndoResult(card(me, last.targetId()));
   }
 
   @Transactional(readOnly = true)
   public List<MatchView> matches(UUID me) {
-    return dating.matchesOf(me).stream()
-        .map(m -> new MatchView(m.id(), card(m.otherUserId()), m.createdAt(), m.lastMessage(), m.unread()))
+    var rows = dating.matchesOf(me);
+    // Thẻ của mọi người kia trong một lượt (quán cùng lưu tính cho cả danh sách)
+    var cards =
+        dating
+            .forViewer(me, rows.stream().map(m -> dating.card(m.otherUserId()).orElseThrow(ApiException::notFound)).toList())
+            .stream()
+            .collect(Collectors.toMap(Candidate::userId, c -> c));
+    return rows.stream()
+        .map(m -> new MatchView(m.id(), cards.get(m.otherUserId()), m.createdAt(), m.lastMessage(), m.unread()))
         .toList();
   }
 
@@ -169,8 +206,9 @@ public class DatingService {
     if (alsoBlock) block(me, other);
   }
 
-  private Candidate card(UUID userId) {
-    return dating.card(userId).orElseThrow(ApiException::notFound);
+  /** Thẻ của {@code userId} nhìn từ phía {@code viewer} (quán cùng lưu, hợp gu). */
+  private Candidate card(UUID viewer, UUID userId) {
+    return dating.forViewer(viewer, List.of(dating.card(userId).orElseThrow(ApiException::notFound))).getFirst();
   }
 
   private void requireEnabled(UUID me) {

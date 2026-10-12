@@ -3,6 +3,10 @@ package com.gfmaster.dating;
 import com.gfmaster.dating.DatingDtos.Candidate;
 import com.gfmaster.dating.DatingDtos.LastMessage;
 import com.gfmaster.dating.DatingDtos.MessageView;
+import com.gfmaster.dating.DatingDtos.SharedPlace;
+import com.gfmaster.catalog.CatalogDistrict;
+import com.gfmaster.place.PlaceType;
+import com.gfmaster.place.PriceRange;
 import com.gfmaster.profile.Gender;
 import com.gfmaster.upload.storage.ImageUrls;
 import java.sql.ResultSet;
@@ -10,10 +14,13 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -47,6 +54,28 @@ public class DatingRepository {
                   WHERE (b.blocker_id = :me AND b.blocked_id = u.id) OR (b.blocker_id = u.id AND b.blocked_id = :me))
       """;
 
+  /**
+   * Bộ lọc của <b>cả hai</b> bên: {@code me} = user_profiles của người xem, {@code p} = người được xem. Dùng
+   * chung cho thẻ quẹt và số "người hợp gu đã lưu" của một quán, để hai chỗ không lệch nhau.
+   */
+  private static final String MUTUAL_FILTER =
+      """
+      (me.interested_in = 'all' OR p.gender = me.interested_in)
+      AND (p.interested_in = 'all' OR me.gender = p.interested_in)
+      AND date_part('year', age(p.birthday)) BETWEEN me.age_min AND me.age_max
+      AND date_part('year', age(me.birthday)) BETWEEN p.age_min AND p.age_max
+      AND (NOT me.same_city_only OR lower(trim(p.city)) = lower(trim(me.city)))
+      AND (NOT p.same_city_only OR lower(trim(p.city)) = lower(trim(me.city)))
+      """;
+
+  /**
+   * 00:00 hôm nay theo giờ Việt Nam, đổi về múi giờ của phiên DB: created_at ghi bằng now() của phiên nên
+   * phải so trong cùng múi giờ đó (không bind giờ từ Java, tránh lệch như jdbc.time_zone=UTC).
+   */
+  private static final String START_OF_VN_DAY =
+      "((date_trunc('day', now() AT TIME ZONE 'Asia/Ho_Chi_Minh') AT TIME ZONE 'Asia/Ho_Chi_Minh')"
+          + " AT TIME ZONE current_setting('TimeZone'))";
+
   private final NamedParameterJdbcTemplate jdbc;
   private final ImageUrls imageUrls;
 
@@ -56,14 +85,20 @@ public class DatingRepository {
   }
 
   /**
-   * Thẻ để quẹt: người hiện được, chưa bị mình quẹt, hợp bộ lọc của <b>cả hai</b> bên. Người đã thích
-   * mình được xếp trước.
+   * Thẻ để quẹt: người hiện được, chưa bị mình quẹt, hợp bộ lọc của <b>cả hai</b> bên. Thứ tự: người đã
+   * siêu thích mình, rồi người đã thích mình, rồi hợp gu cao hơn. Lấy {@code pool} người theo thứ tự SQL
+   * (hai nhóm đầu và mới cập nhật trước), tính hợp gu, xếp lại rồi cắt còn {@code size}.
    */
-  public List<Candidate> deck(UUID me, int limit) {
+  public List<Candidate> deck(UUID me, int pool, int size) {
     String sql =
         "SELECT "
             + CARD_COLUMNS
             + """
+            , CASE WHEN EXISTS (SELECT 1 FROM swipes l
+                                WHERE l.swiper_id = u.id AND l.target_id = :me AND l.super_like) THEN 2
+                   WHEN EXISTS (SELECT 1 FROM swipes l
+                                WHERE l.swiper_id = u.id AND l.target_id = :me AND l.liked) THEN 1
+                   ELSE 0 END AS priority
             FROM users u
             JOIN user_profiles p ON p.user_id = u.id
             JOIN user_profiles me ON me.user_id = :me
@@ -76,19 +111,143 @@ public class DatingRepository {
             // Text block bỏ khoảng trắng cuối dòng: ghép " AND " tường minh, không để "AND" dính "NOT"
             + " AND "
             + NOT_BLOCKED
+            + " AND "
+            + MUTUAL_FILTER
             + """
-              AND (me.interested_in = 'all' OR p.gender = me.interested_in)
-              AND (p.interested_in = 'all' OR me.gender = p.interested_in)
-              AND date_part('year', age(p.birthday)) BETWEEN me.age_min AND me.age_max
-              AND date_part('year', age(me.birthday)) BETWEEN p.age_min AND p.age_max
-              AND (NOT me.same_city_only OR lower(trim(p.city)) = lower(trim(me.city)))
-              AND (NOT p.same_city_only OR lower(trim(p.city)) = lower(trim(me.city)))
-            ORDER BY EXISTS (SELECT 1 FROM swipes l
-                             WHERE l.swiper_id = u.id AND l.target_id = :me AND l.liked) DESC,
-                     p.updated_at DESC, u.id
+            ORDER BY priority DESC, p.updated_at DESC, u.id
             LIMIT :limit
             """;
-    return withPhotosAndInterests(jdbc.query(sql, Map.of("me", me, "limit", limit), this::mapCard));
+    Map<UUID, Integer> priority = new HashMap<>();
+    List<Candidate> cards =
+        jdbc.query(
+            sql,
+            Map.of("me", me, "limit", pool),
+            (rs, i) -> {
+              Candidate c = mapCard(rs, i);
+              priority.put(c.userId(), rs.getInt("priority"));
+              return c;
+            });
+    // sort ổn định: cùng nhóm, cùng hợp gu thì giữ thứ tự SQL (mới cập nhật trước)
+    return forViewer(me, withPhotosAndInterests(cards)).stream()
+        .sorted(
+            Comparator.comparingInt((Candidate c) -> priority.get(c.userId())).reversed()
+                .thenComparing(Comparator.comparingInt(Candidate::fit).reversed()))
+        .limit(size)
+        .toList();
+  }
+
+  /**
+   * Gắn phần nhìn từ phía {@code viewer}: quán cùng lưu, % hợp gu, đã siêu thích viewer chưa. Ba truy vấn
+   * cho cả danh sách. Chỉ trả quán <b>cả hai</b> cùng lưu.
+   */
+  public List<Candidate> forViewer(UUID viewer, List<Candidate> cards) {
+    if (cards.isEmpty()) return cards;
+    List<UUID> ids = cards.stream().map(Candidate::userId).toList();
+    Map<String, Object> params = Map.of("viewer", viewer, "ids", ids);
+
+    Map<UUID, Integer> saved = new HashMap<>();
+    jdbc.query(
+        """
+        SELECT user_id, count(*) AS n FROM places
+        WHERE catalog_id IS NOT NULL AND (user_id IN (:ids) OR user_id = :viewer)
+        GROUP BY user_id
+        """,
+        params,
+        (ResultSet rs) -> {
+          saved.put(rs.getObject("user_id", UUID.class), rs.getInt("n"));
+        });
+
+    Map<UUID, List<SharedPlace>> shared = new HashMap<>();
+    jdbc.query(
+        """
+        SELECT o.user_id, c.id, c.name, c.type, c.district, c.price_range
+        FROM places m
+        JOIN places o        ON o.catalog_id = m.catalog_id AND o.user_id IN (:ids)
+        JOIN place_catalog c ON c.id = m.catalog_id
+        WHERE m.user_id = :viewer AND m.catalog_id IS NOT NULL
+        ORDER BY o.user_id, c.rating DESC, c.name
+        """,
+        params,
+        (ResultSet rs) -> {
+          shared
+              .computeIfAbsent(rs.getObject("user_id", UUID.class), k -> new ArrayList<>())
+              .add(
+                  new SharedPlace(
+                      rs.getObject("id", UUID.class),
+                      rs.getString("name"),
+                      PlaceType.valueOf(rs.getString("type")),
+                      CatalogDistrict.valueOf(rs.getString("district")).label(),
+                      PriceRange.valueOf(rs.getString("price_range"))));
+        });
+
+    Set<UUID> superLikedViewer =
+        Set.copyOf(
+            jdbc.queryForList(
+                "SELECT swiper_id FROM swipes WHERE target_id = :viewer AND super_like AND swiper_id IN (:ids)",
+                params,
+                UUID.class));
+
+    int mine = saved.getOrDefault(viewer, 0);
+    return cards.stream()
+        .map(
+            c -> {
+              List<SharedPlace> both = shared.getOrDefault(c.userId(), List.of());
+              return new Candidate(
+                  c.userId(),
+                  c.displayName(),
+                  c.age(),
+                  c.gender(),
+                  c.city(),
+                  c.bio(),
+                  c.avatarUrl(),
+                  c.photos(),
+                  c.interests(),
+                  both,
+                  FitScore.of(both.size(), mine, saved.getOrDefault(c.userId(), 0)),
+                  superLikedViewer.contains(c.userId()));
+            })
+        .toList();
+  }
+
+  /** :me đang bật và không bị khoá (mới được xem số "người hợp gu"). */
+  public boolean canSeeDeck(UUID me) {
+    return jdbc.queryForObject(
+            "SELECT count(*) FROM user_profiles WHERE user_id = :me AND dating_enabled AND NOT dating_banned",
+            Map.of("me", me),
+            Long.class)
+        > 0;
+  }
+
+  /**
+   * "X người hợp gu đã lưu": với mỗi quán trong danh mục, số người <b>có thể hiện trên thẻ của :me</b> (hiện
+   * được, không chặn nhau, hợp bộ lọc hai bên, không phải :me) đã lưu quán đó. Quán không ai lưu thì không
+   * có trong map.
+   */
+  public Map<UUID, Integer> fansOf(UUID me, Collection<UUID> catalogIds) {
+    if (catalogIds.isEmpty()) return Map.of();
+    String sql =
+        """
+        SELECT pl.catalog_id, count(DISTINCT u.id) AS n
+        FROM places pl
+        JOIN users u          ON u.id = pl.user_id
+        JOIN user_profiles p  ON p.user_id = u.id
+        JOIN user_profiles me ON me.user_id = :me
+        WHERE pl.catalog_id IN (:ids) AND u.id <> :me AND
+        """
+            + VISIBLE
+            + " AND "
+            + NOT_BLOCKED
+            + " AND "
+            + MUTUAL_FILTER
+            + " GROUP BY pl.catalog_id";
+    Map<UUID, Integer> out = new HashMap<>();
+    jdbc.query(
+        sql,
+        Map.of("me", me, "ids", catalogIds),
+        (ResultSet rs) -> {
+          out.put(rs.getObject("catalog_id", UUID.class), rs.getInt("n"));
+        });
+    return out;
   }
 
   /** Thẻ của một người bất kỳ (không xét điều kiện hiện), dùng cho match và hoàn tác. */
@@ -145,14 +304,40 @@ public class DatingRepository {
   }
 
   /** false nếu đã quẹt người này rồi. */
-  public boolean insertSwipe(UUID swiper, UUID target, boolean liked) {
+  public boolean insertSwipe(UUID swiper, UUID target, boolean liked, boolean superLike) {
     return jdbc.update(
             """
-            INSERT INTO swipes (swiper_id, target_id, liked, created_at) VALUES (:swiper, :target, :liked, now())
+            INSERT INTO swipes (swiper_id, target_id, liked, super_like, created_at)
+            VALUES (:swiper, :target, :liked, :super, now())
             ON CONFLICT (swiper_id, target_id) DO NOTHING
             """,
-            new MapSqlParameterSource().addValue("swiper", swiper).addValue("target", target).addValue("liked", liked))
+            new MapSqlParameterSource()
+                .addValue("swiper", swiper)
+                .addValue("target", target)
+                .addValue("liked", liked)
+                .addValue("super", superLike))
         > 0;
+  }
+
+  /** Số người :me đã thích từ 00:00 hôm nay (giờ Việt Nam). Hoàn tác xoá dòng nên tự giảm. */
+  public int likedToday(UUID me) {
+    return jdbc.queryForObject(
+        "SELECT count(*) FROM swipes WHERE swiper_id = :me AND liked AND created_at >= " + START_OF_VN_DAY,
+        Map.of("me", me),
+        Integer.class);
+  }
+
+  /** Số lượt siêu thích :me đã dùng từ 00:00 hôm nay (giờ Việt Nam). */
+  public int superLikesToday(UUID me) {
+    return jdbc.queryForObject(
+        "SELECT count(*) FROM swipes WHERE swiper_id = :me AND super_like AND created_at >= " + START_OF_VN_DAY,
+        Map.of("me", me),
+        Integer.class);
+  }
+
+  /** Khoá hồ sơ của :me tới hết transaction: hai lượt siêu thích đồng thời không vượt giới hạn. */
+  public void lockProfile(UUID me) {
+    jdbc.query("SELECT user_id FROM user_profiles WHERE user_id = :me FOR UPDATE", Map.of("me", me), (ResultSet rs) -> {});
   }
 
   public boolean liked(UUID swiper, UUID target) {
@@ -338,7 +523,10 @@ public class DatingRepository {
                     c.bio(),
                     c.avatarUrl(),
                     photos.getOrDefault(c.userId(), List.of()),
-                    interests.getOrDefault(c.userId(), List.of())))
+                    interests.getOrDefault(c.userId(), List.of()),
+                    c.sharedPlaces(),
+                    c.fit(),
+                    c.superLikedMe()))
         .toList();
   }
 
@@ -353,7 +541,10 @@ public class DatingRepository {
         rs.getString("bio"),
         imageUrls.toPublic(rs.getString("avatar_url")),
         List.of(),
-        List.of());
+        List.of(),
+        List.of(),
+        0,
+        false);
   }
 
   private static Instant toInstant(Timestamp t) {

@@ -18,6 +18,15 @@ export interface SpotQuery {
   size?: number;
 }
 
+/** Chỉ gửi bộ lọc có giá trị (0 vẫn gửi: "miễn phí"). */
+function toParams(query: object): HttpParams {
+  let params = new HttpParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== '') params = params.set(key, String(value));
+  }
+  return params;
+}
+
 /** Dữ liệu admin gửi khi thêm/sửa chỗ chơi. `version`: bỏ qua khi thêm. */
 export type SpotRequest = Omit<SpotItem, 'id' | 'districtLabel' | 'createdAt' | 'updatedAt' | 'version'> & {
   version?: number;
@@ -32,11 +41,12 @@ export class SpotService {
   private readonly http = inject(HttpClient);
 
   search(query: SpotQuery): Promise<SpotPage> {
-    let params = new HttpParams();
-    for (const [key, value] of Object.entries(query)) {
-      if (value !== undefined && value !== null && value !== '') params = params.set(key, String(value));
-    }
-    return firstValueFrom(this.http.get<SpotPage>(`${API_BASE}/spots`, { params }));
+    return firstValueFrom(this.http.get<SpotPage>(`${API_BASE}/spots`, { params: toParams(query) }));
+  }
+
+  /** Số chỗ chơi theo nhóm (khoá `all` là tổng), theo mọi bộ lọc trừ nhóm. */
+  counts(query: Omit<SpotQuery, 'category' | 'page' | 'size'>): Promise<Record<string, number>> {
+    return firstValueFrom(this.http.get<Record<string, number>>(`${API_BASE}/spots/counts`, { params: toParams(query) }));
   }
 
   create(spot: SpotRequest): Promise<SpotItem> {

@@ -10,6 +10,7 @@ import com.gfmaster.place.dto.PlaceResponse;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +45,12 @@ public class CatalogController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "30") int size) {
     return catalog.search(userId, q, type, district, page, size);
+  }
+
+  @GetMapping("/api/v1/catalog/counts")
+  public Map<String, Long> counts(
+      @RequestParam(required = false) String q, @RequestParam(required = false) CatalogDistrict district) {
+    return catalog.counts(q, district);
   }
 
   @GetMapping("/api/v1/catalog/districts")

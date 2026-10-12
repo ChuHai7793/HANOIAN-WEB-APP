@@ -49,7 +49,9 @@ public final class CatalogDtos {
 
   /**
    * Một quán trong "Khám phá quán". {@code district}: mã quận; {@code districtLabel}: tên hiển thị.
-   * {@code inMyPlace}: người đang xem đã add quán này vào My place chưa.
+   * {@code inMyPlace}: người đang xem đã add quán này vào My place chưa. {@code fans}: số "người hợp gu đã
+   * lưu" (người có thể hiện trên thẻ Tìm đối tượng của người xem); null khi người xem chưa bật Tìm đối tượng
+   * hoặc không phải danh sách tìm kiếm (thêm/sửa).
    */
   public record CatalogItem(
       UUID id,
@@ -73,7 +75,8 @@ public final class CatalogDtos {
       Long version,
       Instant createdAt,
       Instant updatedAt,
-      boolean inMyPlace) {}
+      boolean inMyPlace,
+      Integer fans) {}
 
   public record CatalogPage(List<CatalogItem> items, long total, int page, int size) {}
 }

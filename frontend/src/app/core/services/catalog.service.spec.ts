@@ -29,6 +29,15 @@ describe('CatalogService (Khám phá quán)', () => {
     expect((await result).total).toBe(0);
   });
 
+  it('số theo loại chỉ gửi từ khoá và khu vực', async () => {
+    const result = service.counts({ q: '', district: 'BA_DINH' });
+    const req = http.expectOne((r) => r.url === '/api/v1/catalog/counts');
+    expect(req.request.params.has('q')).toBe(false);
+    expect(req.request.params.get('district')).toBe('BA_DINH');
+    req.flush({ all: 2, cafe: 1, bar: 1, restaurant: 0 });
+    expect((await result).cafe).toBe(1);
+  });
+
   it('add vào My place: quán đã có (409) không hiện toast lỗi chung, để trang tự báo', async () => {
     const toast = vi.spyOn(TestBed.inject(ToastService), 'error');
     const result = service.addToMyPlace('c1');

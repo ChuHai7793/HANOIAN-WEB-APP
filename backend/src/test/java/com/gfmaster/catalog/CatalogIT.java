@@ -131,6 +131,21 @@ class CatalogIT extends ApiTestSupport {
         .andExpect(jsonPath("$[0].label").value("Ba Đình"));
   }
 
+  @Test
+  void countsPerTypeFollowSearchAndDistrict() throws Exception {
+    postAs(admin, "/api/v1/admin/catalog", cafe("Cafe Giảng", "HOAN_KIEM", null)).andExpect(status().isCreated());
+    postAs(admin, "/api/v1/admin/catalog", cafe("Highlands Ba Đình", "BA_DINH", null)).andExpect(status().isCreated());
+    postAs(admin, "/api/v1/admin/catalog", bar("Polite Pub", "BA_DINH")).andExpect(status().isCreated());
+
+    getAs(guest, "/api/v1/catalog/counts")
+        .andExpect(jsonPath("$.all").value(3))
+        .andExpect(jsonPath("$.cafe").value(2))
+        .andExpect(jsonPath("$.bar").value(1))
+        .andExpect(jsonPath("$.restaurant").value(0));
+    getAs(guest, "/api/v1/catalog/counts?district=BA_DINH").andExpect(jsonPath("$.all").value(2)).andExpect(jsonPath("$.cafe").value(1));
+    getAs(guest, "/api/v1/catalog/counts?q=pub").andExpect(jsonPath("$.all").value(1)).andExpect(jsonPath("$.bar").value(1));
+  }
+
   // ---- Helpers ----
 
   private ResultActions putAs(UUID user, String id, String body) throws Exception {
