@@ -1,8 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { ToastService } from '../../core/services/toast.service';
+import { IconComponent } from './icon.component';
 
 @Component({
   selector: 'app-toast-host',
+  imports: [IconComponent],
   template: `
     <div
       class="pointer-events-none fixed inset-x-0 bottom-4 z-[100] flex flex-col items-center gap-2 px-4 sm:bottom-6 sm:items-end sm:px-6"
@@ -14,16 +16,14 @@ import { ToastService } from '../../core/services/toast.service';
           [class]="classes[t.kind]"
           role="status"
         >
-          <span>{{ icons[t.kind] }}</span>
+          <span class="mt-0.5"><app-icon [name]="icons[t.kind]" [size]="18" /></span>
           <p class="flex-1">{{ t.message }}</p>
           <button
             type="button"
             class="opacity-60 transition hover:opacity-100"
             (click)="toast.dismiss(t.id)"
             aria-label="Đóng thông báo"
-          >
-            ✕
-          </button>
+          ><app-icon name="close" [size]="16" /></button>
         </div>
       }
     </div>
@@ -31,7 +31,7 @@ import { ToastService } from '../../core/services/toast.service';
 })
 export class ToastHostComponent {
   protected readonly toast = inject(ToastService);
-  protected readonly icons = { error: '⚠️', success: '✅', info: 'ℹ️' };
+  protected readonly icons = { error: 'alert', success: 'checkCircle', info: 'info' } as const;
   protected readonly classes = {
     error: 'border-rose-200 bg-rose-50 text-rose-800',
     success: 'border-emerald-200 bg-emerald-50 text-emerald-800',

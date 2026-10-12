@@ -26,23 +26,16 @@ export const routes: Routes = [
     component: ShellComponent,
     canMatch: [authGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'cafes' },
+      { path: '', pathMatch: 'full', redirectTo: 'places' },
       {
-        path: 'cafes',
-        title: 'Quán cafe · HANOIVIBE',
-        loadComponent: () => import('./features/cafes/cafe-list.page').then((m) => m.CafeListPage),
+        path: 'places',
+        title: 'My place · HANOIVIBE',
+        loadComponent: () => import('./features/places/place-list.component').then((m) => m.PlaceListComponent),
       },
-      {
-        path: 'bars',
-        title: 'Quán bar · HANOIVIBE',
-        loadComponent: () => import('./features/bars/bar-list.page').then((m) => m.BarListPage),
-      },
-      {
-        path: 'restaurants',
-        title: 'Quán ăn · HANOIVIBE',
-        loadComponent: () =>
-          import('./features/restaurants/restaurant-list.page').then((m) => m.RestaurantListPage),
-      },
+      // Link cũ của 3 mục My place riêng: chuyển sang My place, chọn sẵn loại
+      { path: 'cafes', redirectTo: '/places?type=cafe' },
+      { path: 'bars', redirectTo: '/places?type=bar' },
+      { path: 'restaurants', redirectTo: '/places?type=restaurant' },
       {
         path: 'girlfriends',
         title: 'Người yêu · HANOIVIBE',

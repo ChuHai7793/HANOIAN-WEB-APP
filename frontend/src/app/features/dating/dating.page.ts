@@ -76,7 +76,7 @@ type Tab = 'swipe' | 'matches';
         <p class="text-sm text-slate-500">Đang tải…</p>
       } @else if (settings()!.banned) {
         <div class="mx-auto max-w-md rounded-[28px] border border-rose-200 bg-rose-50 p-8 text-center text-sm text-rose-800">
-          <p class="text-4xl">🚫</p>
+          <p class="flex justify-center text-rose-500"><app-icon name="ban" [size]="36" /></p>
           <p class="mt-2 font-semibold">Bạn đã bị quản trị viên khoá khỏi Tìm đối tượng.</p>
           <p class="mt-1">Hồ sơ của bạn không hiện với người khác. Liên hệ quản trị viên nếu có nhầm lẫn.</p>
         </div>
@@ -137,7 +137,7 @@ type Tab = 'swipe' | 'matches';
                 }
               } @else {
                 <div class="flex h-[560px] flex-col items-center justify-center gap-2 rounded-[28px] border-2 border-dashed border-brand-300 bg-white text-center text-slate-500">
-                  <p class="text-4xl">🌙</p>
+                  <p class="text-brand-400"><app-icon name="moon" [size]="36" /></p>
                   <p class="text-sm">{{ loading() ? 'Đang tìm người…' : 'Hết người để quẹt rồi. Quay lại sau nhé!' }}</p>
                 </div>
               }
@@ -455,9 +455,9 @@ export class DatingPage implements OnInit {
     inject(RealtimeService)
       .events.pipe(takeUntilDestroyed())
       .subscribe((e) => {
-        if (e.type === 'match') this.toast.success(`💞 Bạn và ${e.data.user.displayName} vừa match! Vào tab Match để nhắn tin.`);
+        if (e.type === 'match') this.toast.success(`Bạn và ${e.data.user.displayName} vừa match! Vào tab Match để nhắn tin.`);
         if (e.type === 'super_like') {
-          this.toast.success('⭐ Có người vừa siêu thích bạn! Họ sẽ hiện đầu tiên khi bạn quẹt.');
+          this.toast.success('Có người vừa siêu thích bạn! Họ sẽ hiện đầu tiên khi bạn quẹt.');
           void this.loadDeck();
         }
       });

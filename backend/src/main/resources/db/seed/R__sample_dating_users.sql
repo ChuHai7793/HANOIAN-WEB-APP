@@ -84,7 +84,7 @@ INSERT INTO profile_interests (user_id, position, interest) VALUES
 
 -- My place: chép quán từ "Khám phá quán" mẫu (id 4000...NN của R__demo_data.sql) để có "Cùng lưu" và
 -- "Hợp gu %". Tuấn hợp gu nhất với Linh (3 quán chung), Trang (2), Mai (1); Khoa và Ngọc trùng cả 3 quán.
--- R__demo_data.sql chạy lại thì quán mẫu bị tạo lại, bản sao ở đây mất liên kết cho tới khi file này chạy lại.
+-- R__demo_data.sql ghi đè quán mẫu giữ nguyên id (không xoá) nên chạy lại file đó không làm mất liên kết ở đây.
 INSERT INTO places (id, user_id, catalog_id, type, name, address, price_range, rating, open_time, close_time,
                     image_url, note, google_maps_url, lat, lng, has_wifi, has_parking, cuisine,
                     created_at, updated_at, version)

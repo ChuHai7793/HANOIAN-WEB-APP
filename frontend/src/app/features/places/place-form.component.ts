@@ -18,10 +18,11 @@ import { errorMessage } from '../../core/api/api';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { defaultPlaceVibes, Vibe, VibeChoice, VibeSource } from '../../core/models/vibe.model';
 import { VibePickerComponent } from '../../shared/ui/vibe-picker.component';
+import { IconComponent } from '../../shared/ui/icon.component';
 
 @Component({
   selector: 'app-place-form',
-  imports: [VibePickerComponent, ReactiveFormsModule, ModalComponent, RatingStarsComponent, ImagePickerComponent],
+  imports: [VibePickerComponent, ReactiveFormsModule, ModalComponent, RatingStarsComponent, ImagePickerComponent, IconComponent],
   template: `
     <app-modal
       [title]="place() ? 'Sửa ' + config().title.toLowerCase() : config().addLabel"
@@ -164,7 +165,7 @@ import { VibePickerComponent } from '../../shared/ui/vibe-picker.component';
         <!-- Google Maps -->
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div class="mb-3 flex items-center gap-2">
-            <span class="text-lg">📍</span>
+            <span class="text-brand-600"><app-icon name="pin" [size]="20" /></span>
             <h3 class="text-sm font-semibold text-slate-800">Vị trí trên Google Maps</h3>
           </div>
 
@@ -223,7 +224,7 @@ import { VibePickerComponent } from '../../shared/ui/vibe-picker.component';
             rel="noopener"
             class="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 transition hover:text-brand-800"
           >
-            🔎 Mở Google Maps tìm quán này
+            <app-icon name="search" [size]="14" class="mr-1.5 align-middle" />Mở Google Maps tìm quán này
           </a>
         </div>
 

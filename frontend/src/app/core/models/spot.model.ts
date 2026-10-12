@@ -1,3 +1,4 @@
+import type { IconName } from '../../shared/ui/icon.component';
 import type { Vibe, VibeSource } from './vibe.model';
 
 export type SpotCategory =
@@ -9,14 +10,14 @@ export type SpotCategory =
   | 'night_market'
   | 'sport';
 
-export const SPOT_CATEGORIES: { value: SpotCategory; icon: string; label: string }[] = [
-  { value: 'entertainment', icon: '🎤', label: 'Giải trí trong nhà' },
-  { value: 'workshop', icon: '🎨', label: 'Workshop' },
-  { value: 'museum', icon: '🏛️', label: 'Bảo tàng, di tích' },
-  { value: 'outdoor', icon: '🌳', label: 'Dạo chơi ngoài trời' },
-  { value: 'show', icon: '🎭', label: 'Biểu diễn' },
-  { value: 'night_market', icon: '🌙', label: 'Chợ đêm, phố đêm' },
-  { value: 'sport', icon: '⛸️', label: 'Vận động' },
+export const SPOT_CATEGORIES: { value: SpotCategory; icon: IconName; label: string }[] = [
+  { value: 'entertainment', icon: 'mic', label: 'Giải trí trong nhà' },
+  { value: 'workshop', icon: 'palette', label: 'Workshop' },
+  { value: 'museum', icon: 'landmark', label: 'Bảo tàng, di tích' },
+  { value: 'outdoor', icon: 'tree', label: 'Dạo chơi ngoài trời' },
+  { value: 'show', icon: 'ticket', label: 'Biểu diễn' },
+  { value: 'night_market', icon: 'moon', label: 'Chợ đêm, phố đêm' },
+  { value: 'sport', icon: 'activity', label: 'Vận động' },
 ];
 
 /**
@@ -59,8 +60,8 @@ export interface SpotPage {
   size: number;
 }
 
-export function spotCategory(value: SpotCategory): { icon: string; label: string } {
-  return SPOT_CATEGORIES.find((c) => c.value === value) ?? { icon: '📍', label: value };
+export function spotCategory(value: SpotCategory): { icon: IconName; label: string } {
+  return SPOT_CATEGORIES.find((c) => c.value === value) ?? { icon: 'pin', label: value };
 }
 
 /** 150000 → "150k", 1200000 → "1,2tr" */

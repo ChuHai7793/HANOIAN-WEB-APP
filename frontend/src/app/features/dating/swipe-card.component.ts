@@ -159,7 +159,7 @@ export class SwipeCardComponent {
     this.goingUp() ? 0 : Math.min(Math.max(-this.dx() / SWIPE_THRESHOLD, 0), 1),
   );
 
-  /** Nút ✖️ / ❤️ của trang cha: bay thẻ ra rồi báo quẹt */
+  /** Nút Bỏ qua / Thích của trang cha: bay thẻ ra rồi báo quẹt */
   fling(liked: boolean): void {
     this.dx.set(liked ? 600 : -600);
     setTimeout(() => this.swiped.emit(liked), 200);

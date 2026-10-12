@@ -189,8 +189,8 @@ export class ShellComponent {
   }
 
   /**
-   * Menu: Khám phá quán và Tìm chỗ chơi (danh mục chung) ở trên; "My place" gom 3 nhóm quán đã lưu của chính người
-   * đăng nhập; nhóm "Quản trị" chỉ admin thấy.
+   * Menu: Khám phá quán, Tìm chỗ chơi (danh mục chung) và My place (quán đã lưu của chính người
+   * đăng nhập, lọc loại bằng chip trong trang) ở trên; nhóm "Quản trị" chỉ admin thấy.
    */
   protected readonly sections = computed<NavSection[]>(() => [
     {
@@ -198,20 +198,8 @@ export class ShellComponent {
       items: [
         { path: '/explore', label: 'Khám phá quán', icon: 'compass' },
         { path: '/spots', label: 'Tìm chỗ chơi', icon: 'gate' },
+        { path: '/places', label: 'My place', icon: 'bookmark', badge: () => this.places.items().length },
         { path: '/dating', label: 'Tìm đối tượng', icon: 'heart', alert: () => this.inbox.unread() },
-      ],
-    },
-    {
-      title: 'My place',
-      items: [
-        { path: '/cafes', label: 'Quán cafe', icon: 'cup', badge: () => this.places.cafes().length },
-        { path: '/bars', label: 'Quán bar', icon: 'cocktail', badge: () => this.places.bars().length },
-        {
-          path: '/restaurants',
-          label: 'Quán ăn',
-          icon: 'utensils',
-          badge: () => this.places.restaurants().length,
-        },
       ],
     },
     {

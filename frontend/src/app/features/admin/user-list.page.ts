@@ -2,17 +2,18 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { AdminUser, GENDERS } from '../../core/models/profile.model';
 import { ProfileService } from '../../core/services/profile.service';
+import { IconComponent } from '../../shared/ui/icon.component';
 
 /** Chỉ admin: danh sách tài khoản đã đăng ký và hồ sơ họ đã nhập. */
 @Component({
   selector: 'app-user-list-page',
-  imports: [DatePipe],
+  imports: [DatePipe, IconComponent],
   template: `
     <div class="p-4 sm:p-6 lg:p-8">
       <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 class="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <span>👥</span> Người dùng
+            <span class="text-brand-600"><app-icon name="users" [size]="24" /></span> Người dùng
           </h1>
           <p class="mt-1 text-sm text-slate-500">Tài khoản đã đăng ký và hồ sơ cá nhân của họ</p>
         </div>

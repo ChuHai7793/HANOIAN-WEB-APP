@@ -10,11 +10,13 @@
 -- open/close là giờ mở sớm nhất và đóng muộn nhất, giờ nghỉ ghi trong note. rating, price_range,
 -- has_wifi/has_parking là đánh giá cá nhân mẫu, không phải dữ liệu của quán.
 
--- Mục "Khám phá quán" của quán mẫu (id 4000...) và mục do V8 tạo từ quán mẫu: xoá trước khi xoá user
--- (xoá user thì quán trong My place mất theo, không còn biết mục nào của quán mẫu)
+-- Mục "Khám phá quán" do V8 tạo từ quán của tài khoản mẫu cũ: xoá trước khi xoá user (xoá user thì quán
+-- trong My place mất theo, không còn biết mục nào). Mục của quán mẫu (id 4000...) KHÔNG xoá mà ghi đè ở
+-- dưới: giữ nguyên id để bản sao trong My place của người khác (vd. R__sample_dating_users.sql) không mất
+-- liên kết khi file này chạy lại.
 DELETE FROM place_catalog
-WHERE id::text LIKE '40000000-0000-4000-8000-%'
-   OR id IN (SELECT p.catalog_id FROM places p JOIN users u ON u.id = p.user_id
+WHERE id::text NOT LIKE '40000000-0000-4000-8000-%'
+  AND id IN (SELECT p.catalog_id FROM places p JOIN users u ON u.id = p.user_id
              WHERE u.email IN ('demo@gfmaster.local', 'admin@gfmaster.local', 'guest@gfmaster.local')
                 OR u.username IN ('admin', 'guest'));
 
@@ -121,7 +123,15 @@ SELECT ('4' || substr(p.id::text, 2))::uuid, p.type,
        p.name, p.address, p.price_range, p.rating, p.open_time, p.close_time, p.image_url, p.note,
        p.google_maps_url, p.lat, p.lng, p.has_wifi, p.has_parking, p.cuisine, p.created_at, p.updated_at, 0
 FROM places p
-WHERE p.user_id = '00000000-0000-4000-8000-000000000001';
+WHERE p.user_id = '00000000-0000-4000-8000-000000000001'
+-- Đã có (lần chạy trước): ghi đè nội dung, giữ id; nhãn kiểu hẹn giữ nguyên (cập nhật mặc định ở cuối file)
+ON CONFLICT (id) DO UPDATE SET
+  type = EXCLUDED.type, district = EXCLUDED.district, name = EXCLUDED.name, address = EXCLUDED.address,
+  price_range = EXCLUDED.price_range, rating = EXCLUDED.rating, open_time = EXCLUDED.open_time,
+  close_time = EXCLUDED.close_time, image_url = EXCLUDED.image_url, note = EXCLUDED.note,
+  google_maps_url = EXCLUDED.google_maps_url, lat = EXCLUDED.lat, lng = EXCLUDED.lng,
+  has_wifi = EXCLUDED.has_wifi, has_parking = EXCLUDED.has_parking, cuisine = EXCLUDED.cuisine,
+  updated_at = EXCLUDED.updated_at, version = place_catalog.version + 1;
 
 UPDATE places SET catalog_id = ('4' || substr(id::text, 2))::uuid
 WHERE user_id = '00000000-0000-4000-8000-000000000001';

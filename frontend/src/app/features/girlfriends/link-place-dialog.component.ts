@@ -6,10 +6,11 @@ import { PlaceLinkService } from '../../core/services/place-link.service';
 import { PLACE_ICONS, PLACE_LABELS, PlaceType } from '../../core/models/place.model';
 import { PlaceLink } from '../../core/models/place-link.model';
 import { nowIso, todayIso } from '../../core/utils/id';
+import { IconComponent } from '../../shared/ui/icon.component';
 
 @Component({
   selector: 'app-link-place-dialog',
-  imports: [ModalComponent, RatingStarsComponent],
+  imports: [ModalComponent, RatingStarsComponent, IconComponent],
   template: `
     <app-modal
       [title]="link() ? 'Sửa kỷ niệm' : heading()"
@@ -50,7 +51,7 @@ import { nowIso, todayIso } from '../../core/utils/id';
                       <img [src]="p.imageUrl" [alt]="p.name" class="h-10 w-10 rounded-md object-cover" />
                     } @else {
                       <div class="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100">
-                        {{ icon() }}
+                        <app-icon [name]="icon()" [size]="20" />
                       </div>
                     }
                     <div class="min-w-0 flex-1">
@@ -58,7 +59,7 @@ import { nowIso, todayIso } from '../../core/utils/id';
                       <p class="truncate text-xs text-slate-500">{{ p.address }}</p>
                     </div>
                     @if (selectedId() === p.id) {
-                      <span class="text-brand-600">✓</span>
+                      <span class="text-brand-600"><app-icon name="check" [size]="18" /></span>
                     }
                   </button>
                 }

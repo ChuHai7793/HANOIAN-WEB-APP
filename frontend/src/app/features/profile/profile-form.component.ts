@@ -7,6 +7,7 @@ import { ProfileService } from '../../core/services/profile.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ImagePickerComponent } from '../../shared/ui/image-picker.component';
 import { todayIso } from '../../core/utils/id';
+import { IconComponent } from '../../shared/ui/icon.component';
 
 /**
  * Form hồ sơ cá nhân, dùng chung cho trang "Hoàn thiện hồ sơ" (ngay sau khi đăng ký, có nút
@@ -14,7 +15,7 @@ import { todayIso } from '../../core/utils/id';
  */
 @Component({
   selector: 'app-profile-form',
-  imports: [ReactiveFormsModule, ImagePickerComponent],
+  imports: [ReactiveFormsModule, ImagePickerComponent, IconComponent],
   template: `
     @if (loading()) {
       <p class="text-sm text-slate-500">Đang tải hồ sơ…</p>
@@ -115,9 +116,7 @@ import { todayIso } from '../../core/utils/id';
                   class="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 text-xs text-white"
                   (click)="removePhoto(i)"
                   aria-label="Bỏ ảnh"
-                >
-                  ✕
-                </button>
+                ><app-icon name="close" [size]="14" /></button>
               </div>
             }
           </div>

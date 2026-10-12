@@ -1,3 +1,4 @@
+import type { IconName } from '../../shared/ui/icon.component';
 import { PlaceType, PriceRange } from './place.model';
 import { SpotCategory } from './spot.model';
 
@@ -7,10 +8,10 @@ export type Vibe = 'chill' | 'active' | 'romantic';
 /** Nhãn từ đâu: suy ra theo loại < Claude gán từ mô tả < admin chọn tay (không gì tự ghi đè). */
 export type VibeSource = 'default' | 'claude' | 'admin';
 
-export const VIBES: { value: Vibe; icon: string; label: string }[] = [
-  { value: 'chill', icon: '😌', label: 'Chill' },
-  { value: 'active', icon: '⚡', label: 'Năng động' },
-  { value: 'romantic', icon: '💕', label: 'Lãng mạn' },
+export const VIBES: { value: Vibe; icon: IconName; label: string }[] = [
+  { value: 'chill', icon: 'leaf', label: 'Chill' },
+  { value: 'active', icon: 'zap', label: 'Năng động' },
+  { value: 'romantic', icon: 'heart', label: 'Lãng mạn' },
 ];
 
 /** Lựa chọn trong form admin. `auto`: để hệ thống tự gán theo loại (gửi `vibesAuto: true`). */
@@ -19,8 +20,8 @@ export interface VibeChoice {
   auto: boolean;
 }
 
-export function vibeMeta(value: Vibe): { icon: string; label: string } {
-  return VIBES.find((v) => v.value === value) ?? { icon: '', label: value };
+export function vibeMeta(value: Vibe): { icon: IconName; label: string } {
+  return VIBES.find((v) => v.value === value) ?? { icon: 'heart', label: value };
 }
 
 /** Giữ thứ tự chill, active, romantic như server trả về. */

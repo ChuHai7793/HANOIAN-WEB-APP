@@ -39,7 +39,7 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
             <label class="mb-1.5 block text-sm font-medium text-slate-700">Nhóm <span class="text-rose-500">*</span></label>
             <select formControlName="category" [class]="input + ' bg-white'">
               @for (c of categories; track c.value) {
-                <option [value]="c.value">{{ c.icon }} {{ c.label }}</option>
+                <option [value]="c.value">{{ c.label }}</option>
               }
             </select>
           </div>

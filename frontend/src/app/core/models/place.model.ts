@@ -1,9 +1,11 @@
+import type { IconName } from '../../shared/ui/icon.component';
+
 export type PlaceType = 'cafe' | 'restaurant' | 'bar';
 
-export const PLACE_ICONS: Record<PlaceType, string> = {
-  cafe: '☕',
-  restaurant: '🍜',
-  bar: '🍸',
+export const PLACE_ICONS: Record<PlaceType, IconName> = {
+  cafe: 'cup',
+  restaurant: 'utensils',
+  bar: 'cocktail',
 };
 
 export const PLACE_LABELS: Record<PlaceType, string> = {

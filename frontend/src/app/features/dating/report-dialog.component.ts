@@ -1,5 +1,6 @@
 import { Component, input, output, signal } from '@angular/core';
 import { REPORT_REASONS, ReportReason } from '../../core/models/dating.model';
+import { IconComponent } from '../../shared/ui/icon.component';
 
 export interface ReportInput {
   reason: ReportReason;
@@ -10,10 +11,11 @@ export interface ReportInput {
 /** Báo cáo một người trong "Tìm đối tượng": lý do, ghi chú, có chặn luôn không. Gửi về admin. */
 @Component({
   selector: 'app-report-dialog',
+  imports: [IconComponent],
   template: `
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" (click)="cancel.emit()">
       <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl" (click)="$event.stopPropagation()">
-        <h2 class="text-lg font-bold text-slate-900">🚩 Báo cáo {{ name() }}</h2>
+        <h2 class="flex items-center gap-2 text-lg font-bold text-slate-900"><span class="text-rose-600"><app-icon name="flag" [size]="20" /></span>Báo cáo {{ name() }}</h2>
         <p class="mt-1 text-xs text-slate-500">Báo cáo được gửi tới quản trị viên. Người kia không biết ai báo cáo.</p>
         <label class="mb-1 mt-4 block text-sm font-medium text-slate-700">Lý do</label>
         <select

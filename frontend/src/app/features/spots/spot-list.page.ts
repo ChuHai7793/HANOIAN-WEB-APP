@@ -115,7 +115,7 @@ function nowHHmm(): string {
           [class]="rainy() ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white text-slate-700 hover:bg-brand-50'"
           (click)="rainy.set(!rainy()); reload()"
         >
-          ☔ Ngày mưa
+          <app-icon name="umbrella" [size]="16" />Ngày mưa
         </button>
       </div>
 
@@ -137,7 +137,7 @@ function nowHHmm(): string {
             [class]="category() === c.value ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
             (click)="category.set(c.value); reload(false)"
           >
-            {{ c.icon }} {{ c.label }}@if (counts(); as n) { · {{ n[c.value] }}}
+            <span class="inline-flex items-center gap-1.5"><app-icon [name]="c.icon" [size]="15" />{{ c.label }}@if (counts(); as n) { · {{ n[c.value] }}}</span>
           </button>
         }
       </div>
@@ -153,11 +153,11 @@ function nowHHmm(): string {
         <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-6">
           @for (item of items(); track item.id) {
             <article class="flex flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)]">
-              <div class="relative flex h-44 items-center justify-center bg-[#EFEAFC] text-5xl">
+              <div class="relative flex h-44 items-center justify-center bg-[#EFEAFC] text-brand-500">
                 @if (item.imageUrl) {
                   <img [src]="item.imageUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
                 } @else {
-                  <span aria-hidden="true">{{ cat(item).icon }}</span>
+                  <app-icon [name]="cat(item).icon" [size]="44" [stroke]="1.5" />
                 }
                 <span class="absolute left-3 top-3 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-brand-800">
                   {{ cat(item).label }}
@@ -186,7 +186,7 @@ function nowHHmm(): string {
                     {{ item.openTime ? item.openTime + '–' + item.closeTime : 'Không giờ cố định' }}
                   </span>
                   @if (item.durationMin) {
-                    <span>⏱ {{ duration(item.durationMin) }}</span>
+                    <span>Khoảng {{ duration(item.durationMin) }}</span>
                   }
                   <span>{{ item.indoor ? 'Trong nhà' : 'Ngoài trời' }}</span>
                 </div>

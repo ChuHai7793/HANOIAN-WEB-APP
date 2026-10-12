@@ -14,16 +14,17 @@ import { PlaceType } from '../../core/models/place.model';
 import { daysSince } from '../../core/utils/id';
 import { AuthService } from '../../core/auth/auth.service';
 import { MatchInboxService } from '../../core/services/match-inbox.service';
+import { IconComponent } from '../../shared/ui/icon.component';
 
 @Component({
   selector: 'app-girlfriend-list-page',
-  imports: [RouterLink, GirlfriendFormComponent, EmptyStateComponent, ConfirmDialogComponent],
+  imports: [RouterLink, GirlfriendFormComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent],
   template: `
     <div class="p-4 sm:p-6 lg:p-8">
       <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div>
         <h1 class="flex items-center gap-2 text-2xl font-bold text-slate-900">
-          <span>👩</span> Quản lý người yêu
+          <span class="text-brand-600"><app-icon name="couple" [size]="24" /></span> Quản lý người yêu
         </h1>
         <p class="mt-1 text-sm text-slate-500">
           Hồ sơ từng người và những quán đã đi cùng
@@ -44,7 +45,7 @@ import { MatchInboxService } from '../../core/services/match-inbox.service';
     @if (matches().length) {
       <section class="mb-8">
         <div class="mb-3 flex items-center justify-between gap-2">
-          <h2 class="text-base font-semibold text-slate-900">💞 Match từ Tìm đối tượng ({{ matches().length }})</h2>
+          <h2 class="text-base font-semibold text-slate-900"><app-icon name="heart" [size]="16" class="mr-1.5 align-middle" />Match từ Tìm đối tượng ({{ matches().length }})</h2>
           <a routerLink="/dating" [queryParams]="{ tab: 'matches' }" class="text-xs font-medium text-brand-700 hover:underline">Xem tất cả</a>
         </div>
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -54,7 +55,7 @@ import { MatchInboxService } from '../../core/services/match-inbox.service';
                 @if (m.user.avatarUrl) {
                   <img [src]="m.user.avatarUrl" alt="" class="h-14 w-14 rounded-full object-cover ring-2 ring-rose-200" loading="lazy" />
                 } @else {
-                  <div class="flex h-14 w-14 items-center justify-center rounded-full bg-rose-100 text-xl">👤</div>
+                  <div class="flex h-14 w-14 items-center justify-center rounded-full bg-brand-100 text-brand-600"><app-icon name="user" [size]="24" /></div>
                 }
                 @if (m.unread > 0) {
                   <span class="absolute -right-1 -top-1 rounded-full bg-rose-600 px-1.5 text-[11px] font-bold text-white">{{ m.unread }}</span>
@@ -74,7 +75,7 @@ import { MatchInboxService } from '../../core/services/match-inbox.service';
                 [routerLink]="['/dating/matches', m.id]"
                 class="shrink-0 rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-700"
               >
-                💬 Nhắn tin
+                <app-icon name="chat" [size]="14" class="mr-1.5 align-middle" />Nhắn tin
               </a>
             </div>
           }
@@ -113,7 +114,7 @@ import { MatchInboxService } from '../../core/services/match-inbox.service';
 
     @if (visible().length === 0) {
       <app-empty-state
-        icon="💔"
+        icon="heartBroken"
         [title]="all().length ? 'Không có ai ở trạng thái này' : 'Danh sách còn trống'"
         [description]="
           all().length
@@ -153,9 +154,7 @@ import { MatchInboxService } from '../../core/services/match-inbox.service';
                 } @else {
                   <div
                     class="flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 text-2xl"
-                  >
-                    👤
-                  </div>
+                  ><app-icon name="user" [size]="28" /></div>
                 }
               </a>
 
@@ -215,17 +214,13 @@ import { MatchInboxService } from '../../core/services/match-inbox.service';
                   class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
                   (click)="openEdit(gf)"
                   title="Sửa"
-                >
-                  ✏️
-                </button>
+                ><app-icon name="edit" [size]="16" /></button>
                 <button
                   type="button"
                   class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-rose-600 transition hover:bg-rose-50"
                   (click)="pendingDelete.set(gf)"
                   title="Xoá"
-                >
-                  🗑️
-                </button>
+                ><app-icon name="trash" [size]="16" /></button>
               }
             </div>
           </article>

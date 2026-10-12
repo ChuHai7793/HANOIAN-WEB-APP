@@ -3,6 +3,7 @@ import { Component, computed, inject, input, model, signal } from '@angular/core
 import { errorMessage } from '../../core/api/api';
 import { UploadResult, UploadService } from '../../core/services/upload.service';
 import { fileToCompressedBlob, formatBytes } from '../../core/utils/image';
+import { IconComponent } from './icon.component';
 
 /**
  * Chọn ảnh từ máy (hoặc kéo thả), nén lại, upload lên server rồi trả về URL /uploads/...
@@ -10,6 +11,7 @@ import { fileToCompressedBlob, formatBytes } from '../../core/utils/image';
  */
 @Component({
   selector: 'app-image-picker',
+  imports: [IconComponent],
   template: `
     <label class="mb-1.5 block text-sm font-medium text-slate-700">{{ label() }}</label>
 
@@ -66,7 +68,7 @@ import { fileToCompressedBlob, formatBytes } from '../../core/utils/image';
             </div>
           }
         } @else {
-          <p class="text-2xl">🖼️</p>
+          <p class="flex justify-center text-brand-500"><app-icon name="image" [size]="28" /></p>
           <p class="mt-1 text-sm font-medium text-slate-700">Chọn ảnh từ máy</p>
           <p class="mt-0.5 text-xs text-slate-500">
             Hoặc kéo thả ảnh vào đây · JPG, PNG, WebP

@@ -1,12 +1,14 @@
 import { Component, computed, input, model } from '@angular/core';
 import { sortVibes, Vibe, VibeChoice, VIBES, VibeSource } from '../../core/models/vibe.model';
+import { IconComponent } from './icon.component';
 
 /**
  * Admin chọn nhãn kiểu hẹn trong form thêm / sửa quán, chỗ chơi. Mặc định "tự gán theo loại" (nhãn đi theo
- * loại đang chọn trong form); bấm một nhãn là chọn tay; "↺ Để hệ thống tự gán" để quay lại tự gán.
+ * loại đang chọn trong form); bấm một nhãn là chọn tay; "Để hệ thống tự gán" để quay lại tự gán.
  */
 @Component({
   selector: 'app-vibe-picker',
+  imports: [IconComponent],
   template: `
     <div>
       <p class="mb-1.5 text-sm font-medium text-slate-700">Kiểu hẹn phù hợp</p>
@@ -14,12 +16,12 @@ import { sortVibes, Vibe, VibeChoice, VIBES, VibeSource } from '../../core/model
         @for (v of vibes; track v.value) {
           <button
             type="button"
-            class="rounded-full border px-3 py-1 text-xs font-medium transition"
+            class="flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition"
             [class]="shown().includes(v.value) ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'"
             [attr.aria-pressed]="shown().includes(v.value)"
             (click)="toggle(v.value)"
           >
-            {{ v.icon }} {{ v.label }}
+            <app-icon [name]="v.icon" [size]="13" />{{ v.label }}
           </button>
         }
       </div>
@@ -29,12 +31,16 @@ import { sortVibes, Vibe, VibeChoice, VIBES, VibeSource } from '../../core/model
             Tự gán theo loại. Bấm để chọn tay.
           }
           @case ('claude') {
-            🤖 Claude gán theo mô tả.
-            <button type="button" class="ml-1 font-medium text-brand-700 hover:underline" (click)="reset()">↺ Để hệ thống tự gán</button>
+            <span class="inline-flex items-center gap-1 align-middle"><app-icon name="bot" [size]="13" />Claude gán theo mô tả.</span>
+            <button type="button" class="ml-1 inline-flex items-center gap-1 font-medium text-brand-700 hover:underline" (click)="reset()">
+              <app-icon name="refresh" [size]="12" />Để hệ thống tự gán
+            </button>
           }
           @default {
-            ✍️ Chọn tay, không bị tự gán đè.
-            <button type="button" class="ml-1 font-medium text-brand-700 hover:underline" (click)="reset()">↺ Để hệ thống tự gán</button>
+            <span class="inline-flex items-center gap-1 align-middle"><app-icon name="edit" [size]="13" />Chọn tay, không bị tự gán đè.</span>
+            <button type="button" class="ml-1 inline-flex items-center gap-1 font-medium text-brand-700 hover:underline" (click)="reset()">
+              <app-icon name="refresh" [size]="12" />Để hệ thống tự gán
+            </button>
           }
         }
       </p>

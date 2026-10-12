@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { ConflictService } from '../../core/services/conflict.service';
 import { ModalComponent } from './modal.component';
 
-/** Dialog xung đột version. Đóng dialog (✕, bấm nền) = tải bản mới, không mất dữ liệu của máy kia. */
+/** Dialog xung đột version. Đóng dialog (nút đóng, bấm nền) = tải bản mới, không mất dữ liệu của máy kia. */
 @Component({
   selector: 'app-conflict-dialog',
   imports: [ModalComponent],

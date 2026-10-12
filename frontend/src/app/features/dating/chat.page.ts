@@ -7,6 +7,7 @@ import { ChatMessage, Match, MESSAGE_MAX } from '../../core/models/dating.model'
 import { DatingService } from '../../core/services/dating.service';
 import { MatchInboxService } from '../../core/services/match-inbox.service';
 import { RealtimeEvent, RealtimeService } from '../../core/services/realtime.service';
+import { IconComponent } from '../../shared/ui/icon.component';
 
 /**
  * Tin mới tới ngay qua SSE ({@link RealtimeService}). Hỏi server chỉ để dự phòng: 3 giây/lần khi chưa có
@@ -29,7 +30,7 @@ export function mergeMessages(list: ChatMessage[], incoming: ChatMessage[]): Cha
  */
 @Component({
   selector: 'app-chat-page',
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink, IconComponent],
   template: `
     <div class="mx-auto flex h-[calc(100dvh-4rem)] max-w-2xl flex-col p-4 sm:p-6 lg:h-dvh">
       <div class="mb-3 flex items-center gap-3 border-b border-slate-200 pb-3">
@@ -38,7 +39,7 @@ export function mergeMessages(list: ChatMessage[], incoming: ChatMessage[]): Cha
           @if (m.user.avatarUrl) {
             <img [src]="m.user.avatarUrl" alt="" class="h-10 w-10 rounded-full object-cover" />
           } @else {
-            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50">👤</div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600"><app-icon name="user" [size]="20" /></div>
           }
           <div class="min-w-0">
             <p class="truncate font-semibold text-slate-900">{{ m.user.displayName }}, {{ m.user.age }}</p>
@@ -49,7 +50,7 @@ export function mergeMessages(list: ChatMessage[], incoming: ChatMessage[]): Cha
 
       @if (gone()) {
         <div class="flex flex-1 flex-col items-center justify-center text-center text-sm text-slate-500">
-          <p class="text-3xl">💔</p>
+          <p class="text-brand-400"><app-icon name="heartBroken" [size]="36" /></p>
           <p class="mt-2">Cuộc trò chuyện này không còn (đã bỏ match hoặc bị chặn).</p>
           <a routerLink="/dating" [queryParams]="{ tab: 'matches' }" class="mt-3 font-semibold text-brand-700 hover:underline">Về danh sách match</a>
         </div>
@@ -61,7 +62,7 @@ export function mergeMessages(list: ChatMessage[], incoming: ChatMessage[]): Cha
             </div>
           }
           @if (loaded() && messages().length === 0) {
-            <p class="py-10 text-center text-sm text-slate-500">Hai bạn đã match. Gửi lời chào đầu tiên nhé 👋</p>
+            <p class="py-10 text-center text-sm text-slate-500">Hai bạn đã match. Gửi lời chào đầu tiên nhé!</p>
           }
           @for (msg of messages(); track msg.id; let i = $index) {
             @if (newDay(i)) {

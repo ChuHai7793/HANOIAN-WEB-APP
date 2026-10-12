@@ -10,6 +10,7 @@ import { Girlfriend } from '../../core/models/girlfriend.model';
 import { PlaceLink } from '../../core/models/place-link.model';
 import { directionsUrl, embedMapUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
 import { formatDistance } from '../../core/utils/geo';
+import { IconComponent } from '../../shared/ui/icon.component';
 
 interface Companion {
   girlfriend: Girlfriend;
@@ -18,7 +19,7 @@ interface Companion {
 
 @Component({
   selector: 'app-place-detail',
-  imports: [RouterLink, ModalComponent, RatingStarsComponent],
+  imports: [RouterLink, ModalComponent, RatingStarsComponent, IconComponent],
   template: `
     <app-modal [title]="place().name" [subtitle]="place().address" width="max-w-3xl" (dismiss)="dismiss.emit()">
       <div class="space-y-5">
@@ -31,8 +32,7 @@ interface Companion {
               class="mx-auto max-h-[28rem] w-auto max-w-full object-contain"
             />
           } @else {
-            <div class="flex h-64 items-center justify-center text-6xl opacity-30">
-              {{ icon() }}
+            <div class="flex h-64 items-center justify-center bg-[#EFEAFC] text-brand-400"><app-icon [name]="icon()" [size]="56" [stroke]="1.4" />
             </div>
           }
         </div>
@@ -124,8 +124,7 @@ interface Companion {
                       class="h-10 w-10 shrink-0 rounded-full object-cover"
                     />
                   } @else {
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50">
-                      👤
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600"><app-icon name="user" [size]="20" />
                     </div>
                   }
                   <div class="min-w-0 flex-1">
@@ -139,7 +138,7 @@ interface Companion {
                       </span>
                     </div>
                     @if (c.link.memory) {
-                      <p class="mt-1 text-sm italic text-slate-500">💭 {{ c.link.memory }}</p>
+                      <p class="mt-1 text-sm italic text-slate-500"><app-icon name="quote" [size]="14" class="mr-1.5 align-middle" />{{ c.link.memory }}</p>
                     }
                   </div>
                 </a>
@@ -175,7 +174,7 @@ interface Companion {
             class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
             (click)="edit.emit()"
           >
-            ✏️ Sửa quán
+            <app-icon name="edit" [size]="16" class="mr-1.5 align-middle" />Sửa quán
           </button>
         }
         <a
@@ -192,7 +191,7 @@ interface Companion {
           rel="noopener"
           class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
         >
-          🧭 Chỉ đường
+          <app-icon name="navigate" [size]="16" class="mr-1.5 align-middle" />Chỉ đường
         </a>
       </div>
     </app-modal>

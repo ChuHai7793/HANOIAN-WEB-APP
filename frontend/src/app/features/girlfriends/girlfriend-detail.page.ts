@@ -21,6 +21,7 @@ import { ModalComponent } from '../../shared/ui/modal.component';
 import { directionsUrl, routeUrl } from '../../core/utils/gmap-url';
 import { daysSince } from '../../core/utils/id';
 import { AuthService } from '../../core/auth/auth.service';
+import { IconComponent } from '../../shared/ui/icon.component';
 
 type Tab = 'info' | PlaceType;
 
@@ -38,8 +39,7 @@ interface LinkedPlace {
     RatingStarsComponent,
     EmptyStateComponent,
     ConfirmDialogComponent,
-    ModalComponent,
-  ],
+    ModalComponent, IconComponent],
   template: `
     <div class="p-4 sm:p-6 lg:p-8">
     @if (girlfriend(); as gf) {
@@ -60,8 +60,7 @@ interface LinkedPlace {
               class="h-24 w-24 rounded-2xl object-cover ring-4 ring-brand-50"
             />
           } @else {
-            <div class="flex h-24 w-24 items-center justify-center rounded-2xl bg-brand-50 text-4xl">
-              👤
+            <div class="flex h-24 w-24 items-center justify-center rounded-2xl bg-brand-50 text-brand-500"><app-icon name="user" [size]="44" [stroke]="1.5" />
             </div>
           }
 
@@ -103,7 +102,7 @@ interface LinkedPlace {
               class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
               (click)="suggest()"
             >
-              🎲 Gợi ý hẹn hò
+              <app-icon name="shuffle" [size]="16" class="mr-1.5 align-middle" />Gợi ý hẹn hò
             </button>
             @if (canEdit()) {
               <button
@@ -111,7 +110,7 @@ interface LinkedPlace {
                 class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
                 (click)="editOpen.set(true)"
               >
-                ✏️ Sửa
+                <app-icon name="edit" [size]="16" class="mr-1.5 align-middle" />Sửa
               </button>
             }
           </div>
@@ -232,7 +231,7 @@ interface LinkedPlace {
                       />
                     } @else {
                       <div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-2xl">
-                        {{ tabIcon() }}
+                        <app-icon [name]="tabIcon()" [size]="22" />
                       </div>
                     }
 
@@ -254,7 +253,7 @@ interface LinkedPlace {
 
                       @if (row.link.memory) {
                         <p class="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm italic text-amber-900">
-                          💭 {{ row.link.memory }}
+                          <app-icon name="quote" [size]="14" class="mr-1.5 align-middle" />{{ row.link.memory }}
                         </p>
                       }
                     </div>
@@ -267,7 +266,7 @@ interface LinkedPlace {
                         class="rounded-lg border border-slate-200 px-2.5 py-2 text-xs text-slate-600 transition hover:bg-slate-50"
                         title="Chỉ đường"
                       >
-                        🧭
+                        <app-icon name="navigate" [size]="16" />
                       </a>
                       @if (canEdit()) {
                         <button
@@ -276,7 +275,7 @@ interface LinkedPlace {
                           (click)="editLink(row.link)"
                           title="Sửa kỷ niệm"
                         >
-                          ✏️
+                          <app-icon name="edit" [size]="16" />
                         </button>
                         <button
                           type="button"
@@ -284,7 +283,7 @@ interface LinkedPlace {
                           (click)="pendingUnlink.set(row)"
                           title="Gỡ quán"
                         >
-                          🗑️
+                          <app-icon name="trash" [size]="16" />
                         </button>
                       }
                     </div>
@@ -359,7 +358,7 @@ interface LinkedPlace {
               class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
               (click)="suggest()"
             >
-              🎲 Đổi gợi ý
+              <app-icon name="shuffle" [size]="16" class="mr-1.5 align-middle" />Đổi gợi ý
             </button>
             @if (s.routeLink) {
               <a
@@ -368,7 +367,7 @@ interface LinkedPlace {
                 rel="noopener"
                 class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
               >
-                🗺️ Xem lộ trình
+                <app-icon name="route" [size]="16" class="mr-1.5 align-middle" />Xem lộ trình
               </a>
             }
           </div>
@@ -376,7 +375,7 @@ interface LinkedPlace {
       }
     } @else {
       <app-empty-state
-        icon="🔍"
+        icon="search"
         title="Không tìm thấy hồ sơ"
         description="Hồ sơ này có thể đã bị xoá."
       >
