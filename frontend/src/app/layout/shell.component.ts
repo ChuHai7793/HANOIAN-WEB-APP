@@ -6,6 +6,7 @@ import { MatchInboxService } from '../core/services/match-inbox.service';
 import { DataBootstrapService } from '../core/services/data-bootstrap.service';
 import { AuthService } from '../core/auth/auth.service';
 import { LegacyImportDialogComponent } from '../shared/ui/legacy-import-dialog.component';
+import { IconComponent, IconName } from '../shared/ui/icon.component';
 
 interface NavSection {
   /** Rỗng: không có tiêu đề nhóm */
@@ -16,7 +17,7 @@ interface NavSection {
 interface NavItem {
   path: string;
   label: string;
-  icon: string;
+  icon: IconName;
   badge?: () => number;
   /** Số cần chú ý (tin chưa đọc): nền đỏ, ẩn khi bằng 0 */
   alert?: () => number;
@@ -24,7 +25,7 @@ interface NavItem {
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LegacyImportDialogComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LegacyImportDialogComponent, IconComponent],
   template: `
     <div class="flex min-h-screen">
       <!-- Sidebar -->
@@ -32,38 +33,36 @@ interface NavItem {
         class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform lg:translate-x-0"
         [class.-translate-x-full]="!menuOpen()"
       >
-        <div class="flex h-16 shrink-0 items-center gap-2.5 border-b border-slate-100 px-5">
-          <span class="text-2xl">💘</span>
-          <div>
-            <p class="text-sm font-bold leading-tight text-slate-900">Dating Master</p>
-            <p class="text-[11px] leading-tight text-slate-400">Sổ tay hẹn hò</p>
+        <div class="flex shrink-0 items-center gap-3 px-6 pb-2 pt-6">
+          <img src="logo.png" alt="" class="h-11 w-auto" />
+          <div class="flex flex-col gap-0.5">
+            <span class="text-xl font-extrabold leading-none tracking-wide text-slate-900">HANOI<span class="text-brand-600">VIBE</span></span>
+            <span class="text-xs text-slate-500">Hẹn ở đâu cũng đẹp</span>
           </div>
         </div>
 
         <!-- Menu dài hơn màn hình thì cuộn trong phần này, không chui xuống dưới khối tài khoản -->
-        <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto p-3">
+        <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-4" aria-label="Điều hướng chính">
           @for (section of sections(); track section.title) {
             @if (section.title) {
-              <p class="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <p class="px-3 pb-1.5 pt-5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 {{ section.title }}
               </p>
             }
             @for (item of section.items; track item.path) {
               <a
                 [routerLink]="item.path"
-                routerLinkActive="bg-brand-50 text-brand-700 font-semibold"
-                class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-600 transition hover:bg-slate-50"
+                routerLinkActive="!bg-brand-100 !text-brand-800 font-semibold"
+                class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[15px] text-slate-700 transition hover:bg-slate-50"
                 (click)="menuOpen.set(false)"
               >
-                <span class="text-lg">{{ item.icon }}</span>
+                <app-icon [name]="item.icon" />
                 <span class="flex-1">{{ item.label }}</span>
                 @if (item.alert && item.alert() > 0) {
-                  <span class="rounded-full bg-rose-600 px-2 py-0.5 text-xs font-bold text-white">{{ item.alert() }}</span>
+                  <span class="rounded-full bg-[#C2335F] px-2 py-0.5 text-[11px] font-bold text-white">{{ item.alert() }} mới</span>
                 }
                 @if (item.badge) {
-                  <span
-                    class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
-                  >
+                  <span class="min-w-6 rounded-full bg-brand-100 px-1.5 py-0.5 text-center text-xs font-semibold text-brand-800">
                     {{ item.badge() }}
                   </span>
                 }
@@ -72,7 +71,7 @@ interface NavItem {
           }
         </nav>
 
-        <div class="shrink-0 border-t border-slate-100 bg-white p-4">
+        <div class="mx-4 shrink-0 border-t border-slate-200 bg-white px-2 pb-6 pt-4">
           @if (auth.user(); as user) {
             <a
               routerLink="/profile"
@@ -81,16 +80,16 @@ interface NavItem {
               (click)="menuOpen.set(false)"
             >
               @if (user.avatarUrl) {
-                <img [src]="user.avatarUrl" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover" />
+                <img [src]="user.avatarUrl" alt="" class="h-10 w-10 shrink-0 rounded-full object-cover" />
               } @else {
                 <span
-                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700"
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-200 text-sm font-bold text-brand-800"
                 >
                   {{ initial(user.displayName) }}
                 </span>
               }
               <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-medium text-slate-800">
+                <p class="truncate text-sm font-semibold text-slate-900">
                   {{ user.displayName }}
                   @if (user.role === 'GUEST') {
                     <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
@@ -98,20 +97,20 @@ interface NavItem {
                     </span>
                   }
                 </p>
-                <p class="truncate text-[11px] text-slate-400">{{ user.username || user.email }}</p>
+                <p class="truncate text-xs text-slate-500">{{ user.username ? '@' + user.username : user.email }}</p>
               </div>
             </a>
             <div class="mt-3 flex gap-2">
               <button
                 type="button"
-                class="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
+                class="min-h-10 flex-1 rounded-[10px] border border-brand-200 bg-white px-3 text-[13px] font-semibold text-slate-700 transition hover:bg-brand-50"
                 (click)="auth.logout()"
               >
                 Đăng xuất
               </button>
               <button
                 type="button"
-                class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-500 transition hover:bg-slate-50"
+                class="min-h-10 flex-1 rounded-[10px] border border-brand-200 bg-white px-3 text-[13px] text-slate-700 transition hover:bg-brand-50"
                 title="Đăng xuất khỏi mọi thiết bị"
                 (click)="auth.logoutAll()"
               >
@@ -140,17 +139,10 @@ interface NavItem {
             (click)="menuOpen.set(!menuOpen())"
             aria-label="Mở menu"
           >
-            <svg
-              class="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            <app-icon name="menu" [size]="24" />
           </button>
-          <span class="font-semibold text-slate-800">Dating Master</span>
+          <img src="logo.png" alt="" class="h-8 w-auto" />
+          <span class="font-extrabold tracking-wide text-slate-900">HANOI<span class="text-brand-600">VIBE</span></span>
         </header>
 
         <!-- Không đặt padding ở đây: từng trang tự lo, để vùng sticky bám sát mép trên -->
@@ -204,20 +196,20 @@ export class ShellComponent {
     {
       title: '',
       items: [
-        { path: '/explore', label: 'Khám phá quán', icon: '🔎' },
-        { path: '/spots', label: 'Tìm chỗ chơi', icon: '🎡' },
-        { path: '/dating', label: 'Tìm đối tượng', icon: '💘', alert: () => this.inbox.unread() },
+        { path: '/explore', label: 'Khám phá quán', icon: 'compass' },
+        { path: '/spots', label: 'Tìm chỗ chơi', icon: 'gate' },
+        { path: '/dating', label: 'Tìm đối tượng', icon: 'heart', alert: () => this.inbox.unread() },
       ],
     },
     {
       title: 'My place',
       items: [
-        { path: '/cafes', label: 'Quán cafe', icon: '☕', badge: () => this.places.cafes().length },
-        { path: '/bars', label: 'Quán bar', icon: '🍸', badge: () => this.places.bars().length },
+        { path: '/cafes', label: 'Quán cafe', icon: 'cup', badge: () => this.places.cafes().length },
+        { path: '/bars', label: 'Quán bar', icon: 'cocktail', badge: () => this.places.bars().length },
         {
           path: '/restaurants',
           label: 'Quán ăn',
-          icon: '🍜',
+          icon: 'utensils',
           badge: () => this.places.restaurants().length,
         },
       ],
@@ -225,7 +217,7 @@ export class ShellComponent {
     {
       title: 'Hẹn hò',
       items: [
-        { path: '/girlfriends', label: 'Người yêu', icon: '👩', badge: () => this.girlfriends.count() },
+        { path: '/girlfriends', label: 'Người yêu', icon: 'couple', badge: () => this.girlfriends.count() },
       ],
     },
     ...(this.auth.user()?.role === 'ADMIN'
@@ -233,10 +225,10 @@ export class ShellComponent {
           {
             title: 'Quản trị',
             items: [
-              { path: '/admin/users', label: 'Người dùng', icon: '👥' },
-              { path: '/admin/dating', label: 'Tìm đối tượng', icon: '💘' },
+              { path: '/admin/users', label: 'Người dùng', icon: 'users' },
+              { path: '/admin/dating', label: 'Tìm đối tượng', icon: 'shield' },
             ],
-          },
+          } satisfies NavSection,
         ]
       : []),
   ]);

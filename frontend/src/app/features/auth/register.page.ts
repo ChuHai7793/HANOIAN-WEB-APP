@@ -22,8 +22,8 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
     <div class="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
       <div class="w-full max-w-sm">
         <div class="mb-6 text-center">
-          <p class="text-4xl">💘</p>
-          <h1 class="mt-2 text-2xl font-bold text-slate-900">Tạo tài khoản</h1>
+          <img src="logo.png" alt="HANOIVIBE" class="mx-auto h-14 w-auto" />
+          <h1 class="mt-3 text-2xl font-extrabold text-slate-900">Tạo tài khoản</h1>
           <p class="mt-1 text-sm text-slate-500">Đăng ký để xem sổ tay hẹn hò</p>
         </div>
 

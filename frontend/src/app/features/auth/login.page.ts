@@ -11,8 +11,8 @@ import { errorMessage } from '../../core/api/api';
     <div class="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
       <div class="w-full max-w-sm">
         <div class="mb-6 text-center">
-          <p class="text-4xl">💘</p>
-          <h1 class="mt-2 text-2xl font-bold text-slate-900">Dating Master</h1>
+          <img src="logo.png" alt="" class="mx-auto h-14 w-auto" />
+          <h1 class="mt-3 text-2xl font-extrabold tracking-wide text-slate-900">HANOI<span class="text-brand-600">VIBE</span></h1>
           <p class="mt-1 text-sm text-slate-500">Đăng nhập để xem sổ tay hẹn hò của bạn</p>
         </div>
 
