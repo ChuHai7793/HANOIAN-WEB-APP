@@ -16,7 +16,7 @@ const SHARED_SHOWN = 2;
   template: `
     <article
       [attr.aria-label]="'Hồ sơ ' + candidate().displayName"
-      class="relative touch-none select-none overflow-hidden rounded-[28px] border bg-white shadow-[0_2px_4px_rgba(48,30,110,0.05),0_24px_48px_rgba(48,30,110,0.10)]"
+      class="relative flex min-h-0 touch-none select-none flex-col overflow-hidden rounded-[28px] border bg-white shadow-[0_2px_4px_rgba(48,30,110,0.05),0_24px_48px_rgba(48,30,110,0.10)]"
       [class]="candidate().superLikedMe ? 'border-2 border-[#2F80D9]' : 'border-slate-200'"
       [style.transform]="transform()"
       [style.transition]="dragging() ? 'none' : 'transform 0.25s ease-out'"
@@ -25,7 +25,7 @@ const SHARED_SHOWN = 2;
       (pointerup)="end()"
       (pointercancel)="end()"
     >
-      <div class="relative h-[clamp(150px,calc(100dvh-520px),420px)] bg-[#EFEAFC] lg:h-[clamp(200px,calc(100dvh-430px),420px)]">
+      <div class="relative h-[560px] min-h-[150px] shrink bg-[#EFEAFC]">
         @if (photo(); as url) {
           <img [src]="url" alt="" class="pointer-events-none h-full w-full object-cover" draggable="false" />
         } @else {
@@ -79,7 +79,7 @@ const SHARED_SHOWN = 2;
         >
       </div>
 
-      <div class="pointer-events-none flex flex-col gap-2 px-5 pb-4 pt-3.5">
+      <div class="pointer-events-none flex shrink-0 flex-col gap-2 px-5 pb-4 pt-3.5">
         <div class="flex flex-wrap items-baseline gap-2.5">
           <h2 class="text-[22px] font-extrabold tracking-tight text-slate-900">{{ candidate().displayName }}</h2>
           <span class="text-lg text-slate-600">{{ candidate().age }}</span>
@@ -113,7 +113,7 @@ const SHARED_SHOWN = 2;
       </div>
     </article>
   `,
-  host: { class: 'block' },
+  host: { class: 'flex min-h-0 flex-col' },
 })
 export class SwipeCardComponent {
   readonly candidate = input.required<Candidate>();

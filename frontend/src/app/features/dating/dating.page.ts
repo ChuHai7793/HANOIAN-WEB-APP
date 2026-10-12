@@ -30,8 +30,8 @@ type Tab = 'swipe' | 'matches';
   selector: 'app-dating-page',
   imports: [DatePipe, RouterLink, SwipeCardComponent, ReportDialogComponent, ConfirmDialogComponent, IconComponent],
   template: `
-    <div class="relative flex flex-col gap-4 px-4 pb-8 pt-4 sm:px-6 lg:px-8 lg:pt-5">
-      <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="relative flex flex-col gap-4 px-4 pt-4 sm:px-6 lg:px-8 lg:pt-5" [class]="fitScreen() ? 'h-[calc(100dvh-4rem)] pb-2.5 lg:h-dvh' : 'pb-8'">
+      <header class="flex shrink-0 flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-1.5">
           <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Tìm đối tượng</h1>
           <p class="hidden text-[13px] text-slate-500 sm:block">Quẹt phải để thích, quẹt trái để bỏ qua. Hai bên cùng thích là match.</p>
@@ -115,10 +115,12 @@ type Tab = 'swipe' | 'matches';
           </button>
         </div>
       } @else if (tab() === 'swipe') {
-        <div class="flex flex-wrap items-start justify-center gap-6">
+        <div class="flex min-h-0 flex-1 flex-col items-center gap-6 lg:flex-row lg:items-stretch">
           <!-- Cột thẻ -->
-          <div class="flex w-full max-w-[400px] flex-[1_1_360px] flex-col items-stretch gap-3">
-            <div class="relative">
+          <div class="flex h-full w-full shrink-0 justify-center lg:min-w-0 lg:flex-1 lg:shrink">
+          <div class="flex h-full w-full max-w-[400px] flex-col items-stretch gap-3">
+            <!-- Thẻ co lại khi thiếu chỗ (ảnh co trước), hàng nút luôn ngay dưới thẻ -->
+            <div class="relative flex min-h-0 shrink flex-col">
               @if (deck().length > 1) {
                 <!-- Thẻ kế tiếp nằm phía sau -->
                 <div class="absolute inset-0 translate-y-3 scale-[0.96] rounded-[28px] border border-slate-200 bg-white opacity-70"></div>
@@ -136,14 +138,14 @@ type Tab = 'swipe' | 'matches';
                   />
                 }
               } @else {
-                <div class="flex h-[min(460px,calc(100dvh-220px))] flex-col items-center justify-center gap-2 rounded-[28px] border-2 border-dashed border-brand-300 bg-white text-center text-slate-500">
+                <div class="flex h-[460px] min-h-[200px] shrink flex-col items-center justify-center gap-2 rounded-[28px] border-2 border-dashed border-brand-300 bg-white text-center text-slate-500">
                   <p class="text-brand-400"><app-icon name="moon" [size]="36" /></p>
                   <p class="text-sm">{{ loading() ? 'Đang tìm người…' : 'Hết người để quẹt rồi. Quay lại sau nhé!' }}</p>
                 </div>
               }
             </div>
 
-            <div class="flex items-center justify-center gap-4">
+            <div class="flex shrink-0 items-center justify-center gap-4">
               <button
                 type="button"
                 aria-label="Hoàn tác"
@@ -195,17 +197,18 @@ type Tab = 'swipe' | 'matches';
             @if (deck()[0]; as top) {
               <button
                 type="button"
-                class="flex min-h-8 items-center gap-1.5 self-center px-3 text-xs text-slate-500 hover:text-rose-600"
+                class="flex min-h-8 shrink-0 items-center gap-1.5 self-center px-3 text-xs text-slate-500 hover:text-rose-600"
                 (click)="reporting.set({ userId: top.userId, name: top.displayName })"
               >
                 <app-icon name="flag" [size]="14" />
                 Báo cáo / chặn {{ top.displayName }}
               </button>
             }
+            </div>
           </div>
 
           <!-- Panel bên -->
-          <aside class="flex w-full max-w-[320px] flex-[1_1_260px] flex-col gap-4">
+          <aside class="flex w-full max-w-[320px] shrink-0 flex-col gap-4 lg:-mr-[22px] lg:w-[320px] lg:self-start">
             <section class="flex flex-col gap-3 rounded-[20px] border border-slate-200 bg-white p-4">
               <div class="flex items-center justify-between">
                 <h3 class="text-base font-bold text-slate-900">Match gần đây</h3>
@@ -465,6 +468,11 @@ export class DatingPage implements OnInit {
 
   protected readonly card = viewChild<SwipeCardComponent>('card');
   protected readonly tab = signal<Tab>('swipe');
+  /** Đang quẹt: trang cao đúng bằng màn hình để thẻ, hàng nút và "Báo cáo" vừa một màn hình */
+  protected readonly fitScreen = computed(() => {
+    const s = this.settings();
+    return this.tab() === 'swipe' && !!s && s.enabled && !s.banned;
+  });
   protected readonly settings = signal<DatingSettings | null>(null);
   protected readonly deck = signal<Candidate[]>([]);
   /** Danh sách match dùng chung, tự cập nhật khi có tin / match mới */
