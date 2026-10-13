@@ -55,6 +55,8 @@ describe('PhotoListEditorComponent', () => {
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('3/6');
+    // Luôn đủ 6 ô: 3 ảnh + 3 ô trống để thêm
+    expect(el.querySelectorAll('[aria-label^="Thêm ảnh "]').length).toBe(3);
 
     el.querySelectorAll<HTMLButtonElement>('[aria-label="Lên trước"]')[1].click();
     fixture.detectChanges();

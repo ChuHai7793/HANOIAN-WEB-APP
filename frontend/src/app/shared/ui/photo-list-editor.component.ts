@@ -1,4 +1,4 @@
-import { Component, input, model, signal } from '@angular/core';
+import { Component, computed, input, model, signal, viewChild } from '@angular/core';
 import { IconComponent } from './icon.component';
 import { ImagePickerComponent } from './image-picker.component';
 
@@ -13,8 +13,8 @@ import { ImagePickerComponent } from './image-picker.component';
       <p class="mb-1.5 text-sm font-medium text-slate-700">
         Ảnh <span class="font-normal text-slate-400">({{ photos().length }}/{{ max() }}, ảnh đầu là ảnh bìa)</span>
       </p>
-      @if (photos().length) {
-        <div class="mb-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
+      <!-- Luôn đủ max ô: ô có ảnh + ô trống (bấm để thêm), để thấy ngay giới hạn số ảnh -->
+      <div class="mb-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
           @for (url of photos(); track url; let i = $index, first = $first, last = $last) {
             <div class="group relative aspect-square overflow-hidden rounded-lg bg-slate-100" [class.ring-2]="first" [class.ring-brand-500]="first">
               <img [src]="url" alt="" class="h-full w-full object-cover" />
@@ -34,8 +34,23 @@ import { ImagePickerComponent } from './image-picker.component';
               </div>
             </div>
           }
-        </div>
-      }
+          @for (slot of emptySlots(); track slot; let firstEmpty = $first) {
+            <button
+              type="button"
+              class="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed text-xs transition"
+              [class]="firstEmpty ? 'border-brand-300 bg-brand-50/60 text-brand-600 hover:bg-brand-50' : 'border-slate-200 text-slate-300 hover:border-brand-200 hover:text-brand-400'"
+              [attr.aria-label]="'Thêm ảnh ' + slot"
+              (click)="picker()?.openFileDialog()"
+            >
+              <app-icon name="plus" [size]="firstEmpty ? 20 : 16" />
+              @if (firstEmpty) {
+                <span class="font-medium">{{ photos().length ? 'Thêm ảnh' : 'Ảnh bìa' }}</span>
+              } @else {
+                <span>{{ slot }}</span>
+              }
+            </button>
+          }
+      </div>
       @if (photos().length < max()) {
         <app-image-picker label="Thêm ảnh" [value]="pending()" (valueChange)="add($event)" [maxSize]="maxSize()" />
       }
@@ -47,6 +62,12 @@ export class PhotoListEditorComponent {
   readonly max = input(6);
   /** Cạnh dài tối đa khi thu nhỏ ảnh tải lên */
   readonly maxSize = input(1200);
+
+  protected readonly picker = viewChild(ImagePickerComponent);
+  /** Số thứ tự các ô còn trống (ví dụ có 2 ảnh, tối đa 6 → [3, 4, 5, 6]) */
+  protected readonly emptySlots = computed(() =>
+    Array.from({ length: Math.max(0, this.max() - this.photos().length) }, (_, i) => this.photos().length + i + 1),
+  );
 
   /** Ô thêm ảnh: đặt lại sau mỗi lần thêm */
   protected readonly pending = signal('');

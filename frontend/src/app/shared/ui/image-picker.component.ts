@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, input, model, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, input, model, signal, viewChild } from '@angular/core';
 import { errorMessage } from '../../core/api/api';
 import { UploadResult, UploadService } from '../../core/services/upload.service';
 import { fileToCompressedBlob, formatBytes } from '../../core/utils/image';
@@ -106,6 +106,12 @@ import { IconComponent } from './icon.component';
 })
 export class ImagePickerComponent {
   private readonly uploads = inject(UploadService);
+  private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
+
+  /** Mở hộp chọn ảnh từ bên ngoài (vd. bấm vào ô trống của bộ chỉnh nhiều ảnh) */
+  openFileDialog(): void {
+    this.fileInput()?.nativeElement.click();
+  }
 
   readonly value = model('');
   readonly label = input('Ảnh');
