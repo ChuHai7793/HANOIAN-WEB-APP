@@ -1,7 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE } from '../api/api';
+import { SILENT_ERRORS } from '../api/http-context';
 import { SpotItem } from '../models/spot.model';
 
 /**
@@ -16,8 +17,20 @@ export class SavedSpotService {
   readonly items = this.list.asReadonly();
   readonly count = computed(() => this.list().length);
 
+  /**
+   * Lỗi thì coi như chưa lưu chỗ nào, không làm hỏng việc nạp dữ liệu chính (quán, người yêu…), ví dụ khi
+   * backend chưa được cập nhật lên bản có API này.
+   */
   async load(): Promise<void> {
-    this.list.set(await firstValueFrom(this.http.get<SpotItem[]>(`${API_BASE}/me/spots`)));
+    try {
+      this.list.set(
+        await firstValueFrom(
+          this.http.get<SpotItem[]>(`${API_BASE}/me/spots`, { context: new HttpContext().set(SILENT_ERRORS, true) }),
+        ),
+      );
+    } catch {
+      this.list.set([]);
+    }
   }
 
   clear(): void {
