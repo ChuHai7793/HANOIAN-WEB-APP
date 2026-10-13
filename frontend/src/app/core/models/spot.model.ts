@@ -44,6 +44,8 @@ export interface SpotItem {
   imageUrl: string;
   /** Mọi ảnh (tối đa 6); ảnh đầu = imageUrl */
   photos: string[];
+  /** Người đang xem đã lưu vào My place chưa */
+  inMyPlace: boolean;
   googleMapsUrl: string;
   lat: number | null;
   lng: number | null;

@@ -20,10 +20,11 @@ import { SpotFormComponent } from './spot-form.component';
 import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
 import { AddToPlanDialogComponent } from '../plans/add-to-plan-dialog.component';
 import { StopKind } from '../../core/models/plan.model';
-import { ModalComponent } from '../../shared/ui/modal.component';
 import { FitRowDirective } from '../../shared/ui/fit-row.directive';
 import { PhotoCarouselComponent } from '../../shared/ui/photo-carousel.component';
 import { photosOf } from '../../core/models/place.model';
+import { SavedSpotService } from '../../core/services/saved-spot.service';
+import { SpotDetailDialogComponent } from './spot-detail-dialog.component';
 
 /** Lọc theo ngân sách: giá thấp nhất của chỗ chơi không quá mức này. */
 const BUDGETS: { value: number | null; label: string }[] = [
@@ -45,9 +46,9 @@ function nowHHmm(): string {
  */
 @Component({
   selector: 'app-spot-list-page',
-  imports: [PhotoCarouselComponent, FitRowDirective, ModalComponent, AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
+  imports: [SpotDetailDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
   template: `
-    <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
+    <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:pl-8 lg:pr-2.5 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-1.5">
           <h1 class="text-xl font-extrabold tracking-tight text-slate-900">Tìm chỗ chơi</h1>
@@ -125,11 +126,11 @@ function nowHHmm(): string {
         </button>
       </div>
 
-      <div role="group" aria-label="Nhóm chỗ chơi" class="-mt-1 flex max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:flex-wrap gap-1.5">
+      <div role="group" aria-label="Nhóm chỗ chơi" class="-mt-1 flex gap-1 overflow-x-auto [scrollbar-width:none] *:shrink-0 *:whitespace-nowrap max-sm:-mx-4 max-sm:px-4">
         <button
           type="button"
           [attr.aria-pressed]="category() === ''"
-          class="min-h-9 rounded-full border px-3 text-[13px] transition"
+          class="min-h-8 rounded-full border px-2 text-xs transition"
           [class]="category() === '' ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
           (click)="category.set(''); reload(false)"
         >
@@ -139,11 +140,11 @@ function nowHHmm(): string {
           <button
             type="button"
             [attr.aria-pressed]="category() === c.value"
-            class="min-h-9 rounded-full border px-3 text-[13px] transition"
+            class="min-h-8 rounded-full border px-2 text-xs transition"
             [class]="category() === c.value ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
             (click)="category.set(c.value); reload(false)"
           >
-            <span class="inline-flex items-center gap-1.5"><app-icon [name]="c.icon" [size]="15" />{{ c.label }}@if (counts(); as n) { · {{ n[c.value] }}}</span>
+            <span class="inline-flex items-center gap-1"><app-icon [name]="c.icon" [size]="13" />{{ c.label }}@if (counts(); as n) { · {{ n[c.value] }}}</span>
           </button>
         }
       </div>
@@ -200,11 +201,17 @@ function nowHHmm(): string {
                   </div>
                 </div>
                 <div class="grid grid-cols-3 gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
-                  <a [href]="mapUrl(item)" target="_blank" rel="noopener" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50"><app-icon name="pin" [size]="14" />Maps</a>
                   <a [href]="directions(item)" target="_blank" rel="noopener" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50"><app-icon name="navigate" [size]="14" />Chỉ đường</a>
                   <button type="button" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50" (click)="planTarget.set({ kind: 'spot', refId: item.id, name: item.name, district: item.district })">
                     <app-icon name="route" [size]="14" />Vào plan
                   </button>
+                  @if (item.inMyPlace) {
+                    <span class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] bg-brand-100 px-1.5 text-xs font-semibold text-brand-800"><app-icon name="heart" [size]="14" [filled]="true" />Đã lưu</span>
+                  } @else {
+                    <button type="button" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] bg-brand-600 px-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-60" [disabled]="savingSpot() === item.id" (click)="saveSpot(item)">
+                      <app-icon name="plus" [size]="14" [stroke]="2.4" />Lưu
+                    </button>
+                  }
                 </div>
               </div>
             </article>
@@ -243,67 +250,18 @@ function nowHHmm(): string {
     }
 
     @if (detail(); as d) {
-      <app-modal [title]="d.name" [subtitle]="cat(d).label + ' · ' + d.districtLabel" width="max-w-lg" (dismiss)="detail.set(null)">
-        <div class="flex flex-col gap-4">
-          @if (d.imageUrl) {
-            <app-photo-carousel class="h-56 w-full rounded-xl" [photos]="photosOf(d)" [alt]="d.name" [lazy]="false" />
-          }
-          <p class="flex items-start gap-1.5 text-sm text-slate-600">
-            <span class="mt-0.5 text-slate-400"><app-icon name="pin" [size]="15" /></span>{{ d.address || 'Chưa có địa chỉ' }}
-          </p>
-          <app-vibe-tags [vibes]="d.vibes" />
-          <dl class="grid grid-cols-2 gap-3 rounded-xl bg-brand-50/60 p-3 text-sm">
-            <div>
-              <dt class="text-xs text-slate-500">Giá</dt>
-              <dd class="font-semibold" [class]="d.priceFrom === 0 && !d.priceTo ? 'text-emerald-600' : 'text-slate-900'">{{ price(d) }}</dd>
-            </div>
-            <div>
-              <dt class="text-xs text-slate-500">Giờ mở cửa</dt>
-              <dd class="font-semibold text-slate-900">{{ d.openTime ? d.openTime + '–' + d.closeTime : 'Không giờ cố định' }}</dd>
-            </div>
-            <div>
-              <dt class="text-xs text-slate-500">Thời lượng gợi ý</dt>
-              <dd class="font-semibold text-slate-900">{{ d.durationMin ? 'Khoảng ' + duration(d.durationMin) : 'Tuỳ bạn' }}</dd>
-            </div>
-            <div>
-              <dt class="text-xs text-slate-500">Không gian</dt>
-              <dd class="font-semibold text-slate-900">{{ d.indoor ? 'Trong nhà' : 'Ngoài trời' }}{{ d.needsBooking ? ' · Cần đặt trước' : '' }}</dd>
-            </div>
-          </dl>
-          @if (d.description) {
-            <p class="whitespace-pre-line text-sm leading-relaxed text-slate-700">{{ d.description }}</p>
-          }
-          @if (d.hoursNote) {
-            <p class="flex items-start gap-1.5 text-[13px] italic text-slate-500">
-              <span class="mt-0.5 not-italic"><app-icon name="info" [size]="14" /></span>{{ d.hoursNote }}
-            </p>
-          }
-        </div>
-        <div modalFooter class="flex flex-wrap justify-end gap-2">
-          <a [href]="mapUrl(d)" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50">
-            <app-icon name="pin" [size]="15" />Maps
-          </a>
-          <a [href]="directions(d)" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50">
-            <app-icon name="navigate" [size]="15" />Chỉ đường
-          </a>
-          <button
-            type="button"
-            class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
-            (click)="detail.set(null); planTarget.set({ kind: 'spot', refId: d.id, name: d.name, district: d.district })"
-          >
-            <app-icon name="route" [size]="15" />Vào plan
-          </button>
-          @if (d.bookingUrl) {
-            <a [href]="d.bookingUrl" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-1.5 rounded-[10px] bg-brand-600 px-3.5 text-[13px] font-semibold text-white hover:bg-brand-700">
-              <app-icon name="calendar" [size]="15" />Đặt chỗ
-            </a>
-          }
-        </div>
-      </app-modal>
+      <app-spot-detail-dialog
+        [spot]="d"
+        [saved]="d.inMyPlace"
+        (closed)="detail.set(null)"
+        (plan)="detail.set(null); planTarget.set({ kind: 'spot', refId: $event.id, name: $event.name, district: $event.district })"
+        (save)="saveSpot($event)"
+      />
     }
   `,
 })
 export class SpotListPage implements OnInit {
+  private readonly savedSpots = inject(SavedSpotService);
   protected readonly photosOf = photosOf;
   /** Chỗ chơi đang xem chi tiết (popup) */
   protected readonly detail = signal<SpotItem | null>(null);
@@ -399,6 +357,22 @@ export class SpotListPage implements OnInit {
       this.total.set(res.total);
     } finally {
       if (seq === this.requestSeq) this.loading.set(false);
+    }
+  }
+
+  /** Đang lưu chỗ chơi nào vào My place (khoá nút) */
+  protected readonly savingSpot = signal<string | null>(null);
+
+  protected async saveSpot(item: SpotItem): Promise<void> {
+    if (this.savingSpot()) return;
+    this.savingSpot.set(item.id);
+    try {
+      const saved = await this.savedSpots.save(item);
+      this.items.update((list) => list.map((i) => (i.id === saved.id ? { ...i, inMyPlace: true } : i)));
+      if (this.detail()?.id === saved.id) this.detail.set({ ...this.detail()!, inMyPlace: true });
+      this.toast.success(`Đã lưu "${item.name}" vào My place.`);
+    } finally {
+      this.savingSpot.set(null);
     }
   }
 

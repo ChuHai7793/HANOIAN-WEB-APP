@@ -13,15 +13,36 @@ import { formatDistance, haversineKm, LatLng } from '../../core/utils/geo';
 import { FitRowDirective } from '../../shared/ui/fit-row.directive';
 import { PhotoCarouselComponent } from '../../shared/ui/photo-carousel.component';
 import { photosOf } from '../../core/models/place.model';
+import { SavedSpotService } from '../../core/services/saved-spot.service';
+import { spotCategory, SpotItem } from '../../core/models/spot.model';
+import { StopKind } from '../../core/models/plan.model';
+import { SpotDetailDialogComponent } from '../spots/spot-detail-dialog.component';
+import { AddToPlanDialogComponent } from '../plans/add-to-plan-dialog.component';
 
 type SortKey = 'rating' | 'name' | 'distance' | 'price';
 
-const TYPE_FILTERS: { value: PlaceType | ''; label: string }[] = [
-  { value: '', label: 'Tất cả' },
-  { value: 'cafe', label: 'Cafe' },
-  { value: 'bar', label: 'Bar' },
-  { value: 'restaurant', label: 'Quán ăn' },
+/** Chip lọc: 3 loại quán và chỗ chơi đã lưu ('spot') */
+type MyPlaceFilter = PlaceType | '' | 'spot';
+const TYPE_FILTERS: { value: MyPlaceFilter; label: string; icon: IconName }[] = [
+  { value: '', label: 'Tất cả', icon: 'compass' },
+  { value: 'cafe', label: 'Cafe', icon: 'cup' },
+  { value: 'bar', label: 'Bar', icon: 'cocktail' },
+  { value: 'restaurant', label: 'Quán ăn', icon: 'utensils' },
+  { value: 'spot', label: 'Chỗ chơi', icon: 'gate' },
 ];
+/** Khoảng giá của quán ↔ giá vé chỗ chơi (VNĐ / người), cho lọc và sắp xếp chung */
+const PRICE_LIMITS: Record<PriceRange, [number, number]> = {
+  cheap: [0, 50_000],
+  medium: [50_000, 150_000],
+  high: [150_000, 400_000],
+  luxury: [400_000, Infinity],
+};
+const PRICE_ESTIMATE: Record<PriceRange, number> = { cheap: 40_000, medium: 100_000, high: 275_000, luxury: 500_000 };
+
+interface SpotRow {
+  spot: SpotItem;
+  distanceKm: number | null;
+}
 const TYPE_LABELS: Record<PlaceType, string> = { cafe: 'Cafe', bar: 'Bar', restaurant: 'Quán ăn' };
 const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', restaurant: 'utensils' };
 const PLACE_TYPES: PlaceType[] = ['cafe', 'bar', 'restaurant'];
@@ -33,13 +54,13 @@ interface PlaceRow {
 
 @Component({
   selector: 'app-place-list',
-  imports: [PhotoCarouselComponent, FitRowDirective, RouterLink, PlaceDetailComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent],
+  imports: [AddToPlanDialogComponent, SpotDetailDialogComponent, PhotoCarouselComponent, FitRowDirective, RouterLink, PlaceDetailComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-1.5">
           <h1 class="text-xl font-extrabold tracking-tight text-slate-900">My place</h1>
-          <p class="hidden text-[13px] text-slate-500 sm:block">Quán cafe, bar, quán ăn bạn đã lưu từ Khám phá quán.</p>
+          <p class="hidden text-[13px] text-slate-500 sm:block">Quán và chỗ chơi bạn đã lưu từ Khám phá quán, Tìm chỗ chơi.</p>
         </div>
         <a
           routerLink="/explore"
@@ -86,7 +107,7 @@ interface PlaceRow {
                 : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
               (click)="pickType(t.value)"
             >
-              {{ t.label }} · {{ counts()[t.value || 'all'] }}
+              <span class="inline-flex items-center gap-1.5"><app-icon [name]="t.icon" [size]="15" />{{ t.label }} · {{ counts()[t.value || 'all'] }}</span>
             </button>
           }
         </div>
@@ -127,11 +148,11 @@ interface PlaceRow {
         <p class="-mt-3 text-xs text-amber-700">{{ locationError() }}</p>
       }
 
-      @if (visible().length === 0) {
+      @if (visible().length === 0 && visibleSpots().length === 0) {
         <app-empty-state
-          [icon]="type() ? typeIcons[type() || 'cafe'] : 'bookmark'"
-          [title]="hasAny() ? 'Không tìm thấy quán phù hợp' : 'Chưa có quán nào trong My place'"
-          [description]="hasAny() ? 'Thử xoá bớt bộ lọc hoặc từ khoá tìm kiếm.' : 'Vào Khám phá quán, bấm &quot;Lưu vào My place&quot; để lưu quán vào đây.'"
+          [icon]="emptyIcon()"
+          [title]="hasAny() ? 'Không tìm thấy mục phù hợp' : 'My place còn trống'"
+          [description]="hasAny() ? 'Thử xoá bớt bộ lọc hoặc từ khoá tìm kiếm.' : 'Vào Khám phá quán hoặc Tìm chỗ chơi, bấm &quot;Lưu&quot; để lưu vào đây.'"
         >
           @if (!hasAny()) {
             <a
@@ -144,7 +165,7 @@ interface PlaceRow {
           }
         </app-empty-state>
       } @else {
-        <span class="text-[13px] text-slate-500">{{ visible().length }} / {{ all().length }} quán</span>
+        <span class="text-[13px] text-slate-500">{{ visible().length + visibleSpots().length }} / {{ all().length + savedSpots().length }} mục</span>
         <!-- Hàng thẻ đầu vừa khít màn hình, hàng sau cuộn mới thấy -->
         <div appFitRow class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
           @for (item of visible(); track item.place.id) {
@@ -182,9 +203,62 @@ interface PlaceRow {
               </div>
             </article>
           }
+          <!-- Chỗ chơi đã lưu (sau các quán) -->
+          @for (row of visibleSpots(); track row.spot.id) {
+            <article
+              class="flex h-[var(--row-h,420px)] cursor-pointer flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)] transition hover:border-brand-300"
+              (click)="spotDetail.set(row.spot)"
+            >
+              <div class="relative flex min-h-0 flex-[0_1_75%] items-center justify-center overflow-hidden bg-[#EFEAFC] text-brand-500">
+                @if (row.spot.imageUrl) {
+                  <app-photo-carousel class="h-full w-full" [photos]="photosOf(row.spot)" [alt]="row.spot.name" />
+                } @else {
+                  <app-icon [name]="spotIcon(row.spot)" [size]="40" [stroke]="1.5" />
+                }
+                <span class="absolute left-3 top-3 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-brand-800">{{ spotLabel(row.spot) }}</span>
+                @if (row.distanceKm !== null) {
+                  <span class="absolute right-3 top-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">{{ distanceText(row.distanceKm) }}</span>
+                }
+              </div>
+              <div class="flex flex-[1_0_25%] flex-col justify-between gap-2 px-3.5 pb-3 pt-2.5">
+                <div class="flex min-w-0 flex-col gap-1">
+                  <h2 class="truncate text-base font-bold tracking-tight text-slate-900" [title]="row.spot.name">{{ row.spot.name }}</h2>
+                  <span class="truncate text-[13px] text-slate-500">{{ row.spot.address || 'Chưa có địa chỉ' }}</span>
+                </div>
+                <div class="grid grid-cols-3 gap-1.5" (click)="$event.stopPropagation()">
+                  <a [href]="spotDirections(row.spot)" target="_blank" rel="noopener" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50"><app-icon name="navigate" [size]="14" />Chỉ đường</a>
+                  <button type="button" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50" (click)="spotDetail.set(row.spot)"><app-icon name="eye" [size]="14" />Chi tiết</button>
+                  <button type="button" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50" title="Bỏ khỏi My place" (click)="pendingRemoveSpot.set(row.spot)">
+                    <app-icon name="trash" [size]="14" />Bỏ
+                  </button>
+                </div>
+              </div>
+            </article>
+          }
         </div>
       }
     </div>
+
+    @if (spotDetail(); as d) {
+      <app-spot-detail-dialog
+        [spot]="d"
+        [saved]="true"
+        (closed)="spotDetail.set(null)"
+        (plan)="spotDetail.set(null); planTarget.set({ kind: 'spot', refId: $event.id, name: $event.name, district: $event.district })"
+      />
+    }
+    @if (planTarget(); as t) {
+      <app-add-to-plan-dialog [kind]="t.kind" [refId]="t.refId" [name]="t.name" [district]="t.district" (closed)="planTarget.set(null)" />
+    }
+    @if (pendingRemoveSpot(); as target) {
+      <app-confirm-dialog
+        title="Bỏ khỏi My place?"
+        [message]="'Bỏ &quot;' + target.name + '&quot; khỏi My place. Có thể lưu lại từ Tìm chỗ chơi.'"
+        confirmLabel="Bỏ khỏi My place"
+        (confirm)="confirmRemoveSpot()"
+        (cancel)="pendingRemoveSpot.set(null)"
+      />
+    }
 
     <!-- Chi tiết quán -->
     @if (detailing(); as row) {
@@ -224,7 +298,7 @@ export class PlaceListComponent implements OnInit {
   protected readonly typeFilters = TYPE_FILTERS;
   protected readonly typeLabels = TYPE_LABELS;
   protected readonly typeIcons = TYPE_ICONS;
-  protected readonly type = signal<PlaceType | ''>('');
+  protected readonly type = signal<MyPlaceFilter>('');
 
   protected readonly priceRanges = PRICE_RANGES;
   protected readonly sortOptions: { key: SortKey; label: string }[] = [
@@ -246,7 +320,13 @@ export class PlaceListComponent implements OnInit {
   protected readonly pendingRemove = signal<Place | null>(null);
 
   protected readonly all = this.placeService.items;
-  protected readonly hasAny = computed(() => this.all().length > 0);
+  private readonly savedSpotService = inject(SavedSpotService);
+  /** Chỗ chơi đã lưu */
+  protected readonly savedSpots = this.savedSpotService.items;
+  protected readonly spotDetail = signal<SpotItem | null>(null);
+  protected readonly pendingRemoveSpot = signal<SpotItem | null>(null);
+  protected readonly planTarget = signal<{ kind: StopKind; refId: string; name: string; district: string } | null>(null);
+  protected readonly hasAny = computed(() => this.all().length + this.savedSpots().length > 0);
 
   /** Quán hợp từ khoá và khoảng giá (chưa lọc loại): số trên chip đếm từ đây */
   private readonly matching = computed(() => {
@@ -259,9 +339,44 @@ export class PlaceListComponent implements OnInit {
     });
   });
 
+  /** Chỗ chơi đã lưu hợp từ khoá và khoảng giá */
+  private readonly spotMatching = computed(() => {
+    const keyword = this.search().trim().toLowerCase();
+    const priceFilter = this.price() as PriceRange | '';
+    return this.savedSpots().filter((s) => {
+      if (priceFilter) {
+        const [min, max] = PRICE_LIMITS[priceFilter];
+        if (s.priceFrom < min || s.priceFrom >= max) return false;
+      }
+      if (!keyword) return true;
+      return [s.name, s.address, s.description].join(' ').toLowerCase().includes(keyword);
+    });
+  });
+
+  protected readonly visibleSpots = computed<SpotRow[]>(() => {
+    const type = this.type();
+    if (type && type !== 'spot') return [];
+    const origin = this.userLocation();
+    const rows = this.spotMatching().map((spot) => ({
+      spot,
+      distanceKm: origin && spot.lat !== null && spot.lng !== null ? haversineKm(origin, { lat: spot.lat, lng: spot.lng }) : null,
+    }));
+    return rows.sort((a, b) => {
+      switch (this.sortKey()) {
+        case 'price':
+          return a.spot.priceFrom - b.spot.priceFrom;
+        case 'distance':
+          return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
+        default:
+          return a.spot.name.localeCompare(b.spot.name, 'vi');
+      }
+    });
+  });
+
   protected readonly counts = computed(() => {
     const list = this.matching();
-    const out: Record<'all' | PlaceType, number> = { all: list.length, cafe: 0, bar: 0, restaurant: 0 };
+    const spots = this.spotMatching().length;
+    const out: Record<'all' | Exclude<MyPlaceFilter, ''>, number> = { all: list.length + spots, cafe: 0, bar: 0, restaurant: 0, spot: spots };
     for (const p of list) out[p.type]++;
     return out;
   });
@@ -272,6 +387,7 @@ export class PlaceListComponent implements OnInit {
 
     const rows = this.matching()
       .filter((p) => !type || p.type === type)
+      .filter(() => type !== 'spot')
       .map((place) => ({
         place,
         distanceKm:
@@ -299,11 +415,11 @@ export class PlaceListComponent implements OnInit {
 
   ngOnInit(): void {
     const t = this.route.snapshot.queryParamMap.get('type');
-    this.type.set(PLACE_TYPES.includes(t as PlaceType) ? (t as PlaceType) : '');
+    this.type.set(PLACE_TYPES.includes(t as PlaceType) || t === 'spot' ? (t as MyPlaceFilter) : '');
   }
 
   /** Đổi loại và ghi lên URL (quay lại / chia sẻ link giữ đúng tab) */
-  protected pickType(type: PlaceType | ''): void {
+  protected pickType(type: MyPlaceFilter): void {
     this.type.set(type);
     void this.router.navigate([], { queryParams: { type: type || null }, replaceUrl: true });
   }
@@ -323,6 +439,26 @@ export class PlaceListComponent implements OnInit {
 
   protected directions(p: Place): string {
     return directionsUrl(p.lat, p.lng, `${p.name} ${p.address}`);
+  }
+
+  protected emptyIcon(): IconName {
+    const t = this.type();
+    return t === 'spot' ? 'gate' : t ? this.typeIcons[t] : 'bookmark';
+  }
+
+  protected readonly spotIcon = (s: SpotItem) => spotCategory(s.category).icon;
+  protected readonly spotLabel = (s: SpotItem) => spotCategory(s.category).label;
+
+  protected spotDirections(s: SpotItem): string {
+    return directionsUrl(s.lat, s.lng, `${s.name} ${s.address}`);
+  }
+
+  protected async confirmRemoveSpot(): Promise<void> {
+    const target = this.pendingRemoveSpot();
+    this.pendingRemoveSpot.set(null);
+    if (!target) return;
+    await this.savedSpotService.remove(target.id);
+    this.toast.success(`Đã bỏ "${target.name}" khỏi My place.`);
   }
 
   protected async confirmRemove(): Promise<void> {

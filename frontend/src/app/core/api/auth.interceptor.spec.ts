@@ -38,7 +38,7 @@ describe('authInterceptor', () => {
     req.flush({ accessToken: token, expiresIn: 900, user: USER });
     // login() tải dữ liệu ngay sau đó
     await tick();
-    for (const url of ['/api/v1/places', '/api/v1/girlfriends', '/api/v1/place-links']) {
+    for (const url of ['/api/v1/places', '/api/v1/girlfriends', '/api/v1/place-links', '/api/v1/me/spots']) {
       backend.expectOne(url).flush([]);
     }
     await pending;

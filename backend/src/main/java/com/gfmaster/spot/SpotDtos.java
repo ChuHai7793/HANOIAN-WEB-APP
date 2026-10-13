@@ -87,7 +87,9 @@ public final class SpotDtos {
       String vibesSource,
       Long version,
       Instant createdAt,
-      Instant updatedAt) {}
+      Instant updatedAt,
+      /** Người đang xem đã lưu vào My place chưa (false ở kết quả thêm / sửa của admin) */
+      boolean inMyPlace) {}
 
   public record SpotPage(List<SpotItem> items, long total, int page, int size) {}
 }

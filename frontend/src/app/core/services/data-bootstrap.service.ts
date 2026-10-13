@@ -2,6 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { PlaceService } from './place.service';
 import { GirlfriendService } from './girlfriend.service';
 import { PlaceLinkService } from './place-link.service';
+import { SavedSpotService } from './saved-spot.service';
 
 export type BootstrapStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -14,6 +15,7 @@ export class DataBootstrapService {
   private readonly places = inject(PlaceService);
   private readonly girlfriends = inject(GirlfriendService);
   private readonly links = inject(PlaceLinkService);
+  private readonly savedSpots = inject(SavedSpotService);
 
   readonly status = signal<BootstrapStatus>('idle');
 
@@ -21,7 +23,7 @@ export class DataBootstrapService {
   async loadAll(): Promise<void> {
     this.status.set('loading');
     try {
-      await Promise.all([this.places.load(), this.girlfriends.load(), this.links.load()]);
+      await Promise.all([this.places.load(), this.girlfriends.load(), this.links.load(), this.savedSpots.load()]);
       this.status.set('ready');
     } catch {
       this.status.set('error');
@@ -33,6 +35,7 @@ export class DataBootstrapService {
     this.places.clear();
     this.girlfriends.clear();
     this.links.clear();
+    this.savedSpots.clear();
     this.status.set('idle');
   }
 }

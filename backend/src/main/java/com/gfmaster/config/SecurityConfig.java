@@ -82,6 +82,10 @@ public class SecurityConfig {
                     .authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/places/*")
                     .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/spots/*/my-place")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/spots/*/my-place")
+                    .authenticated()
                     // "Tìm đối tượng": mỗi người quẹt, match bằng hồ sơ của chính mình
                     .requestMatchers("/api/v1/dating/**")
                     .authenticated()

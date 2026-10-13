@@ -25,6 +25,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /** "Tìm chỗ chơi": admin thêm/sửa/xoá; mọi người tìm, lọc theo nhóm, khu vực, giá, trong nhà, giờ mở cửa. */
 @Service
@@ -36,9 +40,12 @@ public class SpotService {
   private final DateSpotRepository spots;
   private final ImageUrls imageUrls;
 
-  public SpotService(DateSpotRepository spots, ImageUrls imageUrls) {
+  private final NamedParameterJdbcTemplate jdbc;
+
+  public SpotService(DateSpotRepository spots, ImageUrls imageUrls, NamedParameterJdbcTemplate jdbc) {
     this.spots = spots;
     this.imageUrls = imageUrls;
+    this.jdbc = jdbc;
   }
 
   /**
@@ -47,6 +54,7 @@ public class SpotService {
    */
   @Transactional(readOnly = true)
   public SpotPage search(
+      UUID userId,
       String q,
       SpotCategory category,
       CatalogDistrict district,
@@ -60,7 +68,8 @@ public class SpotService {
         spots.findAll(
             filter(q, category, district, maxPrice, indoor, openAt),
             PageRequest.of(Math.max(page, 0), pageSize, Sort.by("name").and(Sort.by("id"))));
-    List<SpotItem> items = result.getContent().stream().map(this::toItem).toList();
+    Set<UUID> saved = savedAmong(userId, result.getContent().stream().map(DateSpot::getId).toList());
+    List<SpotItem> items = result.getContent().stream().map(s -> toItem(s, saved.contains(s.getId()))).toList();
     return new SpotPage(items, result.getTotalElements(), result.getNumber(), pageSize);
   }
 
@@ -80,17 +89,58 @@ public class SpotService {
     DateSpot s = new DateSpot();
     apply(req, s);
     applyVibes(req, s, true);
-    return toItem(spots.saveAndFlush(s));
+    return toItem(spots.saveAndFlush(s), false);
   }
 
   public SpotItem update(UUID id, SpotRequest req) {
     DateSpot s = spots.findById(id).orElseThrow(ApiException::notFound);
     if (!Objects.equals(s.getVersion(), req.version())) {
-      throw new ApiException(ErrorCode.VERSION_CONFLICT).with("current", toItem(s));
+      throw new ApiException(ErrorCode.VERSION_CONFLICT).with("current", toItem(s, false));
     }
     apply(req, s);
     applyVibes(req, s, false);
-    return toItem(spots.saveAndFlush(s));
+    return toItem(spots.saveAndFlush(s), false);
+  }
+
+  // ---- My place: lưu / bỏ chỗ chơi (mỗi người một danh sách) ----
+
+  /** Lưu vào My place; đã lưu rồi thì 409 ALREADY_IN_MY_PLACE. */
+  public SpotItem save(UUID userId, UUID id) {
+    DateSpot s = spots.findById(id).orElseThrow(ApiException::notFound);
+    int inserted =
+        jdbc.update(
+            "INSERT INTO saved_spots (user_id, spot_id, created_at) VALUES (:user, :spot, now()) ON CONFLICT DO NOTHING",
+            Map.of("user", userId, "spot", id));
+    if (inserted == 0) throw new ApiException(ErrorCode.ALREADY_IN_MY_PLACE);
+    return toItem(s, true);
+  }
+
+  public void unsave(UUID userId, UUID id) {
+    int removed =
+        jdbc.update("DELETE FROM saved_spots WHERE user_id = :user AND spot_id = :spot", Map.of("user", userId, "spot", id));
+    if (removed == 0) throw ApiException.notFound();
+  }
+
+  /** Chỗ chơi đã lưu, mới lưu trước. */
+  @Transactional(readOnly = true)
+  public List<SpotItem> saved(UUID userId) {
+    List<UUID> ids =
+        jdbc.queryForList(
+            "SELECT spot_id FROM saved_spots WHERE user_id = :user ORDER BY created_at DESC, spot_id",
+            Map.of("user", userId),
+            UUID.class);
+    Map<UUID, DateSpot> byId = new HashMap<>();
+    spots.findAllById(ids).forEach(s -> byId.put(s.getId(), s));
+    return ids.stream().map(byId::get).filter(Objects::nonNull).map(s -> toItem(s, true)).toList();
+  }
+
+  private Set<UUID> savedAmong(UUID userId, List<UUID> ids) {
+    if (userId == null || ids.isEmpty()) return Set.of();
+    return new HashSet<>(
+        jdbc.queryForList(
+            "SELECT spot_id FROM saved_spots WHERE user_id = :user AND spot_id IN (:ids)",
+            Map.of("user", userId, "ids", ids),
+            UUID.class));
   }
 
   public void delete(UUID id) {
@@ -192,7 +242,7 @@ public class SpotService {
     return cb.function("date_part", Double.class, cb.literal("epoch"), time);
   }
 
-  private SpotItem toItem(DateSpot s) {
+  private SpotItem toItem(DateSpot s, boolean inMyPlace) {
     return new SpotItem(
         s.getId(),
         s.getCategory(),
@@ -219,6 +269,7 @@ public class SpotService {
         s.getVibesSource().code(),
         s.getVersion(),
         s.getCreatedAt(),
-        s.getUpdatedAt());
+        s.getUpdatedAt(),
+        inMyPlace);
   }
 }

@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.gfmaster.common.security.CurrentUser;
+import java.util.List;
 
 /**
  * "Tìm chỗ chơi". Mọi người đã đăng nhập: xem ({@code GET /spots}). Chỉ admin: thêm/sửa/xoá
@@ -35,6 +37,7 @@ public class SpotController {
 
   @GetMapping("/api/v1/spots")
   public SpotPage search(
+      @CurrentUser UUID userId,
       @RequestParam(required = false) String q,
       @RequestParam(required = false) SpotCategory category,
       @RequestParam(required = false) CatalogDistrict district,
@@ -43,7 +46,7 @@ public class SpotController {
       @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime openAt,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "30") int size) {
-    return spots.search(q, category, district, maxPrice, indoor, openAt, page, size);
+    return spots.search(userId, q, category, district, maxPrice, indoor, openAt, page, size);
   }
 
   @GetMapping("/api/v1/spots/counts")
@@ -54,6 +57,24 @@ public class SpotController {
       @RequestParam(required = false) Boolean indoor,
       @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime openAt) {
     return spots.counts(q, district, maxPrice, indoor, openAt);
+  }
+
+  /** My place: chỗ chơi đã lưu của người đang đăng nhập */
+  @GetMapping("/api/v1/me/spots")
+  public List<SpotItem> saved(@CurrentUser UUID userId) {
+    return spots.saved(userId);
+  }
+
+  /** "Lưu vào My place" (mọi người, kể cả guest) */
+  @PostMapping("/api/v1/spots/{id}/my-place")
+  public ResponseEntity<SpotItem> save(@CurrentUser UUID userId, @PathVariable UUID id) {
+    return ResponseEntity.status(HttpStatus.CREATED).body(spots.save(userId, id));
+  }
+
+  @DeleteMapping("/api/v1/spots/{id}/my-place")
+  public ResponseEntity<Void> unsave(@CurrentUser UUID userId, @PathVariable UUID id) {
+    spots.unsave(userId, id);
+    return ResponseEntity.noContent().build();
   }
 
   @PostMapping("/api/v1/admin/spots")

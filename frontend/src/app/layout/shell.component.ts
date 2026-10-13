@@ -7,6 +7,7 @@ import { DataBootstrapService } from '../core/services/data-bootstrap.service';
 import { AuthService } from '../core/auth/auth.service';
 import { LegacyImportDialogComponent } from '../shared/ui/legacy-import-dialog.component';
 import { IconComponent, IconName } from '../shared/ui/icon.component';
+import { SavedSpotService } from '../core/services/saved-spot.service';
 
 interface NavSection {
   /** Rỗng: không có tiêu đề nhóm */
@@ -177,6 +178,8 @@ interface NavItem {
 export class ShellComponent {
   private readonly places = inject(PlaceService);
   private readonly girlfriends = inject(GirlfriendService);
+  /** Chỗ chơi đã lưu: tính chung vào số của My place */
+  private readonly savedSpots = inject(SavedSpotService);
   /** Mở kết nối realtime khi vào app và giữ số tin chưa đọc cho menu */
   private readonly inbox = inject(MatchInboxService);
 
@@ -198,7 +201,7 @@ export class ShellComponent {
       items: [
         { path: '/explore', label: 'Khám phá quán', icon: 'compass' },
         { path: '/spots', label: 'Tìm chỗ chơi', icon: 'gate' },
-        { path: '/places', label: 'My place', icon: 'bookmark', badge: () => this.places.items().length },
+        { path: '/places', label: 'My place', icon: 'bookmark', badge: () => this.places.items().length + this.savedSpots.count() },
         { path: '/dating', label: 'Tìm đối tượng', icon: 'heart', alert: () => this.inbox.unread() },
       ],
     },
