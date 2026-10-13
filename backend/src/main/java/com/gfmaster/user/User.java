@@ -36,12 +36,15 @@ public class User extends BaseEntity {
   @Column(nullable = false, length = 10)
   private Role role = Role.ADMIN;
 
-  /** Chỉ với GUEST: admin có dữ liệu mà guest được xem. */
+  /**
+   * Admin có dữ liệu mà user này làm việc cùng: GUEST chỉ xem, ADMIN phụ (subadmin, V20) được ghi như admin.
+   * NULL: chủ dữ liệu của chính mình.
+   */
   @Column(name = "owner_id")
   private UUID ownerId;
 
-  /** Dữ liệu (quán, người yêu...) mà user này làm việc cùng: của chính mình, hoặc của admin nếu là guest. */
+  /** Dữ liệu (quán, người yêu...) mà user này làm việc cùng: của chính mình, hoặc của admin được gắn vào. */
   public UUID dataOwnerId() {
-    return role == Role.GUEST && ownerId != null ? ownerId : getId();
+    return ownerId != null ? ownerId : getId();
   }
 }

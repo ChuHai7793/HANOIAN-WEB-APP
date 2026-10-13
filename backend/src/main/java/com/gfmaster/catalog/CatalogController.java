@@ -4,7 +4,7 @@ import com.gfmaster.catalog.CatalogDtos.CatalogItem;
 import com.gfmaster.catalog.CatalogDtos.CatalogPage;
 import com.gfmaster.catalog.CatalogDtos.CatalogRequest;
 import com.gfmaster.catalog.CatalogDtos.DistrictOption;
-import com.gfmaster.common.security.CurrentUser;
+import com.gfmaster.common.security.MyPlaceOwner;
 import com.gfmaster.place.PlaceType;
 import com.gfmaster.place.dto.PlaceResponse;
 import jakarta.validation.Valid;
@@ -39,7 +39,7 @@ public class CatalogController {
   /** Công khai: khách xem được (không có "đã lưu" / "người hợp gu") */
   @GetMapping("/api/v1/catalog")
   public CatalogPage search(
-      @CurrentUser(required = false) UUID userId,
+      @MyPlaceOwner(required = false) UUID userId,
       @RequestParam(required = false) String q,
       @RequestParam(required = false) PlaceType type,
       @RequestParam(required = false) CatalogDistrict district,
@@ -61,7 +61,7 @@ public class CatalogController {
   }
 
   @PostMapping("/api/v1/catalog/{id}/my-place")
-  public ResponseEntity<PlaceResponse> addToMyPlace(@CurrentUser UUID userId, @PathVariable UUID id) {
+  public ResponseEntity<PlaceResponse> addToMyPlace(@MyPlaceOwner UUID userId, @PathVariable UUID id) {
     PlaceResponse place = catalog.addToMyPlace(userId, id);
     return ResponseEntity.created(URI.create("/api/v1/places/" + place.id())).body(place);
   }

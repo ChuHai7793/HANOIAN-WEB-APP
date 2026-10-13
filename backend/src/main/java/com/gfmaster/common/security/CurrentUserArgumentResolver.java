@@ -21,6 +21,7 @@ import org.springframework.web.method.support.ModelAndViewContainer;
  *   <li>{@link CurrentUser}: claim {@code sub}, người đang đăng nhập (dùng cho /auth/me, logout-all).
  *   <li>{@link DataOwner}: claim {@code own}, chủ dữ liệu (admin); token cũ không có claim này thì
  *       dùng {@code sub}.
+ *   <li>{@link MyPlaceOwner}: guest dùng {@code sub} (My place riêng), admin / subadmin dùng {@code own}.
  * </ul>
  */
 @Component
@@ -28,7 +29,9 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
 
   @Override
   public boolean supportsParameter(MethodParameter parameter) {
-    return (parameter.hasParameterAnnotation(CurrentUser.class) || parameter.hasParameterAnnotation(DataOwner.class))
+    return (parameter.hasParameterAnnotation(CurrentUser.class)
+            || parameter.hasParameterAnnotation(DataOwner.class)
+            || parameter.hasParameterAnnotation(MyPlaceOwner.class))
         && UUID.class.equals(parameter.getParameterType());
   }
 
@@ -38,9 +41,18 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
       ModelAndViewContainer mavContainer,
       NativeWebRequest request,
       WebDataBinderFactory binderFactory) {
-    UUID userId = parameter.hasParameterAnnotation(DataOwner.class) ? dataOwnerId() : currentUserId();
-    CurrentUser current = parameter.getParameterAnnotation(CurrentUser.class);
-    if (userId == null && (current == null || current.required())) {
+    MyPlaceOwner myPlace = parameter.getParameterAnnotation(MyPlaceOwner.class);
+    UUID userId;
+    boolean required;
+    if (myPlace != null) {
+      userId = isGuest() ? currentUserId() : dataOwnerId();
+      required = myPlace.required();
+    } else {
+      userId = parameter.hasParameterAnnotation(DataOwner.class) ? dataOwnerId() : currentUserId();
+      CurrentUser current = parameter.getParameterAnnotation(CurrentUser.class);
+      required = current == null || current.required();
+    }
+    if (userId == null && required) {
       throw new ApiException(ErrorCode.UNAUTHORIZED);
     }
     return userId;
@@ -59,6 +71,13 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
       }
     }
     return null;
+  }
+
+  private static boolean isGuest() {
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    return auth != null
+        && auth.getPrincipal() instanceof Jwt jwt
+        && "GUEST".equals(jwt.getClaimAsString(JwtService.ROLE_CLAIM));
   }
 
   /** null nếu request chưa đăng nhập. */

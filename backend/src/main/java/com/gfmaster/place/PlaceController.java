@@ -1,7 +1,6 @@
 package com.gfmaster.place;
 
-import com.gfmaster.common.security.CurrentUser;
-import com.gfmaster.common.security.DataOwner;
+import com.gfmaster.common.security.MyPlaceOwner;
 import com.gfmaster.common.web.PatchReader;
 import com.gfmaster.place.dto.PlacePatch;
 import com.gfmaster.place.dto.PlaceRequest;
@@ -37,31 +36,31 @@ public class PlaceController {
   /** My place: quán của chính người đăng nhập (guest cũng có My place riêng, không xem của admin). */
   @GetMapping
   public List<PlaceResponse> list(
-      @CurrentUser UUID userId, @RequestParam(required = false) PlaceType type) {
+      @MyPlaceOwner UUID userId, @RequestParam(required = false) PlaceType type) {
     return service.list(userId, type);
   }
 
   @GetMapping("/{id}")
-  public PlaceResponse get(@CurrentUser UUID userId, @PathVariable UUID id) {
+  public PlaceResponse get(@MyPlaceOwner UUID userId, @PathVariable UUID id) {
     return service.get(userId, id);
   }
 
   @PostMapping
   public ResponseEntity<PlaceResponse> create(
-      @DataOwner UUID userId, @Valid @RequestBody PlaceRequest request) {
+      @MyPlaceOwner UUID userId, @Valid @RequestBody PlaceRequest request) {
     PlaceResponse created = service.create(userId, request);
     return ResponseEntity.created(URI.create("/api/v1/places/" + created.id())).body(created);
   }
 
   @PatchMapping("/{id}")
   public PlaceResponse update(
-      @DataOwner UUID userId, @PathVariable UUID id, @RequestBody JsonNode body) {
+      @MyPlaceOwner UUID userId, @PathVariable UUID id, @RequestBody JsonNode body) {
     return service.update(userId, id, patchReader.read(body, PlacePatch.class));
   }
 
   /** "Bỏ khỏi My place": mỗi người chỉ xoá được quán của chính mình (guest cũng được). */
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> delete(@CurrentUser UUID userId, @PathVariable UUID id) {
+  public ResponseEntity<Void> delete(@MyPlaceOwner UUID userId, @PathVariable UUID id) {
     service.delete(userId, id);
     return ResponseEntity.noContent().build();
   }

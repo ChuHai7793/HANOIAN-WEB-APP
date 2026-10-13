@@ -1,9 +1,9 @@
 package com.gfmaster.spot;
 
 import com.gfmaster.catalog.CatalogDistrict;
+import com.gfmaster.common.security.MyPlaceOwner;
 import com.gfmaster.spot.SpotDtos.SpotItem;
 import com.gfmaster.spot.SpotDtos.SpotPage;
-import com.gfmaster.spot.SpotDtos.SpotRequest;
 import jakarta.validation.Valid;
 import java.time.LocalTime;
 import java.util.Map;
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import com.gfmaster.common.security.CurrentUser;
+import com.gfmaster.spot.SpotDtos.SpotRequest;
 import java.util.List;
 
 /**
@@ -38,7 +38,7 @@ public class SpotController {
   /** Công khai: khách xem được (inMyPlace luôn false) */
   @GetMapping("/api/v1/spots")
   public SpotPage search(
-      @CurrentUser(required = false) UUID userId,
+      @MyPlaceOwner(required = false) UUID userId,
       @RequestParam(required = false) String q,
       @RequestParam(required = false) SpotCategory category,
       @RequestParam(required = false) CatalogDistrict district,
@@ -62,18 +62,18 @@ public class SpotController {
 
   /** My place: chỗ chơi đã lưu của người đang đăng nhập */
   @GetMapping("/api/v1/me/spots")
-  public List<SpotItem> saved(@CurrentUser UUID userId) {
+  public List<SpotItem> saved(@MyPlaceOwner UUID userId) {
     return spots.saved(userId);
   }
 
   /** "Lưu vào My place" (mọi người, kể cả guest) */
   @PostMapping("/api/v1/spots/{id}/my-place")
-  public ResponseEntity<SpotItem> save(@CurrentUser UUID userId, @PathVariable UUID id) {
+  public ResponseEntity<SpotItem> save(@MyPlaceOwner UUID userId, @PathVariable UUID id) {
     return ResponseEntity.status(HttpStatus.CREATED).body(spots.save(userId, id));
   }
 
   @DeleteMapping("/api/v1/spots/{id}/my-place")
-  public ResponseEntity<Void> unsave(@CurrentUser UUID userId, @PathVariable UUID id) {
+  public ResponseEntity<Void> unsave(@MyPlaceOwner UUID userId, @PathVariable UUID id) {
     spots.unsave(userId, id);
     return ResponseEntity.noContent().build();
   }

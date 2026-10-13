@@ -2,6 +2,7 @@
 -- Idempotent: xoá các user mẫu (cascade) rồi nạp lại. Đăng nhập (tên hoặc email):
 --   admin / admin@12345  (admin@gfmaster.local): chủ dữ liệu, được thêm/sửa/xoá
 --   guest / guest@12345  (guest@gfmaster.local): chỉ xem dữ liệu của admin
+--   subadmin / admin@12345  (subadmin@gfmaster.local): quyền như admin, dùng chung dữ liệu của admin (V20)
 -- Flyway chạy lại file này mỗi khi nội dung thay đổi, nên sửa file sẽ reset dữ liệu của các user mẫu.
 --
 -- Quán là quán thật ở Hà Nội, ảnh trong backend/seed-assets/ (SeedAssetLoader nạp vào /uploads/seed/).
@@ -22,19 +23,22 @@ WHERE id::text NOT LIKE '40000000-0000-4000-8000-%'
 
 -- demo@gfmaster.local: tài khoản mẫu cũ (trước khi có phân quyền)
 DELETE FROM users
-WHERE email IN ('demo@gfmaster.local', 'admin@gfmaster.local', 'guest@gfmaster.local')
-   OR username IN ('admin', 'guest');
+WHERE email IN ('demo@gfmaster.local', 'admin@gfmaster.local', 'guest@gfmaster.local', 'subadmin@gfmaster.local')
+   OR username IN ('admin', 'guest', 'subadmin');
 
 -- Các giá trị cố định dùng trong file:
 --   00000000-0000-4000-8000-000000000001 = admin: mọi dữ liệu mẫu thuộc user này
 --   00000000-0000-4000-8000-000000000002 = guest
+--   00000000-0000-4000-8000-000000000003 = subadmin
 --   2026-01-01 00:00:00 = created_at / updated_at của mọi dòng
 
 INSERT INTO users (id, email, username, password_hash, display_name, role, owner_id, created_at, updated_at, version) VALUES
   ('00000000-0000-4000-8000-000000000001', 'admin@gfmaster.local', 'admin', '$2a$12$.vUBP6k5QkgBneyHn8x8jeJ9PX449AXNm74pc.ao9E3DNdOyKjmUi',
    'Admin', 'ADMIN', NULL, '2026-01-01 00:00:00', '2026-01-01 00:00:00', 0),
   ('00000000-0000-4000-8000-000000000002', 'guest@gfmaster.local', 'guest', '$2a$12$ZZQP9FuUhJLki78RfmtTD.z3QXtnttVA9mBBBUGvEmbsAtbLVq7Gy',
-   'Khách', 'GUEST', '00000000-0000-4000-8000-000000000001', '2026-01-01 00:00:00', '2026-01-01 00:00:00', 0);
+   'Khách', 'GUEST', '00000000-0000-4000-8000-000000000001', '2026-01-01 00:00:00', '2026-01-01 00:00:00', 0),
+  ('00000000-0000-4000-8000-000000000003', 'subadmin@gfmaster.local', 'subadmin', '$2a$12$.vUBP6k5QkgBneyHn8x8jeJ9PX449AXNm74pc.ao9E3DNdOyKjmUi',
+   'Subadmin', 'ADMIN', '00000000-0000-4000-8000-000000000001', '2026-01-01 00:00:00', '2026-01-01 00:00:00', 0);
 
 -- Xoá admin mẫu ở trên làm owner_id của các guest tự đăng ký thành NULL (ON DELETE SET NULL): gắn lại
 UPDATE users SET owner_id = '00000000-0000-4000-8000-000000000001' WHERE role = 'GUEST' AND owner_id IS NULL;
