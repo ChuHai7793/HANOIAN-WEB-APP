@@ -39,3 +39,6 @@ Thumbs.db
 
 # Tài liệu thiết kế, ảnh chụp màn hình… chỉ giữ trên máy
 /ignore/
+
+# Thông tin bí mật (khoá, mật khẩu…): mọi thư mục tên SECRET ở bất kỳ cấp nào, không phân biệt hoa thường
+[Ss][Ee][Cc][Rr][Ee][Tt]/
