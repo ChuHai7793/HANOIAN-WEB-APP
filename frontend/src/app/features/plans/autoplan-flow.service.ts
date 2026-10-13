@@ -45,10 +45,10 @@ export class AutoplanFlowService {
     this.setDraft({ request, plan, notes });
   }
 
-  /** Lưu bản thử thành plan của mình (khách thì mời đăng ký, xong quay lại /autoplan?save=1). */
+  /** Lưu bản thử thành plan của mình (khách: hiện popup đăng nhập; đăng ký thì quay lại /autoplan?save=1). */
   async saveDraft(): Promise<void> {
     const d = this.draft();
-    if (!d || !this.gate.check('lưu plan này', '/autoplan?save=1')) return;
+    if (!d || !this.gate.check('lưu plan này', () => this.saveDraft(), '/autoplan?save=1')) return;
     const p = d.plan;
     const created = await this.api.create({
       title: p.title,

@@ -450,11 +450,11 @@ export class ExplorePage implements OnInit {
   /** Vào đúng nhóm theo loại của quán; thông báo "Đã được add vào Quán cafe/bar/ăn". */
   /** Khách: mời đăng ký trước khi lập plan */
   protected addToPlan(t: { kind: StopKind; refId: string; name: string; district: string }): void {
-    if (this.gate.check('lập plan hẹn hò')) this.planTarget.set(t);
+    if (this.gate.check('lập plan hẹn hò', () => this.planTarget.set(t))) this.planTarget.set(t);
   }
 
   protected async addToMyPlace(item: CatalogItem): Promise<void> {
-    if (!this.gate.check('lưu quán vào My place')) return;
+    if (!this.gate.check('lưu quán vào My place', () => this.addToMyPlace(item))) return;
     this.adding.set(item.id);
     try {
       await this.catalog.addToMyPlace(item.id);

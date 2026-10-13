@@ -109,7 +109,7 @@ export class PublicPlanPage implements OnInit {
   }
 
   protected async copy(): Promise<void> {
-    if (this.busy() || !this.gate.check('lưu plan này', `/p/${this.token()}?copy=1`)) return;
+    if (this.busy() || !this.gate.check('lưu plan này', () => this.copy(), `/p/${this.token()}?copy=1`)) return;
     this.busy.set(true);
     try {
       const copy = await this.api.copyPublic(this.token());

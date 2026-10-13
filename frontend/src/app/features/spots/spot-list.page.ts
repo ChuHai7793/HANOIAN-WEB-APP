@@ -369,11 +369,11 @@ export class SpotListPage implements OnInit {
 
   /** Khách: mời đăng ký trước khi lập plan */
   protected addToPlan(t: { kind: StopKind; refId: string; name: string; district: string }): void {
-    if (this.gate.check('lập plan hẹn hò')) this.planTarget.set(t);
+    if (this.gate.check('lập plan hẹn hò', () => this.planTarget.set(t))) this.planTarget.set(t);
   }
 
   protected async saveSpot(item: SpotItem): Promise<void> {
-    if (!this.gate.check('lưu chỗ chơi vào My place')) return;
+    if (!this.gate.check('lưu chỗ chơi vào My place', () => this.saveSpot(item))) return;
     if (this.savingSpot()) return;
     this.savingSpot.set(item.id);
     try {

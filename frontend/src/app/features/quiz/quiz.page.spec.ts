@@ -3,7 +3,6 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { LoginGate } from '../../core/auth/login-gate.service';
-import { ToastService } from '../../core/services/toast.service';
 import { QUESTIONS, quizResult } from './quiz.page';
 
 describe('quizResult', () => {
@@ -26,27 +25,28 @@ describe('quizResult', () => {
 describe('LoginGate', () => {
   function setup(loggedIn: boolean) {
     const navigate = vi.fn().mockResolvedValue(true);
-    const show = vi.fn();
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthService, useValue: { isLoggedIn: signal(loggedIn) } },
         { provide: Router, useValue: { url: '/explore', navigate } },
-        { provide: ToastService, useValue: { show } },
       ],
     });
-    return { gate: TestBed.inject(LoginGate), navigate, show };
+    return { gate: TestBed.inject(LoginGate), navigate };
   }
 
   it('đã đăng nhập thì cho làm tiếp', () => {
-    const { gate, navigate } = setup(true);
+    const { gate } = setup(true);
     expect(gate.check('lưu quán')).toBe(true);
-    expect(navigate).not.toHaveBeenCalled();
+    expect(gate.prompt()).toBeNull();
   });
 
-  it('khách thì mời đăng ký và quay lại đúng trang', () => {
-    const { gate, navigate, show } = setup(false);
-    expect(gate.check('lưu quán')).toBe(false);
-    expect(show).toHaveBeenCalled();
-    expect(navigate).toHaveBeenCalledWith(['/register'], { queryParams: { returnUrl: '/explore' } });
+  it('khách thì mở popup đăng nhập ngay tại trang, không chuyển trang', () => {
+    const { gate, navigate } = setup(false);
+    const resume = vi.fn();
+    expect(gate.check('lưu quán', resume)).toBe(false);
+    expect(gate.prompt()).toEqual({ action: 'lưu quán', returnUrl: '/explore', resume });
+    expect(navigate).not.toHaveBeenCalled();
+    gate.close();
+    expect(gate.prompt()).toBeNull();
   });
 });
