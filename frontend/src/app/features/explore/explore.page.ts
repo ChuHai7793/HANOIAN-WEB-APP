@@ -127,7 +127,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
               (click)="type.set(t.value); reload(false)"
             >
               <app-icon [name]="t.icon" [size]="16" />
-              {{ t.label }}@if (counts(); as n) { · {{ n[t.value || 'all'] }}}
+              {{ t.label }} · {{ counts()?.[t.value || 'all'] ?? '–' }}
             </button>
           }
         </div>

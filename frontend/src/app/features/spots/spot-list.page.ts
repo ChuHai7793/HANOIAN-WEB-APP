@@ -130,21 +130,23 @@ function nowHHmm(): string {
         <button
           type="button"
           [attr.aria-pressed]="category() === ''"
-          class="min-h-8 rounded-full border px-2 text-xs transition"
-          [class]="category() === '' ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
+          class="min-h-8 rounded-full border px-2.5 text-[13px] font-medium transition"
+          [class]="category() === '' ? 'border-brand-600 bg-brand-600 text-white' : 'border-brand-200 bg-white text-slate-700 hover:bg-brand-50'"
           (click)="category.set(''); reload(false)"
         >
-          Tất cả@if (counts(); as n) { · {{ n['all'] }}}
+          <!-- Số đếm luôn chiếm chỗ (– khi đang tải) để chip không đổi bề ngang, không nhảy dòng -->
+          Tất cả · {{ counts()?.['all'] ?? '–' }}
         </button>
         @for (c of categories; track c.value) {
           <button
             type="button"
             [attr.aria-pressed]="category() === c.value"
-            class="min-h-8 rounded-full border px-2 text-xs transition"
-            [class]="category() === c.value ? 'border-brand-600 bg-brand-600 font-semibold text-white' : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
+            class="min-h-8 rounded-full border px-2.5 text-[13px] font-medium transition"
+            [class]="category() === c.value ? 'border-brand-600 bg-brand-600 text-white' : 'border-brand-200 bg-white text-slate-700 hover:bg-brand-50'"
+            [title]="c.label"
             (click)="category.set(c.value); reload(false)"
           >
-            <span class="inline-flex items-center gap-1"><app-icon [name]="c.icon" [size]="13" />{{ c.label }}@if (counts(); as n) { · {{ n[c.value] }}}</span>
+            <span class="inline-flex items-center gap-1"><app-icon [name]="c.icon" [size]="14" />{{ c.short }} · {{ counts()?.[c.value] ?? '–' }}</span>
           </button>
         }
       </div>

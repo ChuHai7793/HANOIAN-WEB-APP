@@ -10,14 +10,15 @@ export type SpotCategory =
   | 'night_market'
   | 'sport';
 
-export const SPOT_CATEGORIES: { value: SpotCategory; icon: IconName; label: string }[] = [
-  { value: 'entertainment', icon: 'mic', label: 'Giải trí trong nhà' },
-  { value: 'workshop', icon: 'palette', label: 'Workshop' },
-  { value: 'museum', icon: 'landmark', label: 'Bảo tàng, di tích' },
-  { value: 'outdoor', icon: 'tree', label: 'Dạo chơi ngoài trời' },
-  { value: 'show', icon: 'ticket', label: 'Biểu diễn' },
-  { value: 'night_market', icon: 'moon', label: 'Chợ đêm, phố đêm' },
-  { value: 'sport', icon: 'activity', label: 'Vận động' },
+/** `short`: tên trên chip lọc (gọn để các chip vừa một dòng); `label`: tên đầy đủ ở thẻ, popup, form. */
+export const SPOT_CATEGORIES: { value: SpotCategory; icon: IconName; label: string; short: string }[] = [
+  { value: 'entertainment', icon: 'mic', label: 'Giải trí trong nhà', short: 'Giải trí' },
+  { value: 'workshop', icon: 'palette', label: 'Workshop', short: 'Workshop' },
+  { value: 'museum', icon: 'landmark', label: 'Bảo tàng, di tích', short: 'Bảo tàng' },
+  { value: 'outdoor', icon: 'tree', label: 'Dạo chơi ngoài trời', short: 'Ngoài trời' },
+  { value: 'show', icon: 'ticket', label: 'Biểu diễn', short: 'Biểu diễn' },
+  { value: 'night_market', icon: 'moon', label: 'Chợ đêm, phố đêm', short: 'Chợ đêm' },
+  { value: 'sport', icon: 'activity', label: 'Vận động', short: 'Vận động' },
 ];
 
 /**
