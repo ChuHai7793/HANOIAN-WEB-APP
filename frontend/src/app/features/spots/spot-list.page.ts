@@ -22,6 +22,8 @@ import { AddToPlanDialogComponent } from '../plans/add-to-plan-dialog.component'
 import { StopKind } from '../../core/models/plan.model';
 import { ModalComponent } from '../../shared/ui/modal.component';
 import { FitRowDirective } from '../../shared/ui/fit-row.directive';
+import { PhotoCarouselComponent } from '../../shared/ui/photo-carousel.component';
+import { photosOf } from '../../core/models/place.model';
 
 /** Lọc theo ngân sách: giá thấp nhất của chỗ chơi không quá mức này. */
 const BUDGETS: { value: number | null; label: string }[] = [
@@ -43,7 +45,7 @@ function nowHHmm(): string {
  */
 @Component({
   selector: 'app-spot-list-page',
-  imports: [FitRowDirective, ModalComponent, AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
+  imports: [PhotoCarouselComponent, FitRowDirective, ModalComponent, AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
@@ -167,7 +169,7 @@ function nowHHmm(): string {
             >
               <div class="relative flex min-h-0 flex-[0_1_75%] items-center justify-center bg-[#EFEAFC] text-brand-500">
                 @if (item.imageUrl) {
-                  <img [src]="item.imageUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
+                  <app-photo-carousel class="h-full w-full" [photos]="photosOf(item)" [alt]="item.name" />
                 } @else {
                   <app-icon [name]="cat(item).icon" [size]="44" [stroke]="1.5" />
                 }
@@ -244,7 +246,7 @@ function nowHHmm(): string {
       <app-modal [title]="d.name" [subtitle]="cat(d).label + ' · ' + d.districtLabel" width="max-w-lg" (dismiss)="detail.set(null)">
         <div class="flex flex-col gap-4">
           @if (d.imageUrl) {
-            <img [src]="d.imageUrl" alt="" class="h-52 w-full rounded-xl object-cover" />
+            <app-photo-carousel class="h-56 w-full rounded-xl" [photos]="photosOf(d)" [alt]="d.name" [lazy]="false" />
           }
           <p class="flex items-start gap-1.5 text-sm text-slate-600">
             <span class="mt-0.5 text-slate-400"><app-icon name="pin" [size]="15" /></span>{{ d.address || 'Chưa có địa chỉ' }}
@@ -302,6 +304,7 @@ function nowHHmm(): string {
   `,
 })
 export class SpotListPage implements OnInit {
+  protected readonly photosOf = photosOf;
   /** Chỗ chơi đang xem chi tiết (popup) */
   protected readonly detail = signal<SpotItem | null>(null);
   /** Đang chọn plan để thêm quán / chỗ chơi này vào */

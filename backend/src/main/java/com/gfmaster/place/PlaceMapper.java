@@ -15,6 +15,7 @@ public interface PlaceMapper {
 
   /** Ảnh lưu dạng /uploads/<key> được đổi thành URL công khai (local hoặc CDN). */
   @Mapping(target = "imageUrl", qualifiedByName = "publicUrl")
+  @Mapping(target = "photos", ignore = true)
   PlaceResponse toResponse(Place place);
 
   @Mapping(target = "id", ignore = true)

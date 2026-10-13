@@ -42,6 +42,8 @@ export interface SpotItem {
   needsBooking: boolean;
   bookingUrl: string;
   imageUrl: string;
+  /** Mọi ảnh (tối đa 6); ảnh đầu = imageUrl */
+  photos: string[];
   googleMapsUrl: string;
   lat: number | null;
   lng: number | null;

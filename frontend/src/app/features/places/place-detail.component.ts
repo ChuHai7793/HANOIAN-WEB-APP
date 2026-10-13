@@ -11,6 +11,8 @@ import { PlaceLink } from '../../core/models/place-link.model';
 import { directionsUrl, embedMapUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
 import { formatDistance } from '../../core/utils/geo';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { PhotoCarouselComponent } from '../../shared/ui/photo-carousel.component';
+import { photosOf } from '../../core/models/place.model';
 
 interface Companion {
   girlfriend: Girlfriend;
@@ -19,18 +21,14 @@ interface Companion {
 
 @Component({
   selector: 'app-place-detail',
-  imports: [RouterLink, ModalComponent, RatingStarsComponent, IconComponent],
+  imports: [PhotoCarouselComponent, RouterLink, ModalComponent, RatingStarsComponent, IconComponent],
   template: `
     <app-modal [title]="place().name" [subtitle]="place().address" width="max-w-3xl" (dismiss)="dismiss.emit()">
       <div class="space-y-5">
         <!-- Ảnh lớn: hiện trọn ảnh, cao tối đa 28rem, không cắt xén -->
         <div class="overflow-hidden rounded-xl bg-slate-100">
           @if (place().imageUrl) {
-            <img
-              [src]="place().imageUrl"
-              [alt]="place().name"
-              class="mx-auto max-h-[28rem] w-auto max-w-full object-contain"
-            />
+            <app-photo-carousel class="h-72 w-full sm:h-[28rem]" [photos]="photosOf(place())" [alt]="place().name" [lazy]="false" [contain]="true" />
           } @else {
             <div class="flex h-64 items-center justify-center bg-[#EFEAFC] text-brand-400"><app-icon [name]="icon()" [size]="56" [stroke]="1.4" />
             </div>
@@ -198,6 +196,7 @@ interface Companion {
   `,
 })
 export class PlaceDetailComponent {
+  protected readonly photosOf = photosOf;
   private readonly linkService = inject(PlaceLinkService);
   private readonly girlfriendService = inject(GirlfriendService);
   private readonly sanitizer = inject(DomSanitizer);

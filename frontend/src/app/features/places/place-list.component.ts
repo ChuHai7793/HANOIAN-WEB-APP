@@ -11,6 +11,8 @@ import { directionsUrl } from '../../core/utils/gmap-url';
 import { IconComponent, IconName } from '../../shared/ui/icon.component';
 import { formatDistance, haversineKm, LatLng } from '../../core/utils/geo';
 import { FitRowDirective } from '../../shared/ui/fit-row.directive';
+import { PhotoCarouselComponent } from '../../shared/ui/photo-carousel.component';
+import { photosOf } from '../../core/models/place.model';
 
 type SortKey = 'rating' | 'name' | 'distance' | 'price';
 
@@ -31,7 +33,7 @@ interface PlaceRow {
 
 @Component({
   selector: 'app-place-list',
-  imports: [FitRowDirective, RouterLink, PlaceDetailComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent],
+  imports: [PhotoCarouselComponent, FitRowDirective, RouterLink, PlaceDetailComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
@@ -150,14 +152,9 @@ interface PlaceRow {
               class="flex h-[var(--row-h,420px)] cursor-pointer flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)] transition hover:border-brand-300"
               (click)="detailing.set(item)"
             >
-              <button
-                type="button"
-                class="group relative flex min-h-0 flex-[0_1_75%] cursor-pointer items-center justify-center overflow-hidden bg-[#EFEAFC] text-brand-500"
-                (click)="detailing.set(item)"
-                [attr.aria-label]="'Xem chi tiết ' + item.place.name"
-              >
+              <div class="group relative flex min-h-0 flex-[0_1_75%] items-center justify-center overflow-hidden bg-[#EFEAFC] text-brand-500">
                 @if (item.place.imageUrl) {
-                  <img [src]="item.place.imageUrl" [alt]="item.place.name" class="h-full w-full object-cover transition group-hover:brightness-90" loading="lazy" />
+                  <app-photo-carousel class="h-full w-full" [photos]="photosOf(item.place)" [alt]="item.place.name" />
                 } @else {
                   <app-icon [name]="typeIcons[item.place.type]" [size]="40" [stroke]="1.5" />
                 }
@@ -169,7 +166,7 @@ interface PlaceRow {
                     {{ distanceText(item.distanceKm) }}
                   </span>
                 }
-              </button>
+              </div>
               <div class="flex flex-[1_0_25%] flex-col justify-between gap-2 px-3.5 pb-3 pt-2.5">
                 <div class="flex min-w-0 flex-col gap-1">
                   <h2 class="truncate text-base font-bold tracking-tight text-slate-900" [title]="item.place.name">{{ item.place.name }}</h2>
@@ -212,6 +209,7 @@ interface PlaceRow {
   `,
 })
 export class PlaceListComponent implements OnInit {
+  protected readonly photosOf = photosOf;
   /**
    * My place của người đang đăng nhập: mọi quán đã lưu, lọc theo loại bằng chip (Tất cả, Cafe, Bar, Quán
    * ăn) như Khám phá quán; loại đang chọn nằm trên URL (?type=cafe). Xem và "Bỏ khỏi My place"; quán được

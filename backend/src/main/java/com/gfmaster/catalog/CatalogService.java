@@ -162,7 +162,10 @@ public class CatalogService {
     c.setOpenTime(r.openTime());
     c.setCloseTime(r.closeTime());
     // Client gửi lại URL công khai (có thể là CDN) → lưu dạng /uploads/<key>
-    c.setImageUrl(r.imageUrl() == null ? "" : imageUrls.toStored(r.imageUrl()));
+    List<String> photos = VenuePhotos.toStored(r.photos(), r.imageUrl(), imageUrls);
+    c.getPhotos().clear();
+    c.getPhotos().addAll(photos);
+    c.setImageUrl(photos.isEmpty() ? "" : photos.getFirst());
     c.setNote(r.note() == null ? "" : r.note());
     c.setGoogleMapsUrl(r.googleMapsUrl() == null ? "" : r.googleMapsUrl());
     c.setLat(r.lat());
@@ -241,6 +244,7 @@ public class CatalogService {
         c.getHasWifi(),
         c.getHasParking(),
         c.getCuisine(),
+        VenuePhotos.toPublic(c.getPhotos(), c.getImageUrl(), imageUrls),
         List.copyOf(c.getVibes()),
         c.getVibesSource().code(),
         c.getVersion(),

@@ -12,7 +12,10 @@ public interface UploadRepository extends JpaRepository<Upload, UUID> {
 
   Optional<Upload> findByIdAndUserId(UUID id, UUID userId);
 
-  /** Upload tạo trước {@code before} mà URL không còn được quán, người yêu, hồ sơ hay chỗ chơi nào dùng. */
+  /**
+   * Upload tạo trước {@code before} mà URL không còn được quán (My place, Khám phá quán, kể cả ảnh thêm), người
+   * yêu, hồ sơ hay chỗ chơi nào dùng.
+   */
   @Query(
       value =
           """
@@ -24,6 +27,9 @@ public interface UploadRepository extends JpaRepository<Upload, UUID> {
             AND NOT EXISTS (SELECT 1 FROM user_profiles up WHERE up.avatar_url = u.url)
             AND NOT EXISTS (SELECT 1 FROM profile_photos pp WHERE pp.url = u.url)
             AND NOT EXISTS (SELECT 1 FROM date_spots ds WHERE ds.image_url = u.url)
+            AND NOT EXISTS (SELECT 1 FROM place_catalog pc WHERE pc.image_url = u.url)
+            AND NOT EXISTS (SELECT 1 FROM catalog_photos cp WHERE cp.url = u.url)
+            AND NOT EXISTS (SELECT 1 FROM spot_photos sp WHERE sp.url = u.url)
           ORDER BY u.created_at
           LIMIT :limit
           """,

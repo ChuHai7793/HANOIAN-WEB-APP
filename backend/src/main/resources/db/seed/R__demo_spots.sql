@@ -36,3 +36,8 @@ INSERT INTO date_spots (id, category, district, name, address, description, pric
 
 -- Nhãn kiểu hẹn mặc định (V15): chỉ dòng chưa có ai gán (vibes_source = default)
 UPDATE date_spots SET vibes = default_spot_vibes(category) WHERE vibes_source = 'default';
+
+-- Ảnh của chỗ chơi (V17): ảnh bìa thành ảnh số 0
+INSERT INTO spot_photos (spot_id, position, url)
+SELECT s.id, 0, s.image_url FROM date_spots s
+WHERE s.image_url <> '' AND NOT EXISTS (SELECT 1 FROM spot_photos p WHERE p.spot_id = s.id);

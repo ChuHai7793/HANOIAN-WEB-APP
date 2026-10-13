@@ -5,6 +5,7 @@ import com.gfmaster.place.PriceRange;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
 public record PlaceResponse(
@@ -26,4 +27,6 @@ public record PlaceResponse(
     String cuisine,
     Long version,
     Instant createdAt,
-    Instant updatedAt) {}
+    Instant updatedAt,
+    /** Quán sao chép từ Khám phá quán: mọi ảnh của quán gốc (ảnh đầu = imageUrl). Chỉ có ở danh sách My place. */
+    List<String> photos) {}

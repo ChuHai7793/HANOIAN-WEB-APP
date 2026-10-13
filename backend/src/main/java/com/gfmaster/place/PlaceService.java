@@ -15,9 +15,13 @@ import com.gfmaster.upload.storage.ImageUrls;
 import com.gfmaster.user.UserRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,18 +34,21 @@ public class PlaceService {
   private final PlaceMapper mapper;
   private final DomainEventPublisher events;
   private final ImageUrls imageUrls;
+  private final NamedParameterJdbcTemplate jdbc;
 
   public PlaceService(
       PlaceRepository places,
       UserRepository users,
       PlaceMapper mapper,
       DomainEventPublisher events,
-      ImageUrls imageUrls) {
+      ImageUrls imageUrls,
+      NamedParameterJdbcTemplate jdbc) {
     this.places = places;
     this.users = users;
     this.mapper = mapper;
     this.events = events;
     this.imageUrls = imageUrls;
+    this.jdbc = jdbc;
   }
 
   @Transactional(readOnly = true)
@@ -50,7 +57,35 @@ public class PlaceService {
         type == null
             ? places.findAllByUserIdOrderByCreatedAtDesc(userId)
             : places.findAllByUserIdAndTypeOrderByCreatedAtDesc(userId, type);
-    return result.stream().map(mapper::toResponse).toList();
+    Map<UUID, List<String>> photos = catalogPhotos(result.stream().map(Place::getCatalogId).filter(Objects::nonNull).toList());
+    return result.stream()
+        .map(p -> {
+          PlaceResponse r = mapper.toResponse(p);
+          List<String> extra = p.getCatalogId() == null ? null : photos.get(p.getCatalogId());
+          return extra == null ? r : withPhotos(r, extra);
+        })
+        .toList();
+  }
+
+  private static PlaceResponse withPhotos(PlaceResponse r, List<String> photos) {
+    return new PlaceResponse(
+        r.id(), r.type(), r.name(), r.address(), r.priceRange(), r.rating(), r.openTime(), r.closeTime(), r.imageUrl(),
+        r.note(), r.googleMapsUrl(), r.lat(), r.lng(), r.hasWifi(), r.hasParking(), r.cuisine(), r.version(),
+        r.createdAt(), r.updatedAt(), photos);
+  }
+
+  /** Ảnh của các quán gốc trong Khám phá quán (một truy vấn cho cả danh sách), dạng trả về. */
+  private Map<UUID, List<String>> catalogPhotos(List<UUID> catalogIds) {
+    Map<UUID, List<String>> out = new HashMap<>();
+    if (catalogIds.isEmpty()) return out;
+    jdbc.query(
+        "SELECT catalog_id, url FROM catalog_photos WHERE catalog_id IN (:ids) ORDER BY catalog_id, position",
+        Map.of("ids", catalogIds),
+        rs -> {
+          out.computeIfAbsent(rs.getObject("catalog_id", UUID.class), k -> new ArrayList<>())
+              .add(imageUrls.toPublic(rs.getString("url")));
+        });
+    return out;
   }
 
   @Transactional(readOnly = true)

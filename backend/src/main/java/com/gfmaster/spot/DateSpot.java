@@ -20,6 +20,13 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OrderColumn;
+import java.util.ArrayList;
+import java.util.List;
+import org.hibernate.annotations.BatchSize;
 
 /** Một chỗ chơi trong "Tìm chỗ chơi": admin nhập, mọi người xem. */
 @Entity
@@ -94,4 +101,12 @@ public class DateSpot extends BaseEntity {
   @Convert(converter = VibeConverters.SourceConverter.class)
   @Column(nullable = false, length = 10)
   private VibeSource vibesSource = VibeSource.DEFAULT;
+
+  /** Ảnh, tối đa 6, ảnh số 0 là ảnh bìa (= {@code imageUrl}); dạng lưu /uploads/<key> hoặc link http(s) */
+  @ElementCollection
+  @CollectionTable(name = "spot_photos", joinColumns = @JoinColumn(name = "spot_id"))
+  @OrderColumn(name = "position")
+  @Column(name = "url", nullable = false, length = 1024)
+  @BatchSize(size = 50)
+  private List<String> photos = new ArrayList<>();
 }

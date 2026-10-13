@@ -47,6 +47,10 @@ public final class SpotDtos {
       @Size(max = 2048) String googleMapsUrl,
       @DecimalMin("-90") @DecimalMax("90") BigDecimal lat,
       @DecimalMin("-180") @DecimalMax("180") BigDecimal lng,
+      /** Ảnh (tối đa 6, ảnh đầu là ảnh bìa); null = chỉ dùng imageUrl như trước */
+      @Size(max = 6)
+          List<@Size(max = 1024) @Pattern(regexp = PlaceRequest.IMAGE_URL, message = "Chỉ nhận URL http(s) hoặc /uploads/") String>
+              photos,
       /** Nhãn kiểu hẹn admin chọn; null = giữ như cũ. Gửi lại đúng nhãn đang có thì không đổi nguồn. */
       Set<Vibe> vibes,
       /** true = bỏ nhãn admin, để hệ thống tự gán theo loại */
@@ -75,6 +79,8 @@ public final class SpotDtos {
       String googleMapsUrl,
       BigDecimal lat,
       BigDecimal lng,
+      /** Mọi ảnh, ảnh đầu = imageUrl */
+      List<String> photos,
       /** Nhãn kiểu hẹn, theo thứ tự chill, active, romantic */
       List<Vibe> vibes,
       /** default | claude | admin */

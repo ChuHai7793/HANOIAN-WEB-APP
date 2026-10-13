@@ -9,7 +9,7 @@ import { ModalComponent } from '../../shared/ui/modal.component';
 import { DistrictOption } from '../../core/models/catalog.model';
 import { RatingStarsComponent } from '../../shared/ui/rating-stars.component';
 import { ImagePickerComponent } from '../../shared/ui/image-picker.component';
-import { CUISINES, Place, PRICE_RANGES, PriceRange } from '../../core/models/place.model';
+import { CUISINES, photosOf, Place, PRICE_RANGES, PriceRange } from '../../core/models/place.model';
 import { PlaceTypeConfig } from './place.config';
 import { embedMapUrl, isShortMapsLink, parseGmapUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
 import { nowIso } from '../../core/utils/id';
@@ -19,10 +19,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { defaultPlaceVibes, Vibe, VibeChoice, VibeSource } from '../../core/models/vibe.model';
 import { VibePickerComponent } from '../../shared/ui/vibe-picker.component';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { PhotoListEditorComponent } from '../../shared/ui/photo-list-editor.component';
 
 @Component({
   selector: 'app-place-form',
-  imports: [VibePickerComponent, ReactiveFormsModule, ModalComponent, RatingStarsComponent, ImagePickerComponent, IconComponent],
+  imports: [PhotoListEditorComponent, VibePickerComponent, ReactiveFormsModule, ModalComponent, RatingStarsComponent, ImagePickerComponent, IconComponent],
   template: `
     <app-modal
       [title]="place() ? 'Sửa ' + config().title.toLowerCase() : config().addLabel"
@@ -229,12 +230,16 @@ import { IconComponent } from '../../shared/ui/icon.component';
         </div>
 
         <!-- Ảnh + ghi chú -->
-        <app-image-picker
-          label="Ảnh quán"
-          [value]="imageUrl()"
-          (valueChange)="imageUrl.set($event)"
-          [maxSize]="900"
-        />
+        @if (districts()) {
+          <app-photo-list-editor [(photos)]="photos" [maxSize]="1200" />
+        } @else {
+          <app-image-picker
+            label="Ảnh quán"
+            [value]="imageUrl()"
+            (valueChange)="imageUrl.set($event)"
+            [maxSize]="900"
+          />
+        }
 
         <div>
           <label class="mb-1.5 block text-sm font-medium text-slate-700">Ghi chú</label>
@@ -296,6 +301,8 @@ export class PlaceFormComponent {
   protected readonly ratingValue = signal(4);
   /** Data URL của ảnh vừa upload, hoặc link ảnh ngoài */
   protected readonly imageUrl = signal('');
+  /** Form Khám phá quán: nhiều ảnh (tối đa 6), ảnh đầu là ảnh bìa */
+  protected readonly photos = signal<string[]>([]);
 
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -361,6 +368,7 @@ export class PlaceFormComponent {
     });
     this.ratingValue.set(existing.rating);
     this.imageUrl.set(existing.imageUrl);
+    this.photos.set(photosOf(existing));
     if (existing.lat !== null && existing.lng !== null) {
       this.coords.set({ lat: existing.lat, lng: existing.lng });
     }
@@ -461,7 +469,7 @@ export class PlaceFormComponent {
       rating: this.ratingValue(),
       openTime: v.openTime,
       closeTime: v.closeTime,
-      imageUrl: this.imageUrl().trim(),
+      imageUrl: this.districts() ? (this.photos()[0] ?? '') : this.imageUrl().trim(),
       note: v.note.trim(),
       googleMapsUrl: v.googleMapsUrl.trim(),
       lat: c?.lat ?? null,
@@ -476,7 +484,7 @@ export class PlaceFormComponent {
     };
     const vibes = this.vibeChoice();
     const tagged = this.districts()
-      ? { ...result, vibes: vibes.auto ? this.defaultVibes() : vibes.vibes, vibesAuto: vibes.auto }
+      ? { ...result, photos: this.photos(), vibes: vibes.auto ? this.defaultVibes() : vibes.vibes, vibesAuto: vibes.auto }
       : result;
 
     this.save.emit(tagged);

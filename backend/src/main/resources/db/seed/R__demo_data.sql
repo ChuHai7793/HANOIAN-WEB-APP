@@ -165,3 +165,8 @@ INSERT INTO place_links (id, girlfriend_id, place_id, her_rating, last_visited_a
 
 -- Nhãn kiểu hẹn mặc định cho quán vừa nạp (V15): chỉ dòng chưa có ai gán (vibes_source = default)
 UPDATE place_catalog SET vibes = default_place_vibes(type, price_range) WHERE vibes_source = 'default';
+
+-- Ảnh của quán (V17): ảnh bìa thành ảnh số 0
+INSERT INTO catalog_photos (catalog_id, position, url)
+SELECT c.id, 0, c.image_url FROM place_catalog c
+WHERE c.image_url <> '' AND NOT EXISTS (SELECT 1 FROM catalog_photos p WHERE p.catalog_id = c.id);

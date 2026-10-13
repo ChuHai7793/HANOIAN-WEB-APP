@@ -27,6 +27,8 @@ export interface Place {
   openTime: string; // 'HH:mm'
   closeTime: string; // 'HH:mm'
   imageUrl: string;
+  /** Mọi ảnh (quán từ Khám phá quán); ảnh đầu = imageUrl. Có thể thiếu: khi đó chỉ có imageUrl */
+  photos?: string[] | null;
   note: string;
 
   /** Vị trí — lấy từ link Google Maps người dùng dán vào */
@@ -73,4 +75,9 @@ export const CUISINES: string[] = [
 
 export function priceLabel(value: PriceRange): string {
   return PRICE_RANGES.find((p) => p.value === value)?.label ?? value;
+}
+
+/** Ảnh để xem: danh sách ảnh nếu có, không thì ảnh bìa. */
+export function photosOf(item: { photos?: string[] | null; imageUrl: string }): string[] {
+  return item.photos?.length ? item.photos : item.imageUrl ? [item.imageUrl] : [];
 }

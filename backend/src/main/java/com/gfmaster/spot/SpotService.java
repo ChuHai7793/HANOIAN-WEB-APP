@@ -1,5 +1,6 @@
 package com.gfmaster.spot;
 
+import com.gfmaster.catalog.VenuePhotos;
 import com.gfmaster.vibe.VibeDefaults;
 import com.gfmaster.vibe.VibeDefaults.Tagged;
 import com.gfmaster.catalog.CatalogDistrict;
@@ -131,7 +132,10 @@ public class SpotService {
     s.setNeedsBooking(Boolean.TRUE.equals(r.needsBooking()));
     s.setBookingUrl(trimToEmpty(r.bookingUrl()));
     // Client gửi lại URL công khai (có thể là CDN) → lưu dạng /uploads/<key>
-    s.setImageUrl(r.imageUrl() == null ? "" : imageUrls.toStored(r.imageUrl()));
+    List<String> photos = VenuePhotos.toStored(r.photos(), r.imageUrl(), imageUrls);
+    s.getPhotos().clear();
+    s.getPhotos().addAll(photos);
+    s.setImageUrl(photos.isEmpty() ? "" : photos.getFirst());
     s.setGoogleMapsUrl(trimToEmpty(r.googleMapsUrl()));
     s.setLat(r.lat());
     s.setLng(r.lng());
@@ -210,6 +214,7 @@ public class SpotService {
         s.getGoogleMapsUrl(),
         s.getLat(),
         s.getLng(),
+        VenuePhotos.toPublic(s.getPhotos(), s.getImageUrl(), imageUrls),
         List.copyOf(s.getVibes()),
         s.getVibesSource().code(),
         s.getVersion(),

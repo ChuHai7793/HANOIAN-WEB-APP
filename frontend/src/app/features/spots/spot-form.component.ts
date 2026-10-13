@@ -4,11 +4,11 @@ import { DistrictOption } from '../../core/models/catalog.model';
 import { SPOT_CATEGORIES, SpotCategory, SpotItem } from '../../core/models/spot.model';
 import { SpotRequest } from '../../core/services/spot.service';
 import { parseGmapUrl } from '../../core/utils/gmap-url';
-import { ImagePickerComponent } from '../../shared/ui/image-picker.component';
 import { ModalComponent } from '../../shared/ui/modal.component';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { defaultSpotVibes, VibeChoice } from '../../core/models/vibe.model';
 import { VibePickerComponent } from '../../shared/ui/vibe-picker.component';
+import { PhotoListEditorComponent } from '../../shared/ui/photo-list-editor.component';
 
 const INPUT =
   'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100';
@@ -25,7 +25,7 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
 /** Admin thêm/sửa chỗ chơi trong "Tìm chỗ chơi". */
 @Component({
   selector: 'app-spot-form',
-  imports: [ReactiveFormsModule, ModalComponent, ImagePickerComponent, VibePickerComponent],
+  imports: [PhotoListEditorComponent, ReactiveFormsModule, ModalComponent, VibePickerComponent],
   template: `
     <app-modal
       [title]="spot() ? 'Sửa chỗ chơi' : 'Thêm chỗ chơi'"
@@ -160,7 +160,7 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
           </div>
         </div>
 
-        <app-image-picker label="Ảnh" [value]="imageUrl()" (valueChange)="imageUrl.set($event)" [maxSize]="900" />
+        <app-photo-list-editor [(photos)]="photos" [maxSize]="1200" />
       </form>
 
       <div modalFooter class="contents">
@@ -195,7 +195,8 @@ export class SpotFormComponent implements OnInit {
 
   protected readonly input = INPUT;
   protected readonly categories = SPOT_CATEGORIES;
-  protected readonly imageUrl = signal('');
+  /** Nhiều ảnh (tối đa 6), ảnh đầu là ảnh bìa */
+  protected readonly photos = signal<string[]>([]);
   protected readonly coordinateError = signal(false);
 
   protected readonly form = this.fb.group(
@@ -250,7 +251,7 @@ export class SpotFormComponent implements OnInit {
       googleMapsUrl: s.googleMapsUrl,
       coordinates: s.lat !== null && s.lng !== null ? `${s.lat}, ${s.lng}` : '',
     });
-    this.imageUrl.set(s.imageUrl);
+    this.photos.set(s.photos?.length ? s.photos : s.imageUrl ? [s.imageUrl] : []);
   }
 
   protected invalid(control: string): boolean {
@@ -298,7 +299,8 @@ export class SpotFormComponent implements OnInit {
       indoor: v.indoor,
       needsBooking: v.needsBooking,
       bookingUrl: v.needsBooking ? v.bookingUrl.trim() : '',
-      imageUrl: this.imageUrl().trim(),
+      imageUrl: this.photos()[0] ?? '',
+      photos: this.photos(),
       googleMapsUrl: v.googleMapsUrl.trim(),
       lat,
       lng,

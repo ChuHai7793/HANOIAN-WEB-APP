@@ -17,6 +17,8 @@ import { AddToPlanDialogComponent } from '../plans/add-to-plan-dialog.component'
 import { StopKind } from '../../core/models/plan.model';
 import { FitRowDirective } from '../../shared/ui/fit-row.directive';
 import { ModalComponent } from '../../shared/ui/modal.component';
+import { PhotoCarouselComponent } from '../../shared/ui/photo-carousel.component';
+import { photosOf } from '../../core/models/place.model';
 
 const CONFIGS: Record<PlaceType, PlaceTypeConfig> = {
   cafe: CAFE_CONFIG,
@@ -40,7 +42,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
  */
 @Component({
   selector: 'app-explore-page',
-  imports: [ModalComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
+  imports: [PhotoCarouselComponent, ModalComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
@@ -152,7 +154,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
             >
               <div class="relative flex min-h-0 flex-[0_1_75%] items-center justify-center bg-[#EFEAFC] text-brand-500">
                 @if (item.imageUrl) {
-                  <img [src]="item.imageUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
+                  <app-photo-carousel class="h-full w-full" [photos]="photosOf(item)" [alt]="item.name" />
                 } @else {
                   <app-icon [name]="typeIcons[item.type]" [size]="40" [stroke]="1.5" />
                 }
@@ -247,7 +249,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
       <app-modal [title]="d.name" [subtitle]="typeLabels[d.type] + ' · ' + d.districtLabel" width="max-w-lg" (dismiss)="detail.set(null)">
         <div class="flex flex-col gap-4">
           @if (d.imageUrl) {
-            <img [src]="d.imageUrl" alt="" class="h-52 w-full rounded-xl object-cover" />
+            <app-photo-carousel class="h-56 w-full rounded-xl" [photos]="photosOf(d)" [alt]="d.name" [lazy]="false" />
           }
           <p class="flex items-start gap-1.5 text-sm text-slate-600">
             <span class="mt-0.5 text-slate-400"><app-icon name="pin" [size]="15" /></span>{{ d.address || 'Chưa có địa chỉ' }}
@@ -316,6 +318,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
   `,
 })
 export class ExplorePage implements OnInit {
+  protected readonly photosOf = photosOf;
   /** Wifi / đậu xe của quán, cho popup chi tiết */
   protected amenities(d: CatalogItem): string {
     return [d.hasWifi ? 'Wifi' : '', d.hasParking ? 'Đậu xe' : ''].filter((x) => x).join(' · ') || '—';
