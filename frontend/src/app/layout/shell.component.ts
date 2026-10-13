@@ -8,6 +8,7 @@ import { AuthService } from '../core/auth/auth.service';
 import { LegacyImportDialogComponent } from '../shared/ui/legacy-import-dialog.component';
 import { IconComponent, IconName } from '../shared/ui/icon.component';
 import { SavedSpotService } from '../core/services/saved-spot.service';
+import { DateVibeService } from '../core/services/date-vibe.service';
 
 interface NavSection {
   /** Rỗng: không có tiêu đề nhóm */
@@ -62,7 +63,7 @@ interface NavItem {
                 @if (item.alert && item.alert() > 0) {
                   <span class="rounded-full bg-[#C2335F] px-2 py-0.5 text-[11px] font-bold text-white">{{ item.alert() }} mới</span>
                 }
-                @if (item.badge) {
+                @if (item.badge && auth.isLoggedIn()) {
                   <span class="min-w-6 rounded-full bg-brand-100 px-1.5 py-0.5 text-center text-xs font-semibold text-brand-800">
                     {{ item.badge() }}
                   </span>
@@ -117,6 +118,25 @@ interface NavItem {
               >
                 Mọi thiết bị
               </button>
+            </div>
+          } @else {
+            <!-- Khách: mời tạo tài khoản để lưu quán, lập plan, hẹn hò -->
+            <p class="mb-3 text-xs text-slate-500">Tạo tài khoản miễn phí để lưu quán, lập plan và tìm người hẹn hò.</p>
+            <div class="flex gap-2">
+              <a
+                routerLink="/register"
+                class="flex min-h-10 flex-1 items-center justify-center rounded-[10px] bg-brand-600 px-3 text-[13px] font-semibold text-white transition hover:bg-brand-700"
+                (click)="menuOpen.set(false)"
+              >
+                Đăng ký
+              </a>
+              <a
+                routerLink="/login"
+                class="flex min-h-10 flex-1 items-center justify-center rounded-[10px] border border-brand-200 bg-white px-3 text-[13px] font-semibold text-slate-700 transition hover:bg-brand-50"
+                (click)="menuOpen.set(false)"
+              >
+                Đăng nhập
+              </a>
             </div>
           }
         </div>
@@ -176,6 +196,8 @@ interface NavItem {
   `,
 })
 export class ShellComponent {
+  /** Đồng bộ kết quả quiz Gu hẹn hò lên tài khoản khi đăng nhập */
+  private readonly dateVibe = inject(DateVibeService);
   private readonly places = inject(PlaceService);
   private readonly girlfriends = inject(GirlfriendService);
   /** Chỗ chơi đã lưu: tính chung vào số của My place */
@@ -201,6 +223,7 @@ export class ShellComponent {
       items: [
         { path: '/explore', label: 'Khám phá quán', icon: 'compass' },
         { path: '/spots', label: 'Tìm chỗ chơi', icon: 'gate' },
+        { path: '/quiz', label: 'Gu hẹn hò', icon: 'smile' },
         { path: '/places', label: 'My place', icon: 'bookmark', badge: () => this.places.items().length + this.savedSpots.count() },
         { path: '/dating', label: 'Tìm đối tượng', icon: 'heart', alert: () => this.inbox.unread() },
       ],

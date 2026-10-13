@@ -64,6 +64,8 @@ export interface Plan {
   ownerName: string;
   totalDistanceM: number;
   stops: PlanStop[];
+  /** Mã link công khai (/p/<mã>), chỉ chủ plan thấy; null = chưa chia sẻ */
+  shareToken?: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;

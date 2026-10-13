@@ -25,6 +25,7 @@ import { PhotoCarouselComponent } from '../../shared/ui/photo-carousel.component
 import { photosOf } from '../../core/models/place.model';
 import { SavedSpotService } from '../../core/services/saved-spot.service';
 import { SpotDetailDialogComponent } from './spot-detail-dialog.component';
+import { LoginGate } from '../../core/auth/login-gate.service';
 
 /** Lọc theo ngân sách: giá thấp nhất của chỗ chơi không quá mức này. */
 const BUDGETS: { value: number | null; label: string }[] = [
@@ -204,7 +205,7 @@ function nowHHmm(): string {
                 </div>
                 <div class="grid grid-cols-3 gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
                   <a [href]="directions(item)" target="_blank" rel="noopener" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50"><app-icon name="navigate" [size]="14" />Chỉ đường</a>
-                  <button type="button" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50" (click)="planTarget.set({ kind: 'spot', refId: item.id, name: item.name, district: item.district })">
+                  <button type="button" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50" (click)="addToPlan({ kind: 'spot', refId: item.id, name: item.name, district: item.district })">
                     <app-icon name="route" [size]="14" />Vào plan
                   </button>
                   @if (item.inMyPlace) {
@@ -256,13 +257,14 @@ function nowHHmm(): string {
         [spot]="d"
         [saved]="d.inMyPlace"
         (closed)="detail.set(null)"
-        (plan)="detail.set(null); planTarget.set({ kind: 'spot', refId: $event.id, name: $event.name, district: $event.district })"
+        (plan)="detail.set(null); addToPlan({ kind: 'spot', refId: $event.id, name: $event.name, district: $event.district })"
         (save)="saveSpot($event)"
       />
     }
   `,
 })
 export class SpotListPage implements OnInit {
+  private readonly gate = inject(LoginGate);
   private readonly savedSpots = inject(SavedSpotService);
   protected readonly photosOf = photosOf;
   /** Chỗ chơi đang xem chi tiết (popup) */
@@ -365,7 +367,13 @@ export class SpotListPage implements OnInit {
   /** Đang lưu chỗ chơi nào vào My place (khoá nút) */
   protected readonly savingSpot = signal<string | null>(null);
 
+  /** Khách: mời đăng ký trước khi lập plan */
+  protected addToPlan(t: { kind: StopKind; refId: string; name: string; district: string }): void {
+    if (this.gate.check('lập plan hẹn hò')) this.planTarget.set(t);
+  }
+
   protected async saveSpot(item: SpotItem): Promise<void> {
+    if (!this.gate.check('lưu chỗ chơi vào My place')) return;
     if (this.savingSpot()) return;
     this.savingSpot.set(item.id);
     try {

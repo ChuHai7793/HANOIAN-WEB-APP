@@ -35,9 +35,10 @@ public class SpotController {
     this.spots = spots;
   }
 
+  /** Công khai: khách xem được (inMyPlace luôn false) */
   @GetMapping("/api/v1/spots")
   public SpotPage search(
-      @CurrentUser UUID userId,
+      @CurrentUser(required = false) UUID userId,
       @RequestParam(required = false) String q,
       @RequestParam(required = false) SpotCategory category,
       @RequestParam(required = false) CatalogDistrict district,

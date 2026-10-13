@@ -63,6 +63,19 @@ public class SecurityConfig {
                     // Ảnh hiển thị qua <img> nên không kèm được Bearer; tên file là UUID khó đoán
                     .requestMatchers(HttpMethod.GET, "/uploads/**")
                     .permitAll()
+                    // Khách chưa đăng nhập: xem danh mục quán / chỗ chơi, plan được chia sẻ công khai,
+                    // thử Autoplan (không lưu). Lưu, tạo plan… vẫn phải đăng nhập.
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/v1/catalog",
+                        "/api/v1/catalog/counts",
+                        "/api/v1/catalog/districts",
+                        "/api/v1/spots",
+                        "/api/v1/spots/counts",
+                        "/api/v1/public/**")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/public/autoplan")
+                    .permitAll()
                     // /auth/me, /auth/logout-all: mọi người đã đăng nhập
                     .requestMatchers("/api/v1/auth/**")
                     .authenticated()

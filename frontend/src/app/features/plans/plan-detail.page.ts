@@ -107,6 +107,9 @@ const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240];
             <button type="button" class="flex min-h-10 items-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50" [disabled]="p.stops.length >= 12" (click)="pickerOpen.set(true)">
               <app-icon name="plus" [size]="18" [stroke]="2.4" />Thêm điểm
             </button>
+            <button type="button" class="flex min-h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50" [disabled]="!p.stops.length" (click)="linkOpen.set(true)">
+              <app-icon name="arrowRight" [size]="18" />Chia sẻ link
+            </button>
             <button type="button" class="flex min-h-10 items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50" [disabled]="!p.stops.length" (click)="shareOpen.set(true)">
               <app-icon name="chat" [size]="18" />Rủ đi
             </button>
@@ -353,9 +356,36 @@ const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240];
     @if (confirmDelete()) {
       <app-confirm-dialog title="Xoá plan này?" message="Plan và mọi điểm trong plan sẽ bị xoá. Tin nhắn đã rủ đi vẫn còn nhưng không mở được plan." confirmLabel="Xoá" (confirm)="remove()" (cancel)="confirmDelete.set(false)" />
     }
+
+    @if (linkOpen() && plan(); as p) {
+      <app-modal title="Chia sẻ link" subtitle="Ai có link cũng xem được plan này, kể cả người chưa có tài khoản" width="max-w-md" (dismiss)="linkOpen.set(false)">
+        @if (p.shareToken) {
+          <div class="flex items-center gap-2">
+            <input readonly class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700" [value]="publicUrl(p.shareToken)" (focus)="$any($event.target).select()" />
+            <button type="button" class="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700" (click)="copyLink(p.shareToken)">Sao chép</button>
+          </div>
+          <p class="mt-2 text-xs text-slate-500">Người xem không thấy kỷ niệm, điểm chấm của bạn. Họ có thể lưu bản sao về tài khoản của họ.</p>
+        } @else {
+          <p class="text-sm text-slate-600">Tạo một link để gửi qua Zalo, Messenger… Người nhận mở là thấy lịch trình, bản đồ và chỉ đường.</p>
+        }
+        <div modalFooter class="flex w-full justify-between gap-2">
+          @if (p.shareToken) {
+            <button type="button" class="rounded-lg border border-rose-200 px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 disabled:opacity-50" [disabled]="busy()" (click)="revokeLink()">Tắt link</button>
+          } @else {
+            <span></span>
+          }
+          @if (!p.shareToken) {
+            <button type="button" class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50" [disabled]="busy()" (click)="createLink()">Tạo link</button>
+          } @else {
+            <button type="button" class="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600" (click)="linkOpen.set(false)">Xong</button>
+          }
+        </div>
+      </app-modal>
+    }
   `,
 })
 export class PlanDetailPage implements OnInit {
+  protected readonly linkOpen = signal(false);
   private readonly api = inject(PlanService);
   private readonly catalog = inject(CatalogService);
   private readonly toast = inject(ToastService);
@@ -588,6 +618,43 @@ export class PlanDetailPage implements OnInit {
       this.toast.success(
         `Đã lưu ${r.linked} quán vào Người yêu.` + (r.skipped ? ` ${r.skipped} chỗ chơi không lưu được (Người yêu chỉ gắn quán).` : ''),
       );
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected publicUrl(token: string): string {
+    return `${location.origin}/p/${token}`;
+  }
+
+  protected async createLink(): Promise<void> {
+    if (this.busy()) return;
+    this.busy.set(true);
+    try {
+      const { token } = await this.api.publicLink(this.id);
+      this.plan.update((p) => (p ? { ...p, shareToken: token } : p));
+      await this.copyLink(token);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected async copyLink(token: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(this.publicUrl(token));
+      this.toast.success('Đã sao chép link.');
+    } catch {
+      this.toast.show('Không sao chép tự động được, hãy chọn link và sao chép.', 'info');
+    }
+  }
+
+  protected async revokeLink(): Promise<void> {
+    if (this.busy()) return;
+    this.busy.set(true);
+    try {
+      await this.api.revokePublicLink(this.id);
+      this.plan.update((p) => (p ? { ...p, shareToken: null } : p));
+      this.toast.success('Đã tắt link. Link cũ không mở được nữa.');
     } finally {
       this.busy.set(false);
     }

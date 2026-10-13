@@ -59,7 +59,7 @@ import { errorMessage } from '../../core/api/api';
 
           <p class="text-center text-sm text-slate-500">
             Chưa có tài khoản?
-            <a routerLink="/register" class="font-medium text-brand-600 hover:text-brand-700">Đăng ký</a>
+            <a routerLink="/register" [queryParams]="{ returnUrl: returnUrl() }" class="font-medium text-brand-600 hover:text-brand-700">Đăng ký</a>
           </p>
         </form>
 

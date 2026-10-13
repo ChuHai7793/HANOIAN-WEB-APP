@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, input } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -9,6 +9,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { errorMessage } from '../../core/api/api';
+import { safeReturnUrl } from './login.page';
 
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   const { password, confirm } = group.value as { password: string; confirm: string };
@@ -98,7 +99,7 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 
           <p class="text-center text-sm text-slate-500">
             Đã có tài khoản?
-            <a routerLink="/login" class="font-medium text-brand-600 hover:text-brand-700">Đăng nhập</a>
+            <a routerLink="/login" [queryParams]="{ returnUrl: returnUrl() }" class="font-medium text-brand-600 hover:text-brand-700">Đăng nhập</a>
           </p>
         </form>
       </div>
@@ -108,6 +109,8 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 export class RegisterPage {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  /** Trang định vào trước khi được mời đăng ký (?returnUrl=) */
+  readonly returnUrl = input<string>();
 
   protected readonly busy = signal(false);
   protected readonly error = signal('');
@@ -136,7 +139,7 @@ export class RegisterPage {
       const { email, password, displayName } = this.form.getRawValue();
       await this.auth.register(email.trim(), password, displayName.trim());
       // Mời nhập hồ sơ ngay sau khi đăng ký (có nút "Để sau")
-      await this.router.navigateByUrl('/onboarding');
+      await this.router.navigate(['/onboarding'], { queryParams: { returnUrl: safeReturnUrl(this.returnUrl()) } });
     } catch (err) {
       this.error.set(errorMessage(err));
     } finally {

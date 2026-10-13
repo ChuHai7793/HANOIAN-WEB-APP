@@ -1,4 +1,6 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
+import { AuthService } from './core/auth/auth.service';
 import { ShellComponent } from './layout/shell.component';
 import { adminGuard, authGuard, guestGuard } from './core/auth/auth.guard';
 
@@ -24,12 +26,18 @@ export const routes: Routes = [
   {
     path: '',
     component: ShellComponent,
-    canMatch: [authGuard],
+    // Khung app mở cho khách (xem quán, chỗ chơi, quiz, thử Autoplan, plan công khai); trang cần tài
+    // khoản tự có authGuard
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'places' },
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: () => (inject(AuthService).isLoggedIn() ? 'places' : 'explore'),
+      },
       {
         path: 'places',
         title: 'My place · HANOIVIBE',
+        canMatch: [authGuard],
         loadComponent: () => import('./features/places/place-list.component').then((m) => m.PlaceListComponent),
       },
       // Link cũ của 3 mục My place riêng: chuyển sang My place, chọn sẵn loại
@@ -39,16 +47,33 @@ export const routes: Routes = [
       {
         path: 'girlfriends',
         title: 'Người yêu · HANOIVIBE',
+        canMatch: [authGuard],
         loadComponent: () =>
           import('./features/girlfriends/girlfriend-list.page').then((m) => m.GirlfriendListPage),
       },
       {
         path: 'girlfriends/:id',
         title: 'Chi tiết · HANOIVIBE',
+        canMatch: [authGuard],
         loadComponent: () =>
           import('./features/girlfriends/girlfriend-detail.page').then(
             (m) => m.GirlfriendDetailPage,
           ),
+      },
+      {
+        path: 'quiz',
+        title: 'Gu hẹn hò của bạn · HANOIVIBE',
+        loadComponent: () => import('./features/quiz/quiz.page').then((m) => m.QuizPage),
+      },
+      {
+        path: 'autoplan',
+        title: 'Autoplan · HANOIVIBE',
+        loadComponent: () => import('./features/plans/autoplan-preview.page').then((m) => m.AutoplanPreviewPage),
+      },
+      {
+        path: 'p/:token',
+        title: 'Plan hẹn hò · HANOIVIBE',
+        loadComponent: () => import('./features/plans/public-plan.page').then((m) => m.PublicPlanPage),
       },
       {
         path: 'explore',
@@ -63,26 +88,31 @@ export const routes: Routes = [
       {
         path: 'dating',
         title: 'Tìm đối tượng · HANOIVIBE',
+        canMatch: [authGuard],
         loadComponent: () => import('./features/dating/dating.page').then((m) => m.DatingPage),
       },
       {
         path: 'plans',
         title: 'Plan · HANOIVIBE',
+        canMatch: [authGuard],
         loadComponent: () => import('./features/plans/plan-list.page').then((m) => m.PlanListPage),
       },
       {
         path: 'plans/:id',
         title: 'Plan · HANOIVIBE',
+        canMatch: [authGuard],
         loadComponent: () => import('./features/plans/plan-detail.page').then((m) => m.PlanDetailPage),
       },
       {
         path: 'dating/matches/:id',
         title: 'Nhắn tin · HANOIVIBE',
+        canMatch: [authGuard],
         loadComponent: () => import('./features/dating/chat.page').then((m) => m.ChatPage),
       },
       {
         path: 'profile',
         title: 'Hồ sơ của tôi · HANOIVIBE',
+        canMatch: [authGuard],
         loadComponent: () => import('./features/profile/profile.page').then((m) => m.ProfilePage),
       },
       {

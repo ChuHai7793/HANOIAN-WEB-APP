@@ -36,9 +36,10 @@ public class CatalogController {
     this.catalog = catalog;
   }
 
+  /** Công khai: khách xem được (không có "đã lưu" / "người hợp gu") */
   @GetMapping("/api/v1/catalog")
   public CatalogPage search(
-      @CurrentUser UUID userId,
+      @CurrentUser(required = false) UUID userId,
       @RequestParam(required = false) String q,
       @RequestParam(required = false) PlaceType type,
       @RequestParam(required = false) CatalogDistrict district,

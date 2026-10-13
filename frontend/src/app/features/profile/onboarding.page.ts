@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
 import { ProfileFormComponent } from './profile-form.component';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { safeReturnUrl } from '../auth/login.page';
 
 /** Ngay sau khi đăng ký: mời nhập hồ sơ. Có thể "Để sau" và bổ sung ở "Hồ sơ của tôi". */
 @Component({
@@ -26,8 +27,10 @@ import { IconComponent } from '../../shared/ui/icon.component';
 })
 export class OnboardingPage {
   private readonly router = inject(Router);
+  /** Quay lại trang đang xem trước khi đăng ký (?returnUrl=) */
+  readonly returnUrl = input<string>();
 
   protected finish(): void {
-    void this.router.navigateByUrl('/');
+    void this.router.navigateByUrl(safeReturnUrl(this.returnUrl()));
   }
 }

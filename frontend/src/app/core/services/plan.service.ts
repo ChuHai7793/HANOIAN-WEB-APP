@@ -78,6 +78,31 @@ export class PlanService {
     return firstValueFrom(this.http.post<Plan>(`${this.base}/${id}/copy`, {}));
   }
 
+  /** Khách: dựng thử, không lưu */
+  preview(req: AutoplanRequest): Promise<{ plan: Plan; notes: string[] }> {
+    return firstValueFrom(this.http.post<{ plan: Plan; notes: string[] }>(`${API_BASE}/public/autoplan`, req));
+  }
+
+  /** Bật link công khai, trả về mã */
+  publicLink(id: string): Promise<{ token: string }> {
+    return firstValueFrom(this.http.post<{ token: string }>(`${this.base}/${id}/public-link`, {}));
+  }
+
+  revokePublicLink(id: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.base}/${id}/public-link`));
+  }
+
+  /** Plan công khai (khách xem được); link hỏng / đã tắt: trang tự báo */
+  getPublic(token: string): Promise<Plan> {
+    return firstValueFrom(
+      this.http.get<Plan>(`${API_BASE}/public/plans/${token}`, { context: new HttpContext().set(SILENT_CODES, ['NOT_FOUND']) }),
+    );
+  }
+
+  copyPublic(token: string): Promise<Plan> {
+    return firstValueFrom(this.http.post<Plan>(`${this.base}/public/${token}/copy`, {}));
+  }
+
   saveToGirlfriend(id: string, girlfriendId: string): Promise<{ linked: number; skipped: number }> {
     return firstValueFrom(
       this.http.post<{ linked: number; skipped: number }>(`${this.base}/${id}/save-to-girlfriend`, { girlfriendId }),

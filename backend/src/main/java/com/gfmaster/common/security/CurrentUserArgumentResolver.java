@@ -39,7 +39,8 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
       NativeWebRequest request,
       WebDataBinderFactory binderFactory) {
     UUID userId = parameter.hasParameterAnnotation(DataOwner.class) ? dataOwnerId() : currentUserId();
-    if (userId == null) {
+    CurrentUser current = parameter.getParameterAnnotation(CurrentUser.class);
+    if (userId == null && (current == null || current.required())) {
       throw new ApiException(ErrorCode.UNAUTHORIZED);
     }
     return userId;

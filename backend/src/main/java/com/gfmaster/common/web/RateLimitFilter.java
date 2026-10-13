@@ -69,7 +69,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
       return limiter.tryConsume("auth:" + request.getRemoteAddr(), authPerMinute);
     }
     UUID userId = CurrentUserArgumentResolver.currentUserId();
-    if (userId == null) return null;
+    // Khách chưa đăng nhập (API công khai): giới hạn theo IP
+    if (userId == null) return limiter.tryConsume("anon:" + request.getRemoteAddr(), apiPerMinute);
     if (MAPS_PATH.equals(request.getRequestURI())) {
       RateLimiter.Decision maps = limiter.tryConsume("maps:" + userId, mapsPerMinute);
       if (!maps.allowed()) return maps;

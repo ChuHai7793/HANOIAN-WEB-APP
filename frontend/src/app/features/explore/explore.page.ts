@@ -19,6 +19,8 @@ import { FitRowDirective } from '../../shared/ui/fit-row.directive';
 import { ModalComponent } from '../../shared/ui/modal.component';
 import { PhotoCarouselComponent } from '../../shared/ui/photo-carousel.component';
 import { photosOf } from '../../core/models/place.model';
+import { LoginGate } from '../../core/auth/login-gate.service';
+import { AutoplanDialogComponent } from '../plans/autoplan-dialog.component';
 
 const CONFIGS: Record<PlaceType, PlaceTypeConfig> = {
   cafe: CAFE_CONFIG,
@@ -42,7 +44,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
  */
 @Component({
   selector: 'app-explore-page',
-  imports: [PhotoCarouselComponent, ModalComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
+  imports: [AutoplanDialogComponent, PhotoCarouselComponent, ModalComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
@@ -52,6 +54,13 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
             Quán cafe, bar, quán ăn ở Hà Nội. Ưng quán nào thì lưu vào My place.
           </p>
         </div>
+        <button
+          type="button"
+          class="flex min-h-9 items-center gap-1.5 rounded-xl border border-brand-200 bg-white px-3.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 lg:ml-auto"
+          (click)="autoplanOpen.set(true)"
+        >
+          <app-icon name="shuffle" [size]="16" />Autoplan buổi hẹn
+        </button>
         @if (canEdit()) {
           <div class="relative">
             <button
@@ -183,7 +192,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
                 </div>
                 <div class="grid grid-cols-3 gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
                   <a [href]="directions(item)" target="_blank" rel="noopener" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50"><app-icon name="navigate" [size]="14" />Chỉ đường</a>
-                  <button type="button" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50" (click)="planTarget.set({ kind: 'place', refId: item.id, name: item.name, district: item.district })">
+                  <button type="button" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50" (click)="addToPlan({ kind: 'place', refId: item.id, name: item.name, district: item.district })">
                     <app-icon name="route" [size]="14" />Vào plan
                   </button>
                   @if (item.inMyPlace) {
@@ -298,7 +307,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
           <button
             type="button"
             class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50"
-            (click)="detail.set(null); planTarget.set({ kind: 'place', refId: d.id, name: d.name, district: d.district })"
+            (click)="detail.set(null); addToPlan({ kind: 'place', refId: d.id, name: d.name, district: d.district })"
           >
             <app-icon name="route" [size]="15" />Vào plan
           </button>
@@ -315,9 +324,15 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
         </div>
       </app-modal>
     }
+
+    @if (autoplanOpen()) {
+      <app-autoplan-dialog (closed)="autoplanOpen.set(false)" />
+    }
   `,
 })
 export class ExplorePage implements OnInit {
+  private readonly gate = inject(LoginGate);
+  protected readonly autoplanOpen = signal(false);
   protected readonly photosOf = photosOf;
   /** Wifi / đậu xe của quán, cho popup chi tiết */
   protected amenities(d: CatalogItem): string {
@@ -433,7 +448,13 @@ export class ExplorePage implements OnInit {
   }
 
   /** Vào đúng nhóm theo loại của quán; thông báo "Đã được add vào Quán cafe/bar/ăn". */
+  /** Khách: mời đăng ký trước khi lập plan */
+  protected addToPlan(t: { kind: StopKind; refId: string; name: string; district: string }): void {
+    if (this.gate.check('lập plan hẹn hò')) this.planTarget.set(t);
+  }
+
   protected async addToMyPlace(item: CatalogItem): Promise<void> {
+    if (!this.gate.check('lưu quán vào My place')) return;
     this.adding.set(item.id);
     try {
       await this.catalog.addToMyPlace(item.id);

@@ -92,7 +92,7 @@ public class CatalogService {
       UUID userId, String q, PlaceType type, CatalogDistrict district, boolean mine, int page, int size) {
     int pageSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
     Specification<CatalogPlace> spec = filter(q, type, district);
-    if (mine) {
+    if (mine && userId != null) {
       spec =
           spec.and(
               (root, query, cb) -> {
@@ -107,9 +107,9 @@ public class CatalogService {
             spec,
             PageRequest.of(Math.max(page, 0), pageSize, Sort.by("name").and(Sort.by("id"))));
     List<UUID> ids = result.getContent().stream().map(CatalogPlace::getId).toList();
-    Set<UUID> saved = ids.isEmpty() ? Set.of() : new HashSet<>(places.findCatalogIdsInMyPlace(userId, ids));
-    // "Người hợp gu đã lưu": chỉ khi người xem đang bật Tìm đối tượng
-    Map<UUID, Integer> fans = dating.canSeeDeck(userId) ? dating.fansOf(userId, ids) : null;
+    Set<UUID> saved = ids.isEmpty() || userId == null ? Set.of() : new HashSet<>(places.findCatalogIdsInMyPlace(userId, ids));
+    // "Người hợp gu đã lưu": chỉ khi người xem đã đăng nhập và đang bật Tìm đối tượng
+    Map<UUID, Integer> fans = userId != null && dating.canSeeDeck(userId) ? dating.fansOf(userId, ids) : null;
     List<CatalogItem> items =
         result.getContent().stream()
             .map(c -> toItem(c, saved.contains(c.getId()), fans == null ? null : fans.getOrDefault(c.getId(), 0)))

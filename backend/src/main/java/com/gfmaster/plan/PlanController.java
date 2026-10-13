@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.gfmaster.plan.PlanDtos.PublicLink;
 
 /** Plan của người đang đăng nhập (guest cũng có plan riêng). */
 @RestController
@@ -116,6 +117,24 @@ public class PlanController {
   @PostMapping("/{id}/copy")
   public ResponseEntity<PlanView> copy(@CurrentUser UUID me, @PathVariable UUID id) {
     return ResponseEntity.status(HttpStatus.CREATED).body(service.copy(me, id));
+  }
+
+  /** Bật link công khai: ai có link cũng xem được (kể cả khách) */
+  @PostMapping("/{id}/public-link")
+  public PublicLink publicLink(@CurrentUser UUID me, @PathVariable UUID id) {
+    return service.publicLink(me, id);
+  }
+
+  @DeleteMapping("/{id}/public-link")
+  public ResponseEntity<Void> revokePublicLink(@CurrentUser UUID me, @PathVariable UUID id) {
+    service.revokePublicLink(me, id);
+    return ResponseEntity.noContent().build();
+  }
+
+  /** Chép plan công khai (từ link chia sẻ) về làm plan của mình */
+  @PostMapping("/public/{token}/copy")
+  public ResponseEntity<PlanView> copyPublic(@CurrentUser UUID me, @PathVariable String token) {
+    return ResponseEntity.status(HttpStatus.CREATED).body(service.copyPublic(me, token));
   }
 
   /** Chỉ admin (SecurityConfig): gắn các quán trong plan vào Người yêu, kèm điểm và kỷ niệm */

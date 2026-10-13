@@ -55,7 +55,9 @@ public class PlanRepository {
       boolean rainy,
       long version,
       Instant createdAt,
-      Instant updatedAt) {}
+      Instant updatedAt,
+      /** Mã link công khai; null = chưa chia sẻ */
+      String shareToken) {}
 
   public record StopRow(
       UUID id, int position, UUID catalogId, UUID spotId, int durationMin, String note, Integer rating, String memory) {
@@ -148,6 +150,23 @@ public class PlanRepository {
         """,
         Map.of("user", userId),
         (rs, i) -> planRow(rs));
+  }
+
+  public Optional<PlanRow> planByShareToken(String token) {
+    return jdbc.query(
+            "SELECT p.*, u.display_name AS owner_name FROM plans p JOIN users u ON u.id = p.user_id WHERE p.share_token = :token",
+            Map.of("token", token),
+            (rs, i) -> planRow(rs))
+        .stream()
+        .findFirst();
+  }
+
+  /** {@code token} null = tắt link công khai */
+  public void setShareToken(UUID id, String token) {
+    Map<String, Object> p = new HashMap<>();
+    p.put("id", id);
+    p.put("token", token);
+    jdbc.update("UPDATE plans SET share_token = :token WHERE id = :id", p);
   }
 
   /** Người xem được plan: chủ plan, hoặc người trong một match có tin "Rủ đi" kèm plan này. */
@@ -417,7 +436,8 @@ public class PlanRepository {
         rs.getBoolean("rainy"),
         rs.getLong("version"),
         toInstant(rs.getTimestamp("created_at")),
-        toInstant(rs.getTimestamp("updated_at")));
+        toInstant(rs.getTimestamp("updated_at")),
+        rs.getString("share_token"));
   }
 
   private static Map<String, Object> params(PlanFields f) {

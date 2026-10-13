@@ -37,6 +37,9 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.gfmaster.plan.PlanDtos.PublicLink;
+import java.security.SecureRandom;
+import java.util.Base64;
 
 /**
  * "Plan": lịch trình buổi hẹn của từng người. Mỗi người chỉ sửa plan của mình; người được rủ đi (qua tin
@@ -205,6 +208,86 @@ public class PlanService {
     return new AutoplanResult(view(me, id), r.notes());
   }
 
+  // ---- Khách: Autoplan xem trước, plan công khai ----
+
+  /** Autoplan cho khách: dựng lịch trình nhưng không lưu (đăng nhập rồi mới lưu được). */
+  @Transactional(readOnly = true)
+  public AutoplanResult preview(AutoplanRequest req) {
+    Slot slot = req.slot() != null ? req.slot() : Slot.evening;
+    boolean rainy = Boolean.TRUE.equals(req.rainy());
+    Autoplanner.Result r =
+        Autoplanner.plan(new Options(req.district(), slot, req.vibe(), req.budget(), rainy), plans.venues(), random);
+    if (r.venues().isEmpty()) throw new ApiException(ErrorCode.NO_ALTERNATIVE);
+    String title = slotLabel(slot) + " ở " + req.district().label() + (req.date() != null ? " " + req.date().format(DATE) : "");
+    PlanRow row =
+        new PlanRow(
+            null, null, "", title, req.date(), r.start(), req.district(), "", PlanStatus.draft, "", req.vibe(), req.budget(),
+            rainy, 0, null, null, null);
+    List<StopRow> stops = new ArrayList<>();
+    for (int i = 0; i < r.venues().size(); i++) {
+      Venue v = r.venues().get(i);
+      stops.add(
+          new StopRow(
+              UUID.randomUUID(), i, v.kind() == StopKind.place ? v.id() : null, v.kind() == StopKind.spot ? v.id() : null,
+              v.defaultDuration(), "", null, ""));
+    }
+    return new AutoplanResult(view(null, row, stops), r.notes());
+  }
+
+  /** Bật link công khai (giữ mã cũ nếu đã có). */
+  public PublicLink publicLink(UUID me, UUID id) {
+    PlanRow row = own(me, id);
+    String token = row.shareToken() != null ? row.shareToken() : newShareToken();
+    plans.setShareToken(id, token);
+    return new PublicLink(token);
+  }
+
+  public void revokePublicLink(UUID me, UUID id) {
+    own(me, id);
+    plans.setShareToken(id, null);
+  }
+
+  /** Ai có link cũng xem được (kể cả khách); không lộ kỷ niệm, điểm chấm, ghi chú riêng. */
+  @Transactional(readOnly = true)
+  public PlanView getPublic(String token) {
+    PlanRow row = plans.planByShareToken(token).orElseThrow(ApiException::notFound);
+    PlanView v = view(null, row);
+    List<StopView> stops =
+        v.stops().stream()
+            .map(
+                s ->
+                    new StopView(
+                        s.id(), s.position(), s.kind(), s.refId(), s.category(), s.name(), s.address(), s.district(),
+                        s.districtLabel(), s.imageUrl(), s.lat(), s.lng(), s.openTime(), s.closeTime(), s.indoor(), s.vibes(),
+                        s.googleMapsUrl(), s.durationMin(), s.note(), null, "", s.arrival(), s.departure(), s.distanceFromPrevM(),
+                        s.travelFromPrevMin(), s.travelMode(), s.warnings()))
+            .toList();
+    return new PlanView(
+        v.id(), v.title(), v.date(), v.startTime(), v.endTime(), v.district(), v.districtLabel(), v.note(), v.status(), "",
+        v.vibe(), v.budget(), v.rainy(), false, v.ownerName(), v.totalDistanceM(), stops, null, v.version(), v.createdAt(),
+        v.updatedAt());
+  }
+
+  /** Chép plan công khai về làm plan nháp của mình. */
+  public PlanView copyPublic(UUID me, String token) {
+    PlanRow row = plans.planByShareToken(token).orElseThrow(ApiException::notFound);
+    UUID copyId =
+        plans.insertPlan(
+            me,
+            new PlanFields(
+                row.title(), row.date(), row.startTime(), row.district(), row.note(), PlanStatus.draft, "", row.vibe(), row.budget(), row.rainy()));
+    plans.copyStops(row.id(), copyId);
+    return view(me, copyId);
+  }
+
+  private static String newShareToken() {
+    byte[] bytes = new byte[12];
+    TOKENS.nextBytes(bytes);
+    return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+  }
+
+  private static final SecureRandom TOKENS = new SecureRandom();
+
   // ---- Rủ đi / kỷ niệm ----
 
   /** Gửi plan vào cuộc trò chuyện với một match (tin "Rủ đi" kèm plan). */
@@ -306,7 +389,11 @@ public class PlanService {
   }
 
   private PlanView view(UUID me, PlanRow row) {
-    List<StopRow> stops = plans.stops(row.id());
+    return view(me, row, plans.stops(row.id()));
+  }
+
+  private PlanView view(UUID me, PlanRow row, List<StopRow> stops) {
+    boolean mine = me != null && me.equals(row.userId());
     List<Timed> timed = timed(row, stops);
     List<StopView> views = new ArrayList<>();
     int total = 0;
@@ -361,10 +448,11 @@ public class PlanService {
         row.vibe(),
         row.budget(),
         row.rainy(),
-        row.userId().equals(me),
+        mine,
         row.ownerName(),
         total,
         views,
+        mine ? row.shareToken() : null,
         row.version(),
         row.createdAt(),
         row.updatedAt());

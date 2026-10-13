@@ -128,6 +128,8 @@ public final class PlanDtos {
       String ownerName,
       int totalDistanceM,
       List<StopView> stops,
+      /** Mã link công khai (/p/<mã>), chỉ chủ plan thấy; null = chưa chia sẻ */
+      String shareToken,
       Long version,
       Instant createdAt,
       Instant updatedAt) {}
@@ -148,4 +150,6 @@ public final class PlanDtos {
   public record AutoplanResult(PlanView plan, List<String> notes) {}
 
   public record SaveToGirlfriendResult(int linked, int skipped) {}
+
+  public record PublicLink(String token) {}
 }
