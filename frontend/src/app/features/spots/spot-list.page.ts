@@ -126,7 +126,7 @@ function nowHHmm(): string {
         </button>
       </div>
 
-      <div role="group" aria-label="Nhóm chỗ chơi" class="-mt-1 flex gap-1 overflow-x-auto [scrollbar-width:none] *:shrink-0 *:whitespace-nowrap max-sm:-mx-4 max-sm:px-4">
+      <div role="group" aria-label="Nhóm chỗ chơi" class="-mt-1 flex gap-1 *:shrink-0 *:whitespace-nowrap max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] sm:flex-wrap">
         <button
           type="button"
           [attr.aria-pressed]="category() === ''"
