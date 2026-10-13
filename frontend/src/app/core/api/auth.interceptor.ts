@@ -14,7 +14,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   }
   const auth = inject(AuthService);
 
-  return next(withToken(req, auth.token())).pipe(
+  const sentToken = auth.token();
+  return next(withToken(req, sentToken)).pipe(
     catchError((err: unknown) => {
       if (!(err instanceof HttpErrorResponse) || err.status !== 401) {
         return throwError(() => err);
@@ -22,7 +23,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       return from(auth.refreshAccessToken()).pipe(
         switchMap((token) => {
           if (!token) {
-            auth.onSessionExpired();
+            // Khách (gửi đi không có token) thì không có phiên nào hết hạn: trang công khai tự báo lỗi
+            if (sentToken) auth.onSessionExpired();
             return throwError(() => err);
           }
           return next(withToken(req, token));

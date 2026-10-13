@@ -102,4 +102,19 @@ describe('authInterceptor', () => {
     expect(auth.token()).toBeNull();
     expect(navigate).toHaveBeenCalledWith(['/login'], expect.anything());
   });
+
+  it('khách gặp 401 thì không bị đá sang /login', async () => {
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    const pending = firstValueFrom(http.get('/api/v1/catalog'));
+    backend.expectOne('/api/v1/catalog').flush({ code: 'UNAUTHORIZED' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
+    backend
+      .expectOne('/api/v1/auth/refresh')
+      .flush({ code: 'UNAUTHORIZED' }, { status: 401, statusText: 'Unauthorized' });
+
+    await expect(pending).rejects.toBeTruthy();
+    expect(navigate).not.toHaveBeenCalled();
+  });
 });
