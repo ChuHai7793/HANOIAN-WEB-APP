@@ -16,13 +16,13 @@ import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
 import { AddToPlanDialogComponent } from '../plans/add-to-plan-dialog.component';
 import { StopKind } from '../../core/models/plan.model';
 import { FitRowDirective } from '../../shared/ui/fit-row.directive';
-import { ModalComponent } from '../../shared/ui/modal.component';
 import { PhotoCarouselComponent } from '../../shared/ui/photo-carousel.component';
 import { photosOf } from '../../core/models/place.model';
 import { LoginGate } from '../../core/auth/login-gate.service';
 import { AutoplanDialogComponent } from '../plans/autoplan-dialog.component';
 import { ratingText } from '../../core/models/review.model';
 import { ReviewsComponent } from '../../shared/ui/reviews.component';
+import { DetailModalComponent } from '../../shared/ui/detail-modal.component';
 
 const CONFIGS: Record<PlaceType, PlaceTypeConfig> = {
   cafe: CAFE_CONFIG,
@@ -46,7 +46,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
  */
 @Component({
   selector: 'app-explore-page',
-  imports: [ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, ModalComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
+  imports: [DetailModalComponent, ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
@@ -260,11 +260,8 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
     }
 
     @if (detail(); as d) {
-      <app-modal [title]="d.name" [subtitle]="typeLabels[d.type] + ' · ' + d.districtLabel" width="max-w-lg" (dismiss)="detail.set(null)">
+      <app-detail-modal [title]="d.name" [subtitle]="typeLabels[d.type] + ' · ' + d.districtLabel" [photos]="photosOf(d)" (dismiss)="detail.set(null)">
         <div class="flex flex-col gap-4">
-          @if (d.imageUrl) {
-            <app-photo-carousel class="h-56 w-full rounded-xl" [photos]="photosOf(d)" [alt]="d.name" [lazy]="false" />
-          }
           <p class="flex items-start gap-1.5 text-sm text-slate-600">
             <span class="mt-0.5 text-slate-400"><app-icon name="pin" [size]="15" /></span>{{ d.address || 'Chưa có địa chỉ' }}
           </p>
@@ -328,7 +325,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
             </button>
           }
         </div>
-      </app-modal>
+      </app-detail-modal>
     }
 
     @if (autoplanOpen()) {

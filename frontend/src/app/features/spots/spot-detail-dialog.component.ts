@@ -3,22 +3,18 @@ import { photosOf } from '../../core/models/place.model';
 import { durationText, spotCategory, SpotItem, spotPriceText } from '../../core/models/spot.model';
 import { directionsUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
 import { IconComponent } from '../../shared/ui/icon.component';
-import { ModalComponent } from '../../shared/ui/modal.component';
-import { PhotoCarouselComponent } from '../../shared/ui/photo-carousel.component';
+import { DetailModalComponent } from '../../shared/ui/detail-modal.component';
 import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
 import { ReviewsComponent } from '../../shared/ui/reviews.component';
 
 /** Popup chi tiết một chỗ chơi (Tìm chỗ chơi, My place): ảnh, giá, giờ, thời lượng, mô tả, các nút. */
 @Component({
   selector: 'app-spot-detail-dialog',
-  imports: [ReviewsComponent, ModalComponent, IconComponent, PhotoCarouselComponent, VibeTagsComponent],
+  imports: [ReviewsComponent, DetailModalComponent, IconComponent, VibeTagsComponent],
   template: `
     @if (spot(); as d) {
-      <app-modal [title]="d.name" [subtitle]="categoriesText(d) + ' · ' + d.districtLabel" width="max-w-lg" (dismiss)="closed.emit()">
+      <app-detail-modal [title]="d.name" [subtitle]="categoriesText(d) + ' · ' + d.districtLabel" [photos]="photosOf(d)" (dismiss)="closed.emit()">
         <div class="flex flex-col gap-4">
-          @if (d.imageUrl) {
-            <app-photo-carousel class="h-56 w-full rounded-xl" [photos]="photosOf(d)" [alt]="d.name" [lazy]="false" />
-          }
           <p class="flex items-start gap-1.5 text-sm text-slate-600">
             <span class="mt-0.5 text-slate-400"><app-icon name="pin" [size]="15" /></span>{{ d.address || 'Chưa có địa chỉ' }}
           </p>
@@ -72,7 +68,7 @@ import { ReviewsComponent } from '../../shared/ui/reviews.component';
             </button>
           }
         </div>
-      </app-modal>
+      </app-detail-modal>
     }
   `,
 })

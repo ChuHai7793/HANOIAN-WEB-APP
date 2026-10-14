@@ -11,10 +11,14 @@ import { IconComponent } from './icon.component';
   host: { class: 'group/carousel relative block overflow-hidden' },
   template: `
     @if (photos().length) {
+      @if (backdrop()) {
+        <!-- Nền: chính ảnh đó phóng to, làm mờ, để ảnh hiện trọn (contain) mà không lộ khoảng trống -->
+        <img [src]="current()" alt="" aria-hidden="true" class="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
+      }
       <img
         [src]="current()"
         [alt]="alt()"
-        class="h-full w-full select-none"
+        class="relative h-full w-full select-none"
         [class]="contain() ? 'object-contain' : 'object-cover'"
         draggable="false"
         [attr.loading]="lazy() ? 'lazy' : null"
@@ -63,6 +67,8 @@ export class PhotoCarouselComponent {
   readonly lazy = input(true);
   /** Hiện trọn ảnh (không cắt) */
   readonly contain = input(false);
+  /** Dùng với contain: lấp khoảng trống quanh ảnh bằng chính ảnh làm mờ */
+  readonly backdrop = input(false);
 
   protected readonly index = signal(0);
   protected readonly current = computed(() => this.photos()[Math.min(this.index(), this.photos().length - 1)]);
