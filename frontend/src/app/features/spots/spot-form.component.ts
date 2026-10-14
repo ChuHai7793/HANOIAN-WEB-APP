@@ -66,7 +66,7 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
 
           <div class="sm:col-span-2">
             <label class="mb-1.5 block text-sm font-medium text-slate-700">Tên <span class="text-rose-500">*</span></label>
-            <input type="text" formControlName="name" [class]="input" placeholder="VD: Bảo tàng Phụ nữ Việt Nam" />
+            <input type="text" formControlName="name" maxlength="120" [class]="input" placeholder="VD: Bảo tàng Phụ nữ Việt Nam" />
             @if (invalid('name')) {
               <p class="mt-1 text-xs text-rose-600">Tên tối thiểu 2 ký tự.</p>
             }
@@ -74,12 +74,12 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
 
           <div class="sm:col-span-2">
             <label class="mb-1.5 block text-sm font-medium text-slate-700">Địa chỉ</label>
-            <input type="text" formControlName="address" [class]="input" placeholder="Số nhà, tên đường, phường" />
+            <input type="text" formControlName="address" maxlength="255" [class]="input" placeholder="Số nhà, tên đường, phường" />
           </div>
 
           <div class="sm:col-span-2">
             <label class="mb-1.5 block text-sm font-medium text-slate-700">Mô tả</label>
-            <textarea formControlName="description" rows="3" [class]="input" placeholder="Có gì hay, hợp với cặp đôi thế nào…"></textarea>
+            <textarea formControlName="description" maxlength="2000" rows="3" [class]="input" placeholder="Có gì hay, hợp với cặp đôi thế nào…"></textarea>
           </div>
 
           <div>
@@ -110,7 +110,8 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
 
           <div class="sm:col-span-2">
             <label class="mb-1.5 block text-sm font-medium text-slate-700">Ghi chú giờ, giá</label>
-            <input type="text" formControlName="hoursNote" [class]="input" placeholder="VD: Phố đi bộ chỉ mở tối thứ 6 đến chủ nhật" />
+            <textarea formControlName="hoursNote" rows="2" maxlength="1000" [class]="input" placeholder="VD: Phố đi bộ chỉ mở tối thứ 6 đến chủ nhật; vé người lớn 50k, trẻ em 25k"></textarea>
+            <p class="mt-1 text-right text-[11px] text-slate-400">{{ form.controls.hoursNote.value.length }}/1000</p>
           </div>
 
           <div>
@@ -132,7 +133,7 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
           @if (form.value.needsBooking) {
             <div class="sm:col-span-2">
               <label class="mb-1.5 block text-sm font-medium text-slate-700">Link đặt chỗ</label>
-              <input type="url" formControlName="bookingUrl" [class]="input" placeholder="https://…" />
+              <input type="url" formControlName="bookingUrl" maxlength="2048" [class]="input" placeholder="https://…" />
               @if (invalid('bookingUrl')) {
                 <p class="mt-1 text-xs text-rose-600">Link phải bắt đầu bằng http:// hoặc https://</p>
               }

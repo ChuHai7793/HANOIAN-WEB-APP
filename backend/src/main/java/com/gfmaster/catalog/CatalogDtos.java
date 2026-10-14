@@ -48,7 +48,7 @@ public final class CatalogDtos {
       Boolean hasParking,
       @Size(max = 50) String cuisine,
       /** Ảnh (tối đa 6, ảnh đầu là ảnh bìa); null = chỉ dùng imageUrl như trước */
-      @Size(max = 6)
+      @Size(max = 6, message = "Tối đa 6 ảnh")
           List<@Size(max = 1024) @Pattern(regexp = PlaceRequest.IMAGE_URL, message = "Chỉ nhận URL http(s) hoặc /uploads/") String>
               photos,
       /** Nhãn kiểu hẹn admin chọn; null = giữ như cũ. Gửi lại đúng nhãn đang có thì không đổi nguồn. */

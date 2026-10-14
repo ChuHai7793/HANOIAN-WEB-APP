@@ -69,6 +69,7 @@ import { PhotoListEditorComponent } from '../../shared/ui/photo-list-editor.comp
             <input
               type="text"
               formControlName="name"
+              maxlength="120"
               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               placeholder="VD: The Workshop Coffee"
             />
@@ -84,6 +85,7 @@ import { PhotoListEditorComponent } from '../../shared/ui/photo-list-editor.comp
             <input
               type="text"
               formControlName="address"
+              maxlength="255"
               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               placeholder="Số nhà, tên đường, phường"
             />
@@ -245,6 +247,7 @@ import { PhotoListEditorComponent } from '../../shared/ui/photo-list-editor.comp
           <label class="mb-1.5 block text-sm font-medium text-slate-700">Ghi chú</label>
           <textarea
             formControlName="note"
+            maxlength="2000"
             rows="3"
             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             placeholder="Món nên gọi, giờ nên tới, chỗ ngồi đẹp…"

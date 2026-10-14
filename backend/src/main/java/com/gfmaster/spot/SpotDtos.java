@@ -37,7 +37,7 @@ public final class SpotDtos {
       @Min(0) @Max(100_000_000) Integer priceTo,
       LocalTime openTime,
       LocalTime closeTime,
-      @Size(max = 255) String hoursNote,
+      @Size(max = 1000) String hoursNote,
       @Min(15) @Max(1440) Integer durationMin,
       @NotNull Boolean indoor,
       Boolean needsBooking,
@@ -48,7 +48,7 @@ public final class SpotDtos {
       @DecimalMin("-90") @DecimalMax("90") BigDecimal lat,
       @DecimalMin("-180") @DecimalMax("180") BigDecimal lng,
       /** Ảnh (tối đa 6, ảnh đầu là ảnh bìa); null = chỉ dùng imageUrl như trước */
-      @Size(max = 6)
+      @Size(max = 6, message = "Tối đa 6 ảnh")
           List<@Size(max = 1024) @Pattern(regexp = PlaceRequest.IMAGE_URL, message = "Chỉ nhận URL http(s) hoặc /uploads/") String>
               photos,
       /** Nhãn kiểu hẹn admin chọn; null = giữ như cũ. Gửi lại đúng nhãn đang có thì không đổi nguồn. */

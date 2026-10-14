@@ -20,6 +20,6 @@ public record GirlfriendPatch(
     @Size(max = 20) String phone,
     RelationshipStatus status,
     LocalDate startedDate,
-    @Size(max = 20) List<@NotBlank @Size(max = 50) String> hobbies,
+    @Size(max = 20, message = "Tối đa 20 sở thích") List<@NotBlank @Size(max = 50) String> hobbies,
     @Size(max = 2000) String note,
     @NotNull Long version) {}

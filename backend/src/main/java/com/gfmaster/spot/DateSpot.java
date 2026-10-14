@@ -66,7 +66,7 @@ public class DateSpot extends BaseEntity {
 
   private LocalTime closeTime;
 
-  @Column(nullable = false)
+  @Column(nullable = false, length = 1000)
   private String hoursNote = "";
 
   @JdbcTypeCode(SqlTypes.SMALLINT)

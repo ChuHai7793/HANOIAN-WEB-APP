@@ -64,6 +64,27 @@ class SpotIT extends ApiTestSupport {
   }
 
   @Test
+  void longHoursNoteAndVietnameseValidationMessages() throws Exception {
+    // Ghi chú giờ, giá tới 1000 ký tự (V22)
+    String note = "Vé người lớn 50k, trẻ em 25k. ".repeat(40).substring(0, 1000);
+    postAs(admin, "/api/v1/admin/spots", """
+        {"category": "museum", "district": "BA_DINH", "name": "Bảo tàng dài", "priceFrom": 0, "indoor": true,
+         "hoursNote": "%s"}
+        """.formatted(note))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.hoursNote").value(note));
+
+    // Quá dài: báo lỗi tiếng Việt kèm tên trường
+    postAs(admin, "/api/v1/admin/spots", """
+        {"category": "museum", "district": "BA_DINH", "name": "", "priceFrom": 0, "indoor": true,
+         "hoursNote": "%s"}
+        """.formatted(note + "x"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.errors[?(@.field == 'hoursNote')].message").value("tối đa 1000 ký tự"))
+        .andExpect(jsonPath("$.errors[?(@.field == 'name')].message").value(org.hamcrest.Matchers.hasItem("không được để trống")));
+  }
+
+  @Test
   void filtersByBudgetIndoorAndOpeningHours() throws Exception {
     postAs(admin, "/api/v1/admin/spots", museum("Bảo tàng", null)).andExpect(status().isCreated()); // 40k, 08–17, trong nhà
     postAs(admin, "/api/v1/admin/spots", lake()).andExpect(status().isCreated()); // miễn phí, không giờ cố định

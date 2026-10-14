@@ -54,13 +54,51 @@ export function errorCode(err: unknown): string | undefined {
   return problemOf(err)?.code;
 }
 
+/** Nhãn hiển thị của các trường hay gặp trong lỗi kiểm tra dữ liệu (tên trường lấy từ API). */
+const FIELD_LABELS: Record<string, string> = {
+  name: 'Tên',
+  address: 'Địa chỉ',
+  description: 'Mô tả',
+  note: 'Ghi chú',
+  hoursNote: 'Ghi chú giờ, giá',
+  cuisine: 'Món',
+  imageUrl: 'Ảnh',
+  photos: 'Ảnh',
+  googleMapsUrl: 'Link Google Maps',
+  bookingUrl: 'Link đặt chỗ',
+  priceFrom: 'Giá từ',
+  priceTo: 'Giá đến',
+  durationMin: 'Thời lượng',
+  rating: 'Số sao',
+  body: 'Nhận xét',
+  title: 'Tiêu đề',
+  email: 'Email',
+  password: 'Mật khẩu',
+  displayName: 'Tên hiển thị',
+  phone: 'Số điện thoại',
+  city: 'Thành phố',
+  bio: 'Giới thiệu',
+  interests: 'Sở thích',
+  hobbies: 'Sở thích',
+  lat: 'Vĩ độ',
+  lng: 'Kinh độ',
+};
+
+/** "photos[2]" → "Ảnh 3", "hoursNote" → "Ghi chú giờ, giá"; trường lạ giữ nguyên tên. */
+export function fieldLabel(field: string): string {
+  const m = /^(\w+)(?:\[(\d+)\])?/.exec(field);
+  if (!m) return field;
+  const label = FIELD_LABELS[m[1]] ?? field;
+  return m[2] !== undefined && FIELD_LABELS[m[1]] ? `${label} ${Number(m[2]) + 1}` : label;
+}
+
 /** Câu thông báo tiếng Việt cho một lỗi HTTP bất kỳ. */
 export function errorMessage(err: unknown): string {
   const problem = problemOf(err);
   if (!problem) return 'Có lỗi xảy ra.';
   if (problem.status === 0) return 'Không kết nối được server. Kiểm tra mạng rồi thử lại.';
   if (problem.code && MESSAGES[problem.code]) {
-    const fields = problem.errors?.map((e) => `${e.field}: ${e.message}`).join('; ');
+    const fields = problem.errors?.map((e) => `${fieldLabel(e.field)}: ${e.message}`).join('; ');
     return fields ? `${MESSAGES[problem.code]} (${fields})` : MESSAGES[problem.code];
   }
   return problem.detail || `Lỗi ${problem.status}.`;
