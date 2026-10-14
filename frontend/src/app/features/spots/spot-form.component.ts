@@ -161,7 +161,7 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
           </div>
         </div>
 
-        <app-photo-list-editor [(photos)]="photos" [(uploading)]="photosUploading" [maxSize]="1200" />
+        <app-photo-list-editor [(photos)]="photos" [(uploading)]="photosUploading" [maxSize]="1200" purpose="spot" [nameHint]="form.controls.name.value" />
       </form>
 
       <div modalFooter class="contents">

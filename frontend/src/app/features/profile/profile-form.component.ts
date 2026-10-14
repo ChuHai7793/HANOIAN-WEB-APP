@@ -27,6 +27,8 @@ import { IconComponent } from '../../shared/ui/icon.component';
           (valueChange)="avatarUrl.set($event)"
           [round]="true"
           [maxSize]="480"
+          purpose="avatar"
+          [nameHint]="form.controls.displayName.value"
         />
 
         <div class="grid gap-4 sm:grid-cols-2">
@@ -122,7 +124,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
           </div>
           @if (photos().length < maxPhotos) {
             <div class="mt-2">
-              <app-image-picker label="Thêm ảnh" [value]="newPhoto()" (valueChange)="addPhoto($event)" [maxSize]="1200" />
+              <app-image-picker label="Thêm ảnh" [value]="newPhoto()" (valueChange)="addPhoto($event)" [maxSize]="1200" purpose="dating" [nameHint]="form.controls.displayName.value" />
             </div>
           }
         </div>

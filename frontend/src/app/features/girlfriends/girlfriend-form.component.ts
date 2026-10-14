@@ -95,6 +95,8 @@ import { nowIso, todayIso } from '../../core/utils/id';
               (valueChange)="avatarUrl.set($event)"
               [round]="true"
               [maxSize]="480"
+              purpose="girlfriend"
+              [nameHint]="form.controls.name.value"
             />
           </div>
         </div>

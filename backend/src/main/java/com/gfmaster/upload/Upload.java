@@ -49,6 +49,14 @@ public class Upload {
   @Column(length = 1024)
   private String thumbUrl;
 
+  /** Loại ảnh (ImagePurpose), quyết định thư mục; null: ảnh cũ */
+  @Column(length = 12)
+  private String purpose;
+
+  /** Tên gợi ý cho file (tên quán, tên người…); null: không có */
+  @Column(length = 80)
+  private String nameHint;
+
   @Column(nullable = false, length = 50)
   private String mimeType;
 

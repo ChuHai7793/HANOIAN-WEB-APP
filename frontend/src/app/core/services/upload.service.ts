@@ -6,6 +6,16 @@ import { fileToCompressedBlob } from '../utils/image';
 
 export type UploadStatus = 'AWAITING_UPLOAD' | 'PROCESSING' | 'READY' | 'THUMB_PENDING' | 'FAILED';
 
+/** Ảnh dùng vào việc gì: quyết định thư mục trên storage (places/, spots/, avatars/…) */
+export type ImagePurpose = 'place' | 'spot' | 'avatar' | 'dating' | 'girlfriend';
+
+/** Thông tin để server đặt tên file dễ đọc, vd. places/2026/10/cafe-cuoi-ngo-k3f9a1c2.webp */
+export interface UploadMeta {
+  purpose?: ImagePurpose;
+  /** Tên quán, tên người…; trống thì dùng tên file gốc */
+  name?: string;
+}
+
 export interface UploadResult {
   id: string;
   /** null cho tới khi server xử lý xong */
@@ -43,18 +53,26 @@ export class UploadService {
   pollTimeoutMs = 30_000;
 
   /** Nén ở client (WebP, cạnh dài tối đa `maxSize`) rồi upload; trả URL công khai. */
-  async uploadFile(file: File, maxSize: number, onProgress?: (percent: number) => void): Promise<UploadResult & { url: string }> {
+  async uploadFile(
+    file: File,
+    maxSize: number,
+    onProgress?: (percent: number) => void,
+    meta: UploadMeta = {},
+  ): Promise<UploadResult & { url: string }> {
     const blob = await fileToCompressedBlob(file, { maxSize });
-    const result = await this.uploadImage(blob, onProgress);
+    const name = meta.name?.trim() || file.name.replace(/\.[^.]+$/, '');
+    const result = await this.uploadImage(blob, onProgress, { ...meta, name });
     if (!result.url) throw new Error('Server không trả về ảnh.');
     return { ...result, url: result.url };
   }
 
-  async uploadImage(file: Blob, onProgress?: (percent: number) => void): Promise<UploadResult> {
+  async uploadImage(file: Blob, onProgress?: (percent: number) => void, meta: UploadMeta = {}): Promise<UploadResult> {
     const direct = await firstValueFrom(
       this.http.post<DirectUpload>(`${API_BASE}/uploads/direct`, {
         contentType: file.type,
         sizeBytes: file.size,
+        ...(meta.purpose ? { purpose: meta.purpose } : {}),
+        ...(meta.name ? { name: meta.name.slice(0, 200) } : {}),
       }),
     );
 

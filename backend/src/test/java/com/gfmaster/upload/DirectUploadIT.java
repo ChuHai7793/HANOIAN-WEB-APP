@@ -57,7 +57,7 @@ class DirectUploadIT extends ApiTestSupport {
     assertThat(done.get("width").asInt()).isEqualTo(1200);
     assertThat(done.get("height").asInt()).isEqualTo(600);
     String url = done.get("url").asString();
-    assertThat(url).startsWith("/uploads/" + user + "/").endsWith(".webp");
+    assertThat(url).startsWith("/uploads/misc/").endsWith(".webp");
     assertThat(done.get("thumbUrl").asString()).isEqualTo(url.replace(".webp", "-320.webp"));
 
     byte[] served = mvc.perform(get(url)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
@@ -82,7 +82,10 @@ class DirectUploadIT extends ApiTestSupport {
     UUID user = newUser();
     byte[] raw = ImmutableImage.filled(800, 600, java.awt.Color.ORANGE).bytes(WebpWriter.DEFAULT);
 
-    String id = body(begin(user, "image/webp", raw.length)).get("id").asString();
+    // Ảnh quán, gợi ý tên "Cafe Cuối Ngõ": tên file dễ đọc trong thư mục places/
+    String id = body(postAs(user, "/api/v1/uploads/direct", """
+        {"contentType": "image/webp", "sizeBytes": %d, "purpose": "place", "name": "Cafe Cuối Ngõ"}
+        """.formatted(raw.length))).get("id").asString();
     putContent(user, "/api/v1/uploads/" + id + "/content", raw).andExpect(status().isNoContent());
     String incomingKey = jdbc.queryForObject("select incoming_key from uploads where id = ?::uuid", String.class, id);
 
@@ -92,7 +95,7 @@ class DirectUploadIT extends ApiTestSupport {
     assertThat(completed.get("width").asInt()).isEqualTo(800);
     assertThat(completed.get("height").asInt()).isEqualTo(600);
     String url = completed.get("url").asString();
-    assertThat(url).startsWith("/uploads/" + user + "/").endsWith(".webp");
+    assertThat(url).matches("/uploads/places/\\d{4}/\\d{2}/cafe-cuoi-ngo-[a-z0-9]{8}\\.webp");
 
     // Dùng nguyên file, không nén lại
     byte[] served = mvc.perform(get(url)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();

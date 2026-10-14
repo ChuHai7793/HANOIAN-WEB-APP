@@ -233,13 +233,15 @@ import { PhotoListEditorComponent } from '../../shared/ui/photo-list-editor.comp
 
         <!-- Ảnh + ghi chú -->
         @if (districts()) {
-          <app-photo-list-editor [(photos)]="photos" [(uploading)]="photosUploading" [maxSize]="1200" />
+          <app-photo-list-editor [(photos)]="photos" [(uploading)]="photosUploading" [maxSize]="1200" purpose="place" [nameHint]="form.controls.name.value" />
         } @else {
           <app-image-picker
             label="Ảnh quán"
             [value]="imageUrl()"
             (valueChange)="imageUrl.set($event)"
             [maxSize]="900"
+            purpose="place"
+            [nameHint]="form.controls.name.value"
           />
         }
 

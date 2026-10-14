@@ -68,7 +68,7 @@ public class ImageIntakeService {
       return;
     }
 
-    String key = UploadService.newPublicKey(upload.getUser().getId());
+    String key = UploadService.keyFor(upload);
     String thumbKey = UploadService.thumbKeyOf(key);
     upload.setUrl(storage.put(key, image.bytes(), UploadService.WEBP));
     uploadService.deletePublicIfRolledBack(key);

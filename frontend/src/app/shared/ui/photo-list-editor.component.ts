@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, input, model, OnDestroy, signal, viewChild } from '@angular/core';
 import { errorMessage } from '../../core/api/api';
-import { UploadService } from '../../core/services/upload.service';
+import { ImagePurpose, UploadService } from '../../core/services/upload.service';
 import { IconComponent } from './icon.component';
 import { ImagePickerComponent } from './image-picker.component';
 
@@ -79,7 +79,7 @@ const PARALLEL_UPLOADS = 3;
         <p class="mb-2 text-xs text-rose-600">{{ error() }}</p>
       }
       @if (photos().length + queue().length < max()) {
-        <app-image-picker label="Thêm ảnh" [value]="pendingLink()" (valueChange)="add($event)" [maxSize]="maxSize()" />
+        <app-image-picker label="Thêm ảnh" [value]="pendingLink()" (valueChange)="add($event)" [maxSize]="maxSize()" [purpose]="purpose()" [nameHint]="nameHint()" />
       }
     </div>
   `,
@@ -91,6 +91,9 @@ export class PhotoListEditorComponent implements OnDestroy {
   readonly max = input(6);
   /** Cạnh dài tối đa khi thu nhỏ ảnh tải lên */
   readonly maxSize = input(1200);
+  /** Loại ảnh và tên gợi ý (tên quán / chỗ chơi) để server đặt tên file dễ đọc */
+  readonly purpose = input<ImagePurpose | undefined>(undefined);
+  readonly nameHint = input('');
   /** true khi còn ảnh đang tải: form nên chờ rồi mới cho lưu */
   readonly uploading = model(false);
 
@@ -137,7 +140,10 @@ export class PhotoListEditorComponent implements OnDestroy {
       while (next < items.length) {
         const { file, pending } = items[next++];
         try {
-          const result = await this.uploads.uploadFile(file, this.maxSize(), (percent) => this.patch(pending.id, { progress: percent }));
+          const result = await this.uploads.uploadFile(file, this.maxSize(), (percent) => this.patch(pending.id, { progress: percent }), {
+            purpose: this.purpose(),
+            name: this.nameHint(),
+          });
           // Tải sẵn ảnh trên server rồi mới thay ảnh xem trước, để ô ảnh không bị trắng lúc chuyển
           await preload(result.url);
           this.patch(pending.id, { url: result.url });

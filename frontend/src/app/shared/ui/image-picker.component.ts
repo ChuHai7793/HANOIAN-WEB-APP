@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, input, model, signal, viewChild } from '@angular/core';
 import { errorMessage } from '../../core/api/api';
-import { UploadService } from '../../core/services/upload.service';
+import { ImagePurpose, UploadService } from '../../core/services/upload.service';
 import { formatBytes } from '../../core/utils/image';
 import { IconComponent } from './icon.component';
 
@@ -124,6 +124,9 @@ export class ImagePickerComponent {
   readonly round = input(false);
   /** Cạnh dài nhất khi nén ở client — avatar nhỏ hơn ảnh quán */
   readonly maxSize = input(1200);
+  /** Loại ảnh và tên gợi ý (tên quán, tên người…) để server đặt tên file dễ đọc */
+  readonly purpose = input<ImagePurpose | undefined>(undefined);
+  readonly nameHint = input('');
 
   protected readonly busy = signal(false);
   /** null = đang nén ở client, số = % đã upload */
@@ -174,7 +177,10 @@ export class ImagePickerComponent {
     const preview = URL.createObjectURL(file);
     this.preview.set(preview);
     try {
-      const result = await this.uploads.uploadFile(file, this.maxSize(), (percent) => this.progress.set(percent));
+      const result = await this.uploads.uploadFile(file, this.maxSize(), (percent) => this.progress.set(percent), {
+        purpose: this.purpose(),
+        name: this.nameHint(),
+      });
       this.value.set(result.url);
       this.uploadedSize.set(result.sizeBytes);
     } catch (err) {

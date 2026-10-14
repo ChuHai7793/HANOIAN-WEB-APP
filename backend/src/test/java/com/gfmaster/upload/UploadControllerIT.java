@@ -27,7 +27,7 @@ class UploadControllerIT extends ApiTestSupport {
                 .andExpect(jsonPath("$.thumbUrl").isEmpty()));
 
     String url = res.get("url").asString();
-    assertThat(url).startsWith("/uploads/" + user + "/").endsWith(".webp");
+    assertThat(url).startsWith("/uploads/misc/").endsWith(".webp");
 
     byte[] served = mvc.perform(get(url)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
     assertThat(new String(served, 8, 4)).isEqualTo("WEBP");

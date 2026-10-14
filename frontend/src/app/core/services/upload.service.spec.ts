@@ -76,6 +76,18 @@ describe('UploadService (upload thẳng lên storage)', () => {
     http.expectNone('/api/v1/uploads/u1');
   });
 
+  it('gửi kèm loại ảnh và tên gợi ý để server đặt tên file dễ đọc', async () => {
+    const pending = service.uploadImage(file, undefined, { purpose: 'place', name: 'Cafe Cuối Ngõ' });
+    const begin = http.expectOne('/api/v1/uploads/direct');
+    expect(begin.request.body).toEqual({ contentType: 'image/webp', sizeBytes: 1234, purpose: 'place', name: 'Cafe Cuối Ngõ' });
+    begin.flush({ id: 'u1', uploadUrl: '/api/v1/uploads/u1/content', method: 'PUT', headers: {}, expiresAt: '' });
+    await tick();
+    http.expectOne('/api/v1/uploads/u1/content').flush('');
+    await tick();
+    http.expectOne('/api/v1/uploads/u1/complete').flush({ id: 'u1', status: 'READY', url: '/uploads/places/2026/10/cafe-cuoi-ngo-k3f9a1c2.webp' });
+    expect((await pending).url).toContain('cafe-cuoi-ngo');
+  });
+
   it('server báo ảnh hỏng (FAILED) thì ném lỗi', async () => {
     const pending = service.uploadImage(file);
     await beginAndPut('/api/v1/uploads/u1/content');

@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
@@ -93,10 +92,16 @@ public class UploadService {
     return List.of(upload.getStorageKey(), thumbKeyOf(upload.getStorageKey()));
   }
 
-  /** {userId}/{yyyy}/{MM}/{uuid}.webp: tên do server sinh, không dùng tên file của người dùng. */
-  static String newPublicKey(UUID userId) {
-    LocalDate today = LocalDate.now();
-    return "%s/%d/%02d/%s.webp".formatted(userId, today.getYear(), today.getMonthValue(), UUID.randomUUID());
+  /** Tên file trên storage công khai theo loại ảnh và tên gợi ý của upload (xem {@link ImageKeys}). */
+  static String keyFor(Upload upload) {
+    return ImageKeys.newPublicKey(ImagePurpose.parse(upload.getPurpose()), upload.getNameHint());
+  }
+
+  /** Tên gợi ý gọn lại cho cột name_hint (80 ký tự); rỗng thì null. */
+  static String hint(String name) {
+    if (name == null || name.isBlank()) return null;
+    String s = name.strip();
+    return s.length() > 80 ? s.substring(0, 80) : s;
   }
 
   // ---- Upload thẳng lên storage ----
@@ -107,6 +112,15 @@ public class UploadService {
    */
   @Transactional
   public DirectUploadResponse beginDirect(UUID userId, String contentType, long sizeBytes) {
+    return beginDirect(userId, contentType, sizeBytes, null, null);
+  }
+
+  /**
+   * @param purpose loại ảnh (place, spot, avatar, dating, girlfriend), quyết định thư mục
+   * @param name tên gợi ý cho file (tên quán, tên người…), có thể null
+   */
+  @Transactional
+  public DirectUploadResponse beginDirect(UUID userId, String contentType, long sizeBytes, String purpose, String name) {
     String type = contentType == null ? "" : contentType.trim().toLowerCase();
     if (!ACCEPTED_TYPES.contains(type)) throw new ApiException(ErrorCode.UNSUPPORTED_IMAGE);
     if (sizeBytes <= 0 || sizeBytes > maxBytes) throw tooLarge();
@@ -114,6 +128,8 @@ public class UploadService {
     Upload upload = new Upload();
     upload.setUser(users.getReferenceById(userId));
     upload.setIncomingKey("%s/%s".formatted(userId, UUID.randomUUID()));
+    upload.setPurpose(ImagePurpose.parse(purpose).name());
+    upload.setNameHint(hint(name));
     upload.setMimeType(type);
     upload.setSizeBytes((int) sizeBytes);
     upload.setStatus(UploadStatus.AWAITING_UPLOAD);
@@ -170,7 +186,7 @@ public class UploadService {
     var size = WebpInspector.inspect(raw);
     if (size.isEmpty()) return false;
 
-    String key = newPublicKey(upload.getUser().getId());
+    String key = keyFor(upload);
     upload.setUrl(storage.put(key, raw, WEBP));
     deletePublicIfRolledBack(key);
     upload.setStorageKey(key);
@@ -193,11 +209,16 @@ public class UploadService {
 
   @Transactional
   public UploadResponse storeImage(UUID userId, MultipartFile file) {
+    return storeImage(userId, file, null, null);
+  }
+
+  @Transactional
+  public UploadResponse storeImage(UUID userId, MultipartFile file, String purpose, String name) {
     if (file == null || file.isEmpty()) {
       throw new ApiException(ErrorCode.UNSUPPORTED_IMAGE, "Chưa chọn file ảnh.");
     }
     try {
-      return storeImage(userId, file.getBytes());
+      return storeImage(userId, file.getBytes(), purpose, name);
     } catch (IOException e) {
       throw new ApiException(ErrorCode.UNSUPPORTED_IMAGE, "Không đọc được file ảnh này.");
     }
@@ -206,12 +227,19 @@ public class UploadService {
   /** Dùng chung cho upload multipart và import dữ liệu cũ (ảnh data: URL đã decode). */
   @Transactional
   public UploadResponse storeImage(UUID userId, byte[] raw) {
+    return storeImage(userId, raw, null, null);
+  }
+
+  @Transactional
+  public UploadResponse storeImage(UUID userId, byte[] raw, String purpose, String name) {
     ProcessedImage image = processor.process(raw);
-    String key = newPublicKey(userId);
+    Upload upload = new Upload();
+    upload.setPurpose(ImagePurpose.parse(purpose).name());
+    upload.setNameHint(hint(name));
+    String key = keyFor(upload);
     String url = storage.put(key, image.bytes(), WEBP);
     deletePublicIfRolledBack(key);
 
-    Upload upload = new Upload();
     upload.setUser(users.getReferenceById(userId));
     upload.setStorageKey(key);
     upload.setUrl(url);

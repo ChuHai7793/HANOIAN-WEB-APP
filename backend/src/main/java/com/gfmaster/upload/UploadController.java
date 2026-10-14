@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.UUID;
@@ -52,13 +53,18 @@ public class UploadController {
     this.service = service;
   }
 
-  public record DirectUploadRequest(@NotBlank String contentType, @Positive long sizeBytes) {}
+  /**
+   * @param purpose loại ảnh: place, spot, avatar, dating, girlfriend (thư mục trên storage); thiếu thì misc
+   * @param name tên gợi ý cho file (tên quán, tên người…), vd. "Cafe Cuối Ngõ" → cafe-cuoi-ngo-xxxx.webp
+   */
+  public record DirectUploadRequest(
+      @NotBlank String contentType, @Positive long sizeBytes, String purpose, @Size(max = 200) String name) {}
 
   @PostMapping("/direct")
   public ResponseEntity<DirectUploadResponse> beginDirect(
       @CurrentUser UUID userId, @Valid @RequestBody DirectUploadRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED)
-        .body(service.beginDirect(userId, request.contentType(), request.sizeBytes()));
+        .body(service.beginDirect(userId, request.contentType(), request.sizeBytes(), request.purpose(), request.name()));
   }
 
   /** Chỉ dùng với driver local (thay cho presigned URL của S3). */
@@ -84,8 +90,11 @@ public class UploadController {
 
   @PostMapping(path = "/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<UploadResponse> uploadImage(
-      @DataOwner UUID userId, @RequestParam("file") MultipartFile file) {
-    return ResponseEntity.status(HttpStatus.CREATED).body(service.storeImage(userId, file));
+      @DataOwner UUID userId,
+      @RequestParam("file") MultipartFile file,
+      @RequestParam(required = false) String purpose,
+      @RequestParam(required = false) String name) {
+    return ResponseEntity.status(HttpStatus.CREATED).body(service.storeImage(userId, file, purpose, name));
   }
 
   @DeleteMapping("/{id}")

@@ -88,7 +88,7 @@ class ImportIT extends ApiTestSupport {
     assertThat(places).hasSize(2);
     JsonNode cafe = find(places, "Cà phê cũ");
     // Ảnh data: URL được decode, thu nhỏ (1600 → 1200) và lưu như upload thường
-    assertThat(cafe.get("imageUrl").asString()).startsWith("/uploads/" + user + "/").endsWith(".webp");
+    assertThat(cafe.get("imageUrl").asString()).startsWith("/uploads/misc/").endsWith(".webp");
     mvc.perform(get(cafe.get("imageUrl").asString())).andExpect(status().isOk());
     // Toạ độ được điền từ link Google Maps đầy đủ (Phase 7)
     assertThat(cafe.get("lat").asDouble()).isEqualTo(21.03);
