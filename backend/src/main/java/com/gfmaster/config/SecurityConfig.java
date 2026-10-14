@@ -69,6 +69,7 @@ public class SecurityConfig {
                         HttpMethod.GET,
                         "/api/v1/catalog",
                         "/api/v1/catalog/counts",
+                        "/api/v1/catalog/featured",
                         "/api/v1/catalog/districts",
                         "/api/v1/spots",
                         "/api/v1/spots/counts",

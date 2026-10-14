@@ -1,5 +1,7 @@
 package com.gfmaster.catalog;
 
+import com.gfmaster.catalog.CatalogDtos.FeaturedRequest;
+import com.gfmaster.catalog.CatalogDtos.FeaturedItem;
 import com.gfmaster.catalog.CatalogDtos.CatalogItem;
 import com.gfmaster.catalog.CatalogDtos.CatalogPage;
 import com.gfmaster.catalog.CatalogDtos.CatalogRequest;
@@ -47,6 +49,18 @@ public class CatalogController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "30") int size) {
     return catalog.search(userId, q, type, district, mine, page, size);
+  }
+
+  /** Công khai: điểm hẹn nổi bật (tối đa 3, admin chọn) cho đầu trang Khám phá quán */
+  @GetMapping("/api/v1/catalog/featured")
+  public List<FeaturedItem> featured(@MyPlaceOwner(required = false) UUID userId) {
+    return catalog.featured(userId);
+  }
+
+  /** Admin: thay danh sách nổi bật (thứ tự = vị trí; rỗng = tắt) */
+  @PutMapping("/api/v1/admin/catalog/featured")
+  public List<FeaturedItem> setFeatured(@RequestBody List<@Valid FeaturedRequest> list) {
+    return catalog.setFeatured(list);
   }
 
   @GetMapping("/api/v1/catalog/counts")

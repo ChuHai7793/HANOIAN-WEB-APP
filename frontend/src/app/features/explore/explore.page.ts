@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { errorCode, problemOf } from '../../core/api/api';
 import { AuthService } from '../../core/auth/auth.service';
-import { CatalogItem, DistrictOption, MY_PLACE_GROUP, TypeCounts } from '../../core/models/catalog.model';
+import { CatalogItem, FeaturedItem, DistrictOption, MY_PLACE_GROUP, TypeCounts } from '../../core/models/catalog.model';
 import { Place, PlaceType, priceLabel } from '../../core/models/place.model';
 import { CatalogRequest, CatalogService } from '../../core/services/catalog.service';
 import { PlaceService } from '../../core/services/place.service';
@@ -23,6 +23,8 @@ import { AutoplanDialogComponent } from '../plans/autoplan-dialog.component';
 import { ratingText } from '../../core/models/review.model';
 import { ReviewsComponent } from '../../shared/ui/reviews.component';
 import { DetailModalComponent } from '../../shared/ui/detail-modal.component';
+import { FeaturedPlacesComponent } from './featured-places.component';
+import { FeaturedEditorComponent } from './featured-editor.component';
 
 const CONFIGS: Record<PlaceType, PlaceTypeConfig> = {
   cafe: CAFE_CONFIG,
@@ -44,17 +46,28 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
  * "Khám phá quán": danh mục quán do admin nhập. Mọi người xem, lọc theo khu vực và loại, rồi "Add vào
  * My place" (vào nhóm theo loại của quán). Chỉ admin thấy nút thêm mới, sửa, xoá.
  */
+const FEATURED_HIDDEN_KEY = 'gfm.featuredHidden';
+
+function readFeaturedHidden(): boolean {
+  try {
+    return localStorage.getItem(FEATURED_HIDDEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 @Component({
   selector: 'app-explore-page',
-  imports: [DetailModalComponent, ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
+  imports: [FeaturedEditorComponent, FeaturedPlacesComponent, DetailModalComponent, ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
-      <header class="flex flex-wrap items-end justify-between gap-4">
-        <div class="flex flex-col gap-1.5">
-          <h1 class="text-xl font-extrabold tracking-tight text-slate-900">Khám phá quán</h1>
-          <p class="hidden text-[13px] text-slate-500 sm:block">
-            Quán cafe, bar, quán ăn ở Hà Nội. Ưng quán nào thì lưu vào My place.
+      <header class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-col">
+          <p class="flex items-center gap-3 text-[12px] font-bold uppercase tracking-[0.2em] text-brand-600">
+            <span class="h-px w-7 bg-brand-500"></span>Hà Nội, những điểm hẹn
           </p>
+          <h1 class="mt-2 text-[28px] font-extrabold leading-tight tracking-tight text-slate-900 sm:text-[34px]">Khám phá quán.</h1>
+          <p class="mt-1 text-[14px] text-slate-500 sm:text-[15px]">Một góc thật xinh. Một câu chuyện mới. Một cuộc hẹn đáng nhớ.</p>
         </div>
         <button
           type="button"
@@ -89,6 +102,24 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
           </div>
         }
       </header>
+
+      <!-- Điểm hẹn nổi bật (admin chọn): ẩn / hiện, nhớ theo trình duyệt -->
+      @if (featured().length || canEdit()) {
+        <div class="-mt-1 flex justify-end gap-4 text-[13px] font-medium">
+          @if (canEdit()) {
+            <button type="button" class="text-brand-700 hover:underline" (click)="featuredEditorOpen.set(true)">Chọn gợi ý nổi bật</button>
+          }
+          @if (featured().length) {
+            <button type="button" class="flex items-center gap-1 text-slate-500 hover:text-slate-800" (click)="toggleFeatured()">
+              {{ featuredHidden() ? 'Hiện gợi ý nổi bật' : 'Ẩn gợi ý nổi bật' }}
+              <span class="transition" [class.rotate-180]="!featuredHidden()"><app-icon name="chevronDown" [size]="14" /></span>
+            </button>
+          }
+        </div>
+      }
+      @if (featured().length && !featuredHidden()) {
+        <app-featured-places [items]="featured()" (open)="detail.set($event)" />
+      }
 
       <!-- Cầu nối: có quán ưng ý thì đi tìm người hẹn -->
       <a
@@ -328,6 +359,10 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
       </app-detail-modal>
     }
 
+    @if (featuredEditorOpen()) {
+      <app-featured-editor [current]="featured()" (closed)="featuredEditorOpen.set(false)" (saved)="featured.set($event); featuredEditorOpen.set(false)" />
+    }
+
     @if (autoplanOpen()) {
       <app-autoplan-dialog (closed)="autoplanOpen.set(false)" />
     }
@@ -362,6 +397,19 @@ export class ExplorePage implements OnInit {
   protected readonly district = signal('');
   protected readonly districts = signal<DistrictOption[]>([]);
   protected readonly items = signal<CatalogItem[]>([]);
+  /** Điểm hẹn nổi bật (admin chọn) */
+  protected readonly featured = signal<FeaturedItem[]>([]);
+  protected readonly featuredHidden = signal(readFeaturedHidden());
+  protected readonly featuredEditorOpen = signal(false);
+
+  protected toggleFeatured(): void {
+    this.featuredHidden.update((v) => !v);
+    try {
+      localStorage.setItem(FEATURED_HIDDEN_KEY, this.featuredHidden() ? '1' : '0');
+    } catch {
+      // Ẩn danh / chặn lưu trữ, hoặc đang render trên server: chỉ không nhớ được lựa chọn
+    }
+  }
   protected readonly rating = ratingText;
 
   /** Mình vừa viết / sửa / xoá đánh giá trong popup: cập nhật sao trên thẻ */
@@ -392,6 +440,7 @@ export class ExplorePage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     void this.catalog.districts().then((d) => this.districts.set(d));
+    void this.catalog.featured().then((f) => this.featured.set(f)).catch(() => undefined);
     // Mở từ "Gợi ý điểm hẹn" của Tìm đối tượng: /explore?q=<tên quán>
     this.q.set(this.route.snapshot.queryParamMap.get('q') ?? '');
     await this.reload();

@@ -97,5 +97,14 @@ public final class CatalogDtos {
       BigDecimal ratingAvg,
       int ratingCount) {}
 
+  /** Một điểm hẹn nổi bật: vị trí 1..3, dòng nhỏ, câu dẫn và quán */
+  public record FeaturedItem(int position, String kicker, String headline, CatalogItem place) {}
+
+  /** Admin chọn một điểm hẹn nổi bật (thứ tự trong danh sách là vị trí) */
+  public record FeaturedRequest(
+      @NotNull UUID catalogId,
+      @Size(max = 60) String kicker,
+      @NotBlank @Size(max = 120) String headline) {}
+
   public record CatalogPage(List<CatalogItem> items, long total, int page, int size) {}
 }

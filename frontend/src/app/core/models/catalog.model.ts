@@ -40,3 +40,19 @@ export const MY_PLACE_GROUP: Record<PlaceType, string> = {
   bar: 'Quán bar',
   restaurant: 'Quán ăn',
 };
+
+/** "Điểm hẹn nổi bật" do admin chọn (tối đa 3): vị trí 1 là thẻ lớn */
+export interface FeaturedItem {
+  position: number;
+  /** Dòng nhỏ phía trên, vd. "Một chút bình yên" */
+  kicker: string;
+  /** Câu dẫn lớn, xuống dòng bằng \n */
+  headline: string;
+  place: CatalogItem;
+}
+
+export interface FeaturedRequest {
+  catalogId: string;
+  kicker: string;
+  headline: string;
+}

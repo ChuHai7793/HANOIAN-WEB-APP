@@ -26,6 +26,7 @@ const PATHS = {
   undo: '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
   chevronLeft: '<path d="M15 18l-6-6 6-6"/>',
+  chevronDown: '<path d="M6 9l6 6 6-6"/>',
   logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
   thumbUp: '<path d="M7 10v12M15 5.9 14 10h5.8a2 2 0 0 1 2 2.3l-1.4 8a2 2 0 0 1-2 1.7H7V10l4.3-7.6A1.9 1.9 0 0 1 15 3.6z"/><path d="M3 10h4v12H3z"/>',
   more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',

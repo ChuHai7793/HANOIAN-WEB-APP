@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE } from '../api/api';
 import { SILENT_CODES } from '../api/http-context';
-import { CatalogItem, CatalogPage, DistrictOption, TypeCounts } from '../models/catalog.model';
+import { CatalogItem, CatalogPage, DistrictOption, FeaturedItem, FeaturedRequest, TypeCounts } from '../models/catalog.model';
 import { Place, PlaceType } from '../models/place.model';
 import { Vibe } from '../models/vibe.model';
 
@@ -73,6 +73,16 @@ export class CatalogService {
         context: new HttpContext().set(SILENT_CODES, ['VERSION_CONFLICT']),
       }),
     );
+  }
+
+  /** Điểm hẹn nổi bật (công khai) */
+  featured(): Promise<FeaturedItem[]> {
+    return firstValueFrom(this.http.get<FeaturedItem[]>(`${API_BASE}/catalog/featured`));
+  }
+
+  /** Admin: thay danh sách nổi bật (thứ tự = vị trí; rỗng = tắt) */
+  setFeatured(list: FeaturedRequest[]): Promise<FeaturedItem[]> {
+    return firstValueFrom(this.http.put<FeaturedItem[]>(`${API_BASE}/admin/catalog/featured`, list));
   }
 
   remove(id: string): Promise<void> {

@@ -1,5 +1,9 @@
 package com.gfmaster.catalog;
 
+import com.gfmaster.catalog.CatalogDtos.FeaturedRequest;
+import com.gfmaster.catalog.CatalogDtos.FeaturedItem;
+import java.util.HashMap;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import com.gfmaster.vibe.VibeDefaults;
 import com.gfmaster.vibe.VibeDefaults.Tagged;
 import com.gfmaster.catalog.CatalogDtos.CatalogItem;
@@ -47,18 +51,80 @@ public class CatalogService {
   private final PlaceService placeService;
   private final ImageUrls imageUrls;
   private final DatingRepository dating;
+  private final NamedParameterJdbcTemplate jdbc;
 
   public CatalogService(
       CatalogPlaceRepository catalog,
       PlaceRepository places,
       PlaceService placeService,
       ImageUrls imageUrls,
-      DatingRepository dating) {
+      DatingRepository dating,
+      NamedParameterJdbcTemplate jdbc) {
     this.catalog = catalog;
     this.places = places;
     this.placeService = placeService;
     this.imageUrls = imageUrls;
     this.dating = dating;
+    this.jdbc = jdbc;
+  }
+
+  // ---- Điểm hẹn nổi bật (admin chọn, tối đa 3) ----
+
+  static final int MAX_FEATURED = 3;
+
+  private record FeaturedRow(int position, UUID catalogId, String kicker, String headline) {}
+
+  /** Công khai: các điểm hẹn nổi bật theo vị trí, kèm "đã lưu" / "người hợp gu" như danh sách quán. */
+  @Transactional(readOnly = true)
+  public List<FeaturedItem> featured(UUID userId) {
+    List<FeaturedRow> rows =
+        jdbc.query(
+            "SELECT position, catalog_id, kicker, headline FROM featured_places ORDER BY position",
+            Map.of(),
+            (rs, i) ->
+                new FeaturedRow(
+                    rs.getInt("position"), rs.getObject("catalog_id", UUID.class), rs.getString("kicker"), rs.getString("headline")));
+    if (rows.isEmpty()) return List.of();
+    List<UUID> ids = rows.stream().map(FeaturedRow::catalogId).toList();
+    Map<UUID, CatalogPlace> byId = new HashMap<>();
+    catalog.findAllById(ids).forEach(c -> byId.put(c.getId(), c));
+    Set<UUID> saved = userId == null ? Set.of() : new HashSet<>(places.findCatalogIdsInMyPlace(userId, ids));
+    Map<UUID, Integer> fans = userId != null && dating.canSeeDeck(userId) ? dating.fansOf(userId, ids) : null;
+    return rows.stream()
+        .filter(r -> byId.containsKey(r.catalogId()))
+        .map(
+            r ->
+                new FeaturedItem(
+                    r.position(),
+                    r.kicker(),
+                    r.headline(),
+                    toItem(byId.get(r.catalogId()), saved.contains(r.catalogId()), fans == null ? null : fans.getOrDefault(r.catalogId(), 0))))
+        .toList();
+  }
+
+  /** Admin: thay toàn bộ danh sách nổi bật (thứ tự trong danh sách là vị trí; rỗng = tắt khối nổi bật). */
+  public List<FeaturedItem> setFeatured(List<FeaturedRequest> list) {
+    if (list.size() > MAX_FEATURED) {
+      throw new ApiException(ErrorCode.VALIDATION_FAILED, "Tối đa " + MAX_FEATURED + " điểm hẹn nổi bật.");
+    }
+    if (list.stream().map(FeaturedRequest::catalogId).distinct().count() != list.size()) {
+      throw new ApiException(ErrorCode.VALIDATION_FAILED, "Mỗi quán chỉ chọn một lần.");
+    }
+    for (FeaturedRequest f : list) {
+      if (!catalog.existsById(f.catalogId())) throw ApiException.notFound();
+    }
+    jdbc.update("DELETE FROM featured_places", Map.of());
+    for (int i = 0; i < list.size(); i++) {
+      FeaturedRequest f = list.get(i);
+      jdbc.update(
+          "INSERT INTO featured_places (position, catalog_id, kicker, headline) VALUES (:pos, :id, :kicker, :headline)",
+          Map.of(
+              "pos", i + 1,
+              "id", f.catalogId(),
+              "kicker", f.kicker() == null ? "" : f.kicker().strip(),
+              "headline", f.headline().strip()));
+    }
+    return featured(null);
   }
 
   @Transactional(readOnly = true)
