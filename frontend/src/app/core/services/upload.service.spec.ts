@@ -21,7 +21,7 @@ describe('UploadService (upload thẳng lên storage)', () => {
 
   afterEach(() => http.verify());
 
-  async function beginAndPut(uploadUrl: string) {
+  async function beginAndPut(uploadUrl: string, completed: object = { id: 'u1', status: 'PROCESSING' }) {
     const begin = http.expectOne('/api/v1/uploads/direct');
     expect(begin.request.body).toEqual({ contentType: 'image/webp', sizeBytes: 1234 });
     begin.flush({
@@ -40,7 +40,7 @@ describe('UploadService (upload thẳng lên storage)', () => {
     put.flush('');
     await tick();
 
-    http.expectOne('/api/v1/uploads/u1/complete').flush({ id: 'u1', status: 'PROCESSING' });
+    http.expectOne('/api/v1/uploads/u1/complete').flush(completed);
     await tick();
   }
 
@@ -61,6 +61,19 @@ describe('UploadService (upload thẳng lên storage)', () => {
       });
 
     expect((await pending).url).toBe('https://img.example.com/u/a.webp');
+  });
+
+  it('WebP sạch: complete trả URL luôn, không phải hỏi lại (thumbnail làm ở nền)', async () => {
+    const pending = service.uploadImage(file);
+    await beginAndPut('/api/v1/uploads/u1/content', {
+      id: 'u1',
+      status: 'THUMB_PENDING',
+      url: 'https://img.example.com/u/b.webp',
+      sizeBytes: 1234,
+    });
+
+    expect((await pending).url).toBe('https://img.example.com/u/b.webp');
+    http.expectNone('/api/v1/uploads/u1');
   });
 
   it('server báo ảnh hỏng (FAILED) thì ném lỗi', async () => {

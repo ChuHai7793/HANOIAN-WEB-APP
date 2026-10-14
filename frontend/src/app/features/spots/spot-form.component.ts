@@ -160,7 +160,7 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
           </div>
         </div>
 
-        <app-photo-list-editor [(photos)]="photos" [maxSize]="1200" />
+        <app-photo-list-editor [(photos)]="photos" [(uploading)]="photosUploading" [maxSize]="1200" />
       </form>
 
       <div modalFooter class="contents">
@@ -174,10 +174,10 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
         <button
           type="button"
           class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
-          [disabled]="form.invalid"
+          [disabled]="form.invalid || photosUploading()"
           (click)="submit()"
         >
-          {{ spot() ? 'Lưu thay đổi' : 'Thêm chỗ chơi' }}
+          {{ photosUploading() ? 'Đang tải ảnh…' : spot() ? 'Lưu thay đổi' : 'Thêm chỗ chơi' }}
         </button>
       </div>
     </app-modal>
@@ -197,6 +197,8 @@ export class SpotFormComponent implements OnInit {
   protected readonly categories = SPOT_CATEGORIES;
   /** Nhiều ảnh (tối đa 6), ảnh đầu là ảnh bìa */
   protected readonly photos = signal<string[]>([]);
+  /** Còn ảnh đang tải lên: chờ xong mới cho lưu */
+  protected readonly photosUploading = signal(false);
   protected readonly coordinateError = signal(false);
 
   protected readonly form = this.fb.group(
@@ -269,7 +271,7 @@ export class SpotFormComponent implements OnInit {
 
   protected submit(): void {
     this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    if (this.form.invalid || this.photosUploading()) return;
     const v = this.form.getRawValue();
 
     let lat: number | null = null;

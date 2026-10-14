@@ -37,7 +37,8 @@ import org.springframework.web.multipart.MultipartFile;
  *   <li><b>Upload thẳng lên storage</b> (frontend dùng cách này): {@link #beginDirect} tạo bản ghi
  *       AWAITING_UPLOAD và phát URL để trình duyệt PUT ảnh gốc vào vùng incoming (riêng tư) →
  *       {@link #completeDirect} chuyển PROCESSING và phát {@code image.received} → worker
- *       ({@link ImageIntakeService}) xử lý, lưu vào storage công khai, READY.
+ *       ({@link ImageIntakeService}) xử lý, lưu vào storage công khai, READY. WebP trình duyệt đã nén
+ *       sạch thì lưu luôn trong request ({@link #completeDirect}), thumbnail sinh ở nền.
  *   <li><b>Qua backend</b> ({@link #storeImage}): multipart cũ và import dữ liệu cũ. Xử lý ngay trong
  *       request, thumbnail sinh ở nền.
  * </ul>
@@ -151,9 +152,36 @@ public class UploadService {
       deleteIncomingAfterCommit(upload.getIncomingKey());
       throw tooLarge();
     }
+    if (WEBP.equals(upload.getMimeType()) && acceptAsIs(upload)) return toResponse(upload);
     upload.setStatus(UploadStatus.PROCESSING);
     events.publish(new ImageReceived(userId, upload.getId()));
     return toResponse(upload);
+  }
+
+  /**
+   * Đường tắt: ảnh trình duyệt đã nén sẵn thành WebP sạch, đủ nhỏ ({@link WebpInspector}) thì lưu nguyên
+   * trạng sang storage công khai ngay trong request, không giải mã / nén lại; thumbnail sinh ở nền
+   * (THUMB_PENDING → READY). Trình duyệt nhận URL luôn, không phải chờ worker.
+   *
+   * @return false nếu ảnh cần xử lý đầy đủ
+   */
+  private boolean acceptAsIs(Upload upload) {
+    byte[] raw = incoming.get(upload.getIncomingKey());
+    var size = WebpInspector.inspect(raw);
+    if (size.isEmpty()) return false;
+
+    String key = newPublicKey(upload.getUser().getId());
+    upload.setUrl(storage.put(key, raw, WEBP));
+    deletePublicIfRolledBack(key);
+    upload.setStorageKey(key);
+    upload.setSizeBytes(raw.length);
+    upload.setWidth(size.get().width());
+    upload.setHeight(size.get().height());
+    upload.setStatus(UploadStatus.THUMB_PENDING);
+    deleteIncomingAfterCommit(upload.getIncomingKey());
+    upload.setIncomingKey(null);
+    events.publish(new ImageUploaded(upload.getUser().getId(), upload.getId()));
+    return true;
   }
 
   @Transactional(readOnly = true)

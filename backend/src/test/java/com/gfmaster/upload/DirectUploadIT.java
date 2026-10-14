@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.gfmaster.support.ApiTestSupport;
 import com.gfmaster.upload.storage.IncomingStorage;
 import com.sksamuel.scrimage.ImmutableImage;
+import com.sksamuel.scrimage.webp.WebpWriter;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -74,6 +75,49 @@ class DirectUploadIT extends ApiTestSupport {
                 .formatted(url))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.imageUrl").value(url));
+  }
+
+  @Test
+  void cleanBrowserWebpIsPublishedAsIsWithinTheRequest() throws Exception {
+    UUID user = newUser();
+    byte[] raw = ImmutableImage.filled(800, 600, java.awt.Color.ORANGE).bytes(WebpWriter.DEFAULT);
+
+    String id = body(begin(user, "image/webp", raw.length)).get("id").asString();
+    putContent(user, "/api/v1/uploads/" + id + "/content", raw).andExpect(status().isNoContent());
+    String incomingKey = jdbc.queryForObject("select incoming_key from uploads where id = ?::uuid", String.class, id);
+
+    // complete trả URL ngay, không qua worker; thumbnail làm ở nền
+    JsonNode completed = body(postAs(user, "/api/v1/uploads/" + id + "/complete", "").andExpect(status().isAccepted()));
+    assertThat(completed.get("status").asString()).isIn("THUMB_PENDING", "READY");
+    assertThat(completed.get("width").asInt()).isEqualTo(800);
+    assertThat(completed.get("height").asInt()).isEqualTo(600);
+    String url = completed.get("url").asString();
+    assertThat(url).startsWith("/uploads/" + user + "/").endsWith(".webp");
+
+    // Dùng nguyên file, không nén lại
+    byte[] served = mvc.perform(get(url)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+    assertThat(served).isEqualTo(raw);
+    await().atMost(WAIT).until(() -> incoming.size(incomingKey).isEmpty());
+
+    JsonNode done = awaitFinished(user, id);
+    assertThat(done.get("status").asString()).isEqualTo("READY");
+    assertThat(done.get("thumbUrl").asString()).isEqualTo(url.replace(".webp", "-320.webp"));
+  }
+
+  @Test
+  void oversizedWebpStillGoesThroughFullProcessing() throws Exception {
+    UUID user = newUser();
+    byte[] raw = ImmutableImage.filled(2000, 1000, java.awt.Color.ORANGE).bytes(WebpWriter.DEFAULT);
+
+    String id = body(begin(user, "image/webp", raw.length)).get("id").asString();
+    putContent(user, "/api/v1/uploads/" + id + "/content", raw).andExpect(status().isNoContent());
+    postAs(user, "/api/v1/uploads/" + id + "/complete", "")
+        .andExpect(status().isAccepted())
+        .andExpect(jsonPath("$.url").doesNotExist());
+
+    JsonNode done = awaitFinished(user, id);
+    assertThat(done.get("status").asString()).isEqualTo("READY");
+    assertThat(done.get("width").asInt()).isEqualTo(1200);
   }
 
   @Test

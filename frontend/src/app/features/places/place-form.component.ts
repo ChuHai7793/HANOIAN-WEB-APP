@@ -231,7 +231,7 @@ import { PhotoListEditorComponent } from '../../shared/ui/photo-list-editor.comp
 
         <!-- Ảnh + ghi chú -->
         @if (districts()) {
-          <app-photo-list-editor [(photos)]="photos" [maxSize]="1200" />
+          <app-photo-list-editor [(photos)]="photos" [(uploading)]="photosUploading" [maxSize]="1200" />
         } @else {
           <app-image-picker
             label="Ảnh quán"
@@ -263,10 +263,10 @@ import { PhotoListEditorComponent } from '../../shared/ui/photo-list-editor.comp
         <button
           type="button"
           class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
-          [disabled]="form.invalid"
+          [disabled]="form.invalid || photosUploading()"
           (click)="submit()"
         >
-          {{ place() ? 'Lưu thay đổi' : 'Thêm quán' }}
+          {{ photosUploading() ? 'Đang tải ảnh…' : place() ? 'Lưu thay đổi' : 'Thêm quán' }}
         </button>
       </div>
     </app-modal>
@@ -303,6 +303,8 @@ export class PlaceFormComponent {
   protected readonly imageUrl = signal('');
   /** Form Khám phá quán: nhiều ảnh (tối đa 6), ảnh đầu là ảnh bìa */
   protected readonly photos = signal<string[]>([]);
+  /** Còn ảnh đang tải lên: chờ xong mới cho lưu */
+  protected readonly photosUploading = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -453,7 +455,7 @@ export class PlaceFormComponent {
 
   protected submit(): void {
     this.form.markAllAsTouched();
-    if (this.form.invalid) return;
+    if (this.form.invalid || this.photosUploading()) return;
 
     const v = this.form.getRawValue();
     const cfg = this.config();

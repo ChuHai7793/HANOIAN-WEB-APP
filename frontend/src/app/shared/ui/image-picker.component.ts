@@ -1,8 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, input, model, signal, viewChild } from '@angular/core';
 import { errorMessage } from '../../core/api/api';
-import { UploadResult, UploadService } from '../../core/services/upload.service';
-import { fileToCompressedBlob, formatBytes } from '../../core/utils/image';
+import { UploadService } from '../../core/services/upload.service';
+import { formatBytes } from '../../core/utils/image';
 import { IconComponent } from './icon.component';
 
 /**
@@ -59,14 +59,20 @@ import { IconComponent } from './icon.component';
         (drop)="onDrop($event)"
       >
         @if (busy()) {
-          <p class="text-sm text-slate-500">
-            {{ progress() === null ? 'Đang nén ảnh…' : 'Đang tải ảnh lên… ' + progress() + '%' }}
-          </p>
-          @if (progress() !== null) {
-            <div class="mx-auto mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-slate-200">
-              <div class="h-full bg-brand-500 transition-all" [style.width.%]="progress()"></div>
+          <!-- Hiện ngay ảnh vừa chọn (từ máy), upload chạy phía sau -->
+          <div class="flex items-center justify-center gap-4">
+            @if (preview(); as src) {
+              <img [src]="src" alt="" class="h-20 w-20 shrink-0 bg-white opacity-70" [class]="round() ? 'rounded-full object-cover' : 'rounded-lg object-contain'" />
+            }
+            <div class="text-left">
+              <p class="text-sm text-slate-500">
+                {{ progress() === null ? 'Đang nén ảnh…' : 'Đang tải ảnh lên… ' + progress() + '%' }}
+              </p>
+              <div class="mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-slate-200">
+                <div class="h-full bg-brand-500 transition-all" [style.width.%]="progress() ?? 0"></div>
+              </div>
             </div>
-          }
+          </div>
         } @else {
           <p class="flex justify-center text-brand-500"><app-icon name="image" [size]="28" /></p>
           <p class="mt-1 text-sm font-medium text-slate-700">Chọn ảnh từ máy</p>
@@ -124,6 +130,8 @@ export class ImagePickerComponent {
   protected readonly progress = signal<number | null>(null);
   protected readonly dragging = signal(false);
   protected readonly error = signal('');
+  /** Ảnh vừa chọn (object URL trên máy), hiện trong lúc upload */
+  protected readonly preview = signal<string | null>(null);
   private readonly uploadedSize = signal<number | null>(null);
 
   protected readonly isUploaded = computed(() => this.value().startsWith('/uploads/'));
@@ -163,9 +171,10 @@ export class ImagePickerComponent {
     this.busy.set(true);
     this.progress.set(null);
     this.error.set('');
+    const preview = URL.createObjectURL(file);
+    this.preview.set(preview);
     try {
-      const blob = await fileToCompressedBlob(file, { maxSize: this.maxSize() });
-      const result = await this.upload(blob);
+      const result = await this.uploads.uploadFile(file, this.maxSize(), (percent) => this.progress.set(percent));
       this.value.set(result.url);
       this.uploadedSize.set(result.sizeBytes);
     } catch (err) {
@@ -174,14 +183,8 @@ export class ImagePickerComponent {
     } finally {
       this.busy.set(false);
       this.progress.set(null);
+      this.preview.set(null);
+      URL.revokeObjectURL(preview);
     }
-  }
-
-  /** Upload thẳng lên storage, chờ server xử lý xong (thường chỉ 1–2 giây). */
-  private async upload(blob: Blob): Promise<UploadResult & { url: string }> {
-    this.progress.set(0);
-    const result = await this.uploads.uploadImage(blob, (percent) => this.progress.set(percent));
-    if (!result.url) throw new Error('Server không trả về ảnh.');
-    return { ...result, url: result.url };
   }
 }
