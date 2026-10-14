@@ -16,7 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** Điểm hẹn nổi bật: admin chọn tối đa 3 quán kèm câu dẫn; ai cũng xem được. */
+/** Điểm hẹn nổi bật: admin chọn tối đa 6 quán kèm câu dẫn; ai cũng xem được. */
 class FeaturedPlacesIT extends ApiTestSupport {
 
   @Autowired JdbcTemplate jdbc;
@@ -79,9 +79,11 @@ class FeaturedPlacesIT extends ApiTestSupport {
     setFeatured(newGuestOf(admin), "[" + item + "]").andExpect(status().isForbidden());
     setFeatured(admin, "[" + item + "," + item + "]").andExpect(status().isBadRequest());
     setFeatured(admin, "[{\"catalogId\": \"%s\", \"headline\": \"\"}]".formatted(a)).andExpect(status().isBadRequest());
-    String[] four = new String[4];
-    for (int i = 0; i < 4; i++) four[i] = "{\"catalogId\": \"%s\", \"headline\": \"x\"}".formatted(place(admin, "P" + i + UUID.randomUUID()));
-    setFeatured(admin, "[" + String.join(",", four) + "]").andExpect(status().isBadRequest());
+    // Tối đa 6
+    String[] seven = new String[7];
+    for (int i = 0; i < 7; i++) seven[i] = "{\"catalogId\": \"%s\", \"headline\": \"x\"}".formatted(place(admin, "P" + i + UUID.randomUUID()));
+    setFeatured(admin, "[" + String.join(",", java.util.Arrays.copyOf(seven, 6)) + "]").andExpect(status().isOk());
+    setFeatured(admin, "[" + String.join(",", seven) + "]").andExpect(status().isBadRequest());
     setFeatured(admin, "[{\"catalogId\": \"%s\", \"headline\": \"x\"}]".formatted(UUID.randomUUID())).andExpect(status().isNotFound());
   }
 }

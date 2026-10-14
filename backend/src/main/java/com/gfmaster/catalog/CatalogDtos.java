@@ -97,7 +97,7 @@ public final class CatalogDtos {
       BigDecimal ratingAvg,
       int ratingCount) {}
 
-  /** Một điểm hẹn nổi bật: vị trí 1..3, dòng nhỏ, câu dẫn và quán */
+  /** Một điểm hẹn nổi bật: vị trí 1..6, dòng nhỏ, câu dẫn và quán */
   public record FeaturedItem(int position, String kicker, String headline, CatalogItem place) {}
 
   /** Admin chọn một điểm hẹn nổi bật (thứ tự trong danh sách là vị trí) */

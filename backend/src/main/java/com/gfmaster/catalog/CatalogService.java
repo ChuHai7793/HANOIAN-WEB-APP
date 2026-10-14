@@ -68,9 +68,9 @@ public class CatalogService {
     this.jdbc = jdbc;
   }
 
-  // ---- Điểm hẹn nổi bật (admin chọn, tối đa 3) ----
+  // ---- Điểm hẹn nổi bật (admin chọn, tối đa 6) ----
 
-  static final int MAX_FEATURED = 3;
+  static final int MAX_FEATURED = 6;
 
   private record FeaturedRow(int position, UUID catalogId, String kicker, String headline) {}
 

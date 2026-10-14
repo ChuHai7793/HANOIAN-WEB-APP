@@ -51,7 +51,7 @@ public class CatalogController {
     return catalog.search(userId, q, type, district, mine, page, size);
   }
 
-  /** Công khai: điểm hẹn nổi bật (tối đa 3, admin chọn) cho đầu trang Khám phá quán */
+  /** Công khai: điểm hẹn nổi bật (tối đa 6, admin chọn) cho đầu trang Khám phá quán */
   @GetMapping("/api/v1/catalog/featured")
   public List<FeaturedItem> featured(@MyPlaceOwner(required = false) UUID userId) {
     return catalog.featured(userId);
