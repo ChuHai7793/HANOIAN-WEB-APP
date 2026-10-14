@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { PlaceService } from '../core/services/place.service';
 import { GirlfriendService } from '../core/services/girlfriend.service';
@@ -6,6 +6,7 @@ import { MatchInboxService } from '../core/services/match-inbox.service';
 import { DataBootstrapService } from '../core/services/data-bootstrap.service';
 import { AuthService } from '../core/auth/auth.service';
 import { LegacyImportDialogComponent } from '../shared/ui/legacy-import-dialog.component';
+import { ConfirmDialogComponent } from '../shared/ui/confirm-dialog.component';
 import { IconComponent, IconName } from '../shared/ui/icon.component';
 import { SavedSpotService } from '../core/services/saved-spot.service';
 import { DateVibeService } from '../core/services/date-vibe.service';
@@ -37,7 +38,7 @@ function readCollapsed(): boolean {
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LegacyImportDialogComponent, IconComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LegacyImportDialogComponent, IconComponent, ConfirmDialogComponent],
   template: `
     <!-- data-collapsed: thanh bên thu gọn (chỉ logo + icon), chỉ áp dụng màn rộng (lg:); điện thoại vẫn là menu trượt -->
     <div class="group/shell flex min-h-screen" [attr.data-collapsed]="collapsed() ? '' : null">
@@ -101,52 +102,73 @@ function readCollapsed(): boolean {
           }
         </nav>
 
-        <div class="mx-4 shrink-0 border-t border-slate-200 bg-white px-2 pb-6 pt-4 lg:group-data-collapsed/shell:mx-3 lg:group-data-collapsed/shell:px-0">
+        <div #account class="relative mx-4 shrink-0 border-t border-slate-200 bg-white px-1 py-3 lg:group-data-collapsed/shell:mx-3 lg:group-data-collapsed/shell:px-0">
           @if (auth.user(); as user) {
-            <a
-              routerLink="/profile"
-              class="-m-1.5 flex items-center gap-3 rounded-lg p-1.5 transition hover:bg-slate-50 lg:group-data-collapsed/shell:m-0 lg:group-data-collapsed/shell:justify-center"
-              [title]="collapsed() ? user.displayName + ' · Hồ sơ của tôi' : 'Hồ sơ của tôi'"
-              (click)="menuOpen.set(false)"
+            <!-- Một dòng tài khoản; bấm mở menu (Hồ sơ, Đăng xuất, Đăng xuất mọi thiết bị) -->
+            <button
+              type="button"
+              class="flex w-full items-center gap-3 rounded-xl p-1.5 text-left transition hover:bg-slate-50 lg:group-data-collapsed/shell:justify-center"
+              [class.bg-slate-50]="accountOpen()"
+              [attr.aria-expanded]="accountOpen()"
+              aria-haspopup="menu"
+              [title]="collapsed() ? user.displayName : ''"
+              (click)="accountOpen.set(!accountOpen())"
             >
               @if (user.avatarUrl) {
-                <img [src]="user.avatarUrl" alt="" class="h-10 w-10 shrink-0 rounded-full object-cover" />
+                <img [src]="user.avatarUrl" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover" />
               } @else {
-                <span
-                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-200 text-sm font-bold text-brand-800"
-                >
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-200 text-sm font-bold text-brand-800">
                   {{ initial(user.displayName) }}
                 </span>
               }
-              <div class="min-w-0 flex-1 lg:group-data-collapsed/shell:hidden">
-                <p class="truncate text-sm font-semibold text-slate-900">
-                  {{ user.displayName }}
-                  @if (user.role === 'GUEST') {
-                    <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
-                      Chỉ xem
-                    </span>
+              <span class="min-w-0 flex-1 lg:group-data-collapsed/shell:hidden">
+                <span class="flex items-center gap-1.5">
+                  <span class="truncate text-sm font-semibold text-slate-900">{{ user.displayName }}</span>
+                  @if (user.role === 'ADMIN') {
+                    <span class="shrink-0 rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">Admin</span>
+                  } @else {
+                    <span class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">Chỉ xem</span>
                   }
-                </p>
-                <p class="truncate text-xs text-slate-500">{{ user.username ? '@' + user.username : user.email }}</p>
+                </span>
+                <span class="block truncate text-xs text-slate-500">{{ user.username ? '@' + user.username : user.email }}</span>
+              </span>
+              <span class="text-slate-400 lg:group-data-collapsed/shell:hidden"><app-icon name="more" [size]="18" /></span>
+            </button>
+
+            @if (accountOpen()) {
+              <div
+                role="menu"
+                class="absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg lg:group-data-collapsed/shell:bottom-0 lg:group-data-collapsed/shell:left-full lg:group-data-collapsed/shell:right-auto lg:group-data-collapsed/shell:mb-0 lg:group-data-collapsed/shell:ml-3 lg:group-data-collapsed/shell:w-60"
+              >
+                <!-- Thu gọn: menu mở sang phải, thêm tên để biết đang ở tài khoản nào -->
+                <p class="hidden truncate border-b border-slate-100 px-4 pb-2 pt-1 text-sm font-semibold text-slate-900 lg:group-data-collapsed/shell:block">{{ user.displayName }}</p>
+                <a
+                  routerLink="/profile"
+                  role="menuitem"
+                  class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                  (click)="accountOpen.set(false); menuOpen.set(false)"
+                >
+                  <app-icon name="user" [size]="18" />Hồ sơ của tôi
+                </a>
+                <button
+                  type="button"
+                  role="menuitem"
+                  class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                  (click)="accountOpen.set(false); auth.logout()"
+                >
+                  <app-icon name="logout" [size]="18" />Đăng xuất
+                </button>
+                <div class="my-1.5 border-t border-slate-100"></div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  class="flex w-full items-center gap-3 px-4 py-2 text-left text-[13px] text-rose-600 transition hover:bg-rose-50"
+                  (click)="accountOpen.set(false); confirmLogoutAll.set(true)"
+                >
+                  <app-icon name="logout" [size]="16" />Đăng xuất mọi thiết bị
+                </button>
               </div>
-            </a>
-            <div class="mt-3 flex gap-2 lg:group-data-collapsed/shell:hidden">
-              <button
-                type="button"
-                class="min-h-10 flex-1 rounded-[10px] border border-brand-200 bg-white px-3 text-[13px] font-semibold text-slate-700 transition hover:bg-brand-50"
-                (click)="auth.logout()"
-              >
-                Đăng xuất
-              </button>
-              <button
-                type="button"
-                class="min-h-10 flex-1 rounded-[10px] border border-brand-200 bg-white px-3 text-[13px] text-slate-700 transition hover:bg-brand-50"
-                title="Đăng xuất khỏi mọi thiết bị"
-                (click)="auth.logoutAll()"
-              >
-                Mọi thiết bị
-              </button>
-            </div>
+            }
           } @else {
             <!-- Khách: mời tạo tài khoản để lưu quán, lập plan, hẹn hò -->
             <p class="mb-3 text-xs text-slate-500 lg:group-data-collapsed/shell:hidden">Tạo tài khoản miễn phí để lưu quán, lập plan và tìm người hẹn hò.</p>
@@ -178,6 +200,16 @@ function readCollapsed(): boolean {
           }
         </div>
       </aside>
+
+      @if (confirmLogoutAll()) {
+        <app-confirm-dialog
+          title="Đăng xuất mọi thiết bị?"
+          message="Tài khoản sẽ bị đăng xuất trên tất cả điện thoại, máy tính đang đăng nhập, kể cả máy này. Dùng khi bạn nghi ngờ người khác đang dùng tài khoản của mình."
+          confirmLabel="Đăng xuất tất cả"
+          (confirm)="confirmLogoutAll.set(false); auth.logoutAll()"
+          (cancel)="confirmLogoutAll.set(false)"
+        />
+      }
 
       @if (menuOpen()) {
         <div
@@ -243,6 +275,21 @@ export class ShellComponent {
   private readonly inbox = inject(MatchInboxService);
 
   protected readonly menuOpen = signal(false);
+  /** Menu tài khoản (cuối thanh bên) */
+  protected readonly accountOpen = signal(false);
+  protected readonly confirmLogoutAll = signal(false);
+  private readonly account = viewChild<ElementRef<HTMLElement>>('account');
+
+  /** Bấm ra ngoài khối tài khoản hoặc nhấn Esc thì đóng menu tài khoản */
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: MouseEvent): void {
+    if (this.accountOpen() && !this.account()?.nativeElement.contains(event.target as Node)) this.accountOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    this.accountOpen.set(false);
+  }
   /** Thanh bên thu gọn (màn rộng): nhớ theo trình duyệt */
   protected readonly collapsed = signal(readCollapsed());
 
