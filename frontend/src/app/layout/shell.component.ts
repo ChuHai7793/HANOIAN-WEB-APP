@@ -46,21 +46,23 @@ function readCollapsed(): boolean {
         class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-[width,transform] duration-200 lg:translate-x-0 lg:group-data-collapsed/shell:w-[72px]"
         [class.-translate-x-full]="!menuOpen()"
       >
-        <div class="flex shrink-0 items-center gap-3 px-6 pb-2 pt-6 lg:group-data-collapsed/shell:flex-col lg:group-data-collapsed/shell:gap-2 lg:group-data-collapsed/shell:px-0 lg:group-data-collapsed/shell:pt-5">
-          <img src="logo.png" alt="" class="h-11 w-auto lg:group-data-collapsed/shell:h-9" />
+        <!-- Nút tròn nằm đè lên mép phải thanh bên, ngang logo: thu gọn / mở rộng (chỉ màn rộng) -->
+        <button
+          type="button"
+          class="group/toggle absolute -right-3 top-9 z-10 hidden h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition hover:border-brand-300 hover:text-brand-600 hover:shadow lg:flex"
+          [attr.aria-label]="collapsed() ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'"
+          [title]="collapsed() ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'"
+          (click)="toggleCollapsed()"
+        >
+          <span class="transition-transform duration-200" [class.rotate-180]="collapsed()"><app-icon name="chevronLeft" [size]="14" [stroke]="2.5" /></span>
+        </button>
+
+        <div class="flex shrink-0 items-center gap-3 px-6 pb-2 pt-6 lg:group-data-collapsed/shell:justify-center lg:group-data-collapsed/shell:px-0">
+          <img src="logo.png" alt="" class="h-11 w-auto" />
           <div class="flex min-w-0 flex-1 flex-col gap-0.5 lg:group-data-collapsed/shell:hidden">
             <span class="text-xl font-extrabold leading-none tracking-wide text-slate-900">HANOI<span class="text-brand-600">VIBE</span></span>
             <span class="text-xs text-slate-500">Hẹn ở đâu cũng đẹp</span>
           </div>
-          <button
-            type="button"
-            class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:flex"
-            [attr.aria-label]="collapsed() ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'"
-            [title]="collapsed() ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'"
-            (click)="toggleCollapsed()"
-          >
-            <app-icon [name]="collapsed() ? 'sidebarExpand' : 'sidebarCollapse'" [size]="18" />
-          </button>
         </div>
 
         <!-- Menu dài hơn màn hình thì cuộn trong phần này, không chui xuống dưới khối tài khoản -->
