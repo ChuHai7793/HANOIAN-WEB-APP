@@ -1,6 +1,8 @@
+import { isPlatformServer } from '@angular/common';
 import {
   ApplicationConfig,
   inject,
+  PLATFORM_ID,
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
@@ -11,6 +13,7 @@ import { routes } from './app.routes';
 import { authInterceptor } from './core/api/auth.interceptor';
 import { errorInterceptor } from './core/api/error.interceptor';
 import { idempotencyInterceptor } from './core/api/idempotency.interceptor';
+import { serverApiOriginInterceptor } from './core/api/server-api-origin';
 import { AuthService } from './core/auth/auth.service';
 import { DataBootstrapService } from './core/services/data-bootstrap.service';
 
@@ -24,10 +27,13 @@ export const appConfig: ApplicationConfig = {
     // idempotencyInterceptor đứng trước authInterceptor: lần gửi lại sau refresh giữ nguyên key
     provideHttpClient(
       withFetch(),
-      withInterceptors([errorInterceptor, idempotencyInterceptor, authInterceptor]),
+      // serverApiOriginInterceptor đứng trong cùng: chỉ đổi URL khi render trên server (bản SSR)
+      withInterceptors([errorInterceptor, idempotencyInterceptor, authInterceptor, serverApiOriginInterceptor]),
     ),
-    // Khôi phục phiên (cookie refresh) rồi tải dữ liệu, trước khi router chạy guard
+    // Khôi phục phiên (cookie refresh) rồi tải dữ liệu, trước khi router chạy guard.
+    // Render trên server (bản SSR) thì bỏ qua: server luôn render như khách, trình duyệt tự đăng nhập lại.
     provideAppInitializer(async () => {
+      if (isPlatformServer(inject(PLATFORM_ID))) return;
       const auth = inject(AuthService);
       const bootstrap = inject(DataBootstrapService);
       if (await auth.restoreSession()) {

@@ -81,21 +81,10 @@ export type IconName = keyof typeof PATHS;
  */
 @Component({
   selector: 'app-icon',
-  template: `
-    <svg
-      [attr.width]="size()"
-      [attr.height]="size()"
-      viewBox="0 0 24 24"
-      [attr.fill]="filled() ? 'currentColor' : 'none'"
-      stroke="currentColor"
-      [attr.stroke-width]="filled() ? 0 : stroke()"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      [innerHTML]="svg()"
-    ></svg>
-  `,
-  host: { class: 'inline-flex shrink-0' },
+  // Cả thẻ <svg> dựng thành chuỗi rồi gán vào chính <app-icon> (phần tử HTML): DOM giả lập khi render trên
+  // server (bản SSR) chưa hỗ trợ gán innerHTML trực tiếp cho phần tử SVG
+  template: '',
+  host: { class: 'inline-flex shrink-0', '[innerHTML]': 'svg()' },
 })
 export class IconComponent {
   readonly name = input.required<IconName>();
@@ -104,6 +93,15 @@ export class IconComponent {
   readonly filled = input(false);
 
   private readonly sanitizer = inject(DomSanitizer);
-  /** Hằng trong code nên đánh dấu an toàn: sanitizer mặc định bỏ mất thẻ SVG */
-  protected readonly svg = computed<SafeHtml>(() => this.sanitizer.bypassSecurityTrustHtml(PATHS[this.name()]));
+  /** Hằng trong code (nét vẽ + số) nên đánh dấu an toàn: sanitizer mặc định bỏ mất thẻ SVG */
+  protected readonly svg = computed<SafeHtml>(() => {
+    const size = Number(this.size());
+    const fill = this.filled() ? 'currentColor' : 'none';
+    const strokeWidth = this.filled() ? 0 : Number(this.stroke());
+    return this.sanitizer.bypassSecurityTrustHtml(
+      `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill}" stroke="currentColor" ` +
+        `stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">` +
+        `${PATHS[this.name()]}</svg>`,
+    );
+  });
 }

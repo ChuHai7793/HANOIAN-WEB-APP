@@ -1,4 +1,4 @@
-import { afterNextRender, Directive, ElementRef, inject, OnDestroy } from '@angular/core';
+import { afterNextRender, DestroyRef, Directive, ElementRef, inject } from '@angular/core';
 
 /** Cách mép dưới cửa sổ */
 const BOTTOM_GAP = 10;
@@ -12,7 +12,7 @@ const MIN_HEIGHT_PHONE = 300;
  * Tính lại khi đổi cỡ cửa sổ hoặc phần trên lưới cao / thấp đi (chip lọc xuống dòng, dữ liệu vừa tải…).
  */
 @Directive({ selector: '[appFitRow]' })
-export class FitRowDirective implements OnDestroy {
+export class FitRowDirective {
   private readonly el = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private observer: ResizeObserver | null = null;
   private frame = 0;
@@ -29,6 +29,8 @@ export class FitRowDirective implements OnDestroy {
   };
 
   constructor() {
+    const destroyRef = inject(DestroyRef);
+    // Chỉ chạy trên trình duyệt (afterNextRender không chạy khi render trên server, bản SSR)
     afterNextRender(() => {
       this.update();
       window.addEventListener('resize', this.update);
@@ -36,12 +38,11 @@ export class FitRowDirective implements OnDestroy {
         this.observer = new ResizeObserver(this.scheduleUpdate);
         this.observer.observe(this.el.parentElement ?? this.el);
       }
+      destroyRef.onDestroy(() => {
+        window.removeEventListener('resize', this.update);
+        this.observer?.disconnect();
+        cancelAnimationFrame(this.frame);
+      });
     });
-  }
-
-  ngOnDestroy(): void {
-    window.removeEventListener('resize', this.update);
-    this.observer?.disconnect();
-    cancelAnimationFrame(this.frame);
   }
 }
