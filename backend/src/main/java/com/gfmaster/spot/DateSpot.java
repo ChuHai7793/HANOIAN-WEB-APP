@@ -26,6 +26,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OrderColumn;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
 import org.hibernate.annotations.BatchSize;
 
 /** Một chỗ chơi trong "Tìm chỗ chơi": admin nhập, mọi người xem. */
@@ -101,6 +102,15 @@ public class DateSpot extends BaseEntity {
   @Convert(converter = VibeConverters.SourceConverter.class)
   @Column(nullable = false, length = 10)
   private VibeSource vibesSource = VibeSource.DEFAULT;
+
+  /** Nhóm khác ngoài nhóm chính (V24): lọc theo nhóm khớp cả các nhóm này. Không chứa nhóm chính. */
+  @ElementCollection
+  @CollectionTable(name = "spot_extra_categories", joinColumns = @JoinColumn(name = "spot_id"))
+  @Enumerated(EnumType.STRING)
+  @JdbcTypeCode(SqlTypes.VARCHAR)
+  @Column(name = "category", nullable = false, length = 20)
+  @BatchSize(size = 50)
+  private Set<SpotCategory> extraCategories = new HashSet<>();
 
   /** Ảnh, tối đa 6, ảnh số 0 là ảnh bìa (= {@code imageUrl}); dạng lưu /uploads/<key> hoặc link http(s) */
   @ElementCollection

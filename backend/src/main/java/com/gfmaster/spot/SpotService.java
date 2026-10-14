@@ -167,6 +167,13 @@ public class SpotService {
       throw new ApiException(ErrorCode.VALIDATION_FAILED, "Nhập cả giờ mở và giờ đóng, hoặc bỏ trống cả hai.");
     }
     s.setCategory(r.category());
+    if (r.extraCategories() != null) {
+      s.getExtraCategories().clear();
+      r.extraCategories().stream().filter(c -> c != null && c != r.category()).forEach(s.getExtraCategories()::add);
+    } else {
+      // Đổi nhóm chính sang một nhóm đang là "nhóm khác": bỏ trùng
+      s.getExtraCategories().remove(r.category());
+    }
     s.setDistrict(r.district());
     s.setName(r.name().trim());
     s.setAddress(trimToEmpty(r.address()));
@@ -198,7 +205,13 @@ public class SpotService {
   private static Specification<DateSpot> filter(
       String q, SpotCategory category, CatalogDistrict district, Integer maxPrice, Boolean indoor, LocalTime openAt) {
     Specification<DateSpot> spec = (root, query, cb) -> cb.conjunction();
-    if (category != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("category"), category));
+    // Nhóm chính hoặc một trong các nhóm khác
+    if (category != null) {
+      spec =
+          spec.and(
+              (root, query, cb) ->
+                  cb.or(cb.equal(root.get("category"), category), cb.isMember(category, root.get("extraCategories"))));
+    }
     if (district != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("district"), district));
     if (maxPrice != null) spec = spec.and((root, query, cb) -> cb.le(root.get("priceFrom"), maxPrice));
     if (indoor != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("indoor"), indoor));
@@ -246,6 +259,7 @@ public class SpotService {
     return new SpotItem(
         s.getId(),
         s.getCategory(),
+        s.getExtraCategories().stream().sorted().toList(),
         s.getDistrict().name(),
         s.getDistrict().label(),
         s.getName(),

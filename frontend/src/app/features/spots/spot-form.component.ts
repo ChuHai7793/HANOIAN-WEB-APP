@@ -9,6 +9,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { defaultSpotVibes, VibeChoice } from '../../core/models/vibe.model';
 import { VibePickerComponent } from '../../shared/ui/vibe-picker.component';
 import { PhotoListEditorComponent } from '../../shared/ui/photo-list-editor.component';
+import { IconComponent } from '../../shared/ui/icon.component';
 
 const INPUT =
   'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100';
@@ -25,7 +26,7 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
 /** Admin thêm/sửa chỗ chơi trong "Tìm chỗ chơi". */
 @Component({
   selector: 'app-spot-form',
-  imports: [PhotoListEditorComponent, ReactiveFormsModule, ModalComponent, VibePickerComponent],
+  imports: [IconComponent, PhotoListEditorComponent, ReactiveFormsModule, ModalComponent, VibePickerComponent],
   template: `
     <app-modal
       [title]="spot() ? 'Sửa chỗ chơi' : 'Thêm chỗ chơi'"
@@ -54,6 +55,23 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
             @if (invalid('district')) {
               <p class="mt-1 text-xs text-rose-600">Chọn khu vực.</p>
             }
+          </div>
+          <div class="sm:col-span-2">
+            <p class="mb-1.5 text-sm font-medium text-slate-700">Thuộc thêm nhóm <span class="font-normal text-slate-400">(tuỳ chọn, chọn nhiều)</span></p>
+            <div class="flex flex-wrap gap-1.5" role="group" aria-label="Thuộc thêm nhóm">
+              @for (c of extraOptions(); track c.value) {
+                <button
+                  type="button"
+                  class="flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition"
+                  [class]="extraCategories().includes(c.value) ? 'border-brand-500 bg-brand-50 font-semibold text-brand-700' : 'border-slate-200 text-slate-600 hover:border-brand-200'"
+                  [attr.aria-pressed]="extraCategories().includes(c.value)"
+                  (click)="toggleExtra(c.value)"
+                >
+                  <app-icon [name]="c.icon" [size]="13" />{{ c.label }}
+                </button>
+              }
+            </div>
+            <p class="mt-1 text-xs text-slate-500">Lọc theo các nhóm này cũng ra chỗ chơi. Nhãn trên thẻ và kiểu hẹn tự gán vẫn theo nhóm chính.</p>
           </div>
           <div class="sm:col-span-2">
             <app-vibe-picker
@@ -230,6 +248,13 @@ export class SpotFormComponent implements OnInit {
     initialValue: this.form.controls.category.value,
   });
   protected readonly defaultVibes = computed(() => defaultSpotVibes(this.category()));
+  /** Nhóm khác (chọn nhiều); nhóm chính không có trong danh sách chọn */
+  protected readonly extraCategories = signal<SpotCategory[]>([]);
+  protected readonly extraOptions = computed(() => this.categories.filter((c) => c.value !== this.category()));
+
+  protected toggleExtra(c: SpotCategory): void {
+    this.extraCategories.update((list) => (list.includes(c) ? list.filter((x) => x !== c) : [...list, c]));
+  }
 
   // Component được tạo mới mỗi lần mở modal nên nạp một lần ở ngOnInit là đủ.
   ngOnInit(): void {
@@ -255,6 +280,7 @@ export class SpotFormComponent implements OnInit {
       coordinates: s.lat !== null && s.lng !== null ? `${s.lat}, ${s.lng}` : '',
     });
     this.photos.set(s.photos?.length ? s.photos : s.imageUrl ? [s.imageUrl] : []);
+    this.extraCategories.set(s.extraCategories ?? []);
   }
 
   protected invalid(control: string): boolean {
@@ -289,6 +315,8 @@ export class SpotFormComponent implements OnInit {
 
     this.save.emit({
       category: v.category,
+      // Nhóm chính không lặp lại trong nhóm khác (vd. vừa đổi nhóm chính sang một nhóm đã chọn ở dưới)
+      extraCategories: this.extraCategories().filter((c) => c !== v.category),
       district: v.district,
       name: v.name.trim(),
       address: v.address.trim(),

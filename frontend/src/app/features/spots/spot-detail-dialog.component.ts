@@ -14,7 +14,7 @@ import { ReviewsComponent } from '../../shared/ui/reviews.component';
   imports: [ReviewsComponent, ModalComponent, IconComponent, PhotoCarouselComponent, VibeTagsComponent],
   template: `
     @if (spot(); as d) {
-      <app-modal [title]="d.name" [subtitle]="cat(d).label + ' · ' + d.districtLabel" width="max-w-lg" (dismiss)="closed.emit()">
+      <app-modal [title]="d.name" [subtitle]="categoriesText(d) + ' · ' + d.districtLabel" width="max-w-lg" (dismiss)="closed.emit()">
         <div class="flex flex-col gap-4">
           @if (d.imageUrl) {
             <app-photo-carousel class="h-56 w-full rounded-xl" [photos]="photosOf(d)" [alt]="d.name" [lazy]="false" />
@@ -90,6 +90,10 @@ export class SpotDetailDialogComponent {
   protected readonly price = spotPriceText;
   protected readonly duration = durationText;
   protected readonly cat = (item: SpotItem) => spotCategory(item.category);
+  /** "Vận động · Giải trí": nhóm chính trước, rồi các nhóm khác */
+  protected categoriesText(item: SpotItem): string {
+    return [item.category, ...(item.extraCategories ?? [])].map((c) => spotCategory(c).label).join(' · ');
+  }
 
   protected mapUrl(item: SpotItem): string {
     return item.googleMapsUrl || viewOnMapUrl(item.lat, item.lng, `${item.name} ${item.address}`);

@@ -28,6 +28,8 @@ export const SPOT_CATEGORIES: { value: SpotCategory; icon: IconName; label: stri
 export interface SpotItem {
   id: string;
   category: SpotCategory;
+  /** Nhóm khác ngoài nhóm chính: lọc theo nhóm khớp cả các nhóm này */
+  extraCategories: SpotCategory[];
   district: string;
   districtLabel: string;
   name: string;

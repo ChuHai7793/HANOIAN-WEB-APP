@@ -64,6 +64,35 @@ class SpotIT extends ApiTestSupport {
   }
 
   @Test
+  void extraCategoriesCountInFiltersAndChips() throws Exception {
+    String id = body(postAs(admin, "/api/v1/admin/spots", """
+        {"category": "sport", "extraCategories": ["entertainment", "sport", "show"], "district": "DONG_DA",
+         "name": "AdventureS", "priceFrom": 150000, "indoor": true}
+        """).andExpect(status().isCreated()))
+        .get("id").asString();
+    // Nhóm chính không lặp lại trong nhóm khác
+    getAs(guest, "/api/v1/spots?q=AdventureS").andExpect(jsonPath("$.items[0].extraCategories.length()").value(2));
+
+    // Lọc theo nhóm khác vẫn ra; chip đếm cả nhóm chính lẫn nhóm khác, "Tất cả" vẫn là tổng thật
+    getAs(guest, "/api/v1/spots?category=entertainment").andExpect(jsonPath("$.items[0].name").value("AdventureS"));
+    getAs(guest, "/api/v1/spots?category=museum").andExpect(jsonPath("$.total").value(0));
+    getAs(guest, "/api/v1/spots/counts")
+        .andExpect(jsonPath("$.all").value(1))
+        .andExpect(jsonPath("$.sport").value(1))
+        .andExpect(jsonPath("$.entertainment").value(1))
+        .andExpect(jsonPath("$.show").value(1));
+
+    // Đổi nhóm chính thành một nhóm đang là "nhóm khác" (không gửi extraCategories): bỏ trùng
+    putAs(admin, id, """
+        {"category": "entertainment", "district": "DONG_DA", "name": "AdventureS", "priceFrom": 150000,
+         "indoor": true, "version": 0}
+        """).andExpect(status().isOk())
+        .andExpect(jsonPath("$.category").value("entertainment"))
+        .andExpect(jsonPath("$.extraCategories[0]").value("show"))
+        .andExpect(jsonPath("$.extraCategories.length()").value(1));
+  }
+
+  @Test
   void longHoursNoteAndVietnameseValidationMessages() throws Exception {
     // Ghi chú giờ, giá tới 1000 ký tự (V22)
     String note = "Vé người lớn 50k, trẻ em 25k. ".repeat(40).substring(0, 1000);

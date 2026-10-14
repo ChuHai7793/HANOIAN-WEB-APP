@@ -29,6 +29,8 @@ public final class SpotDtos {
    */
   public record SpotRequest(
       @NotNull SpotCategory category,
+      /** Nhóm khác ngoài nhóm chính; null = giữ như cũ */
+      Set<SpotCategory> extraCategories,
       @NotNull CatalogDistrict district,
       @NotBlank @Size(max = 120) String name,
       @Size(max = 255) String address,
@@ -61,6 +63,8 @@ public final class SpotDtos {
   public record SpotItem(
       UUID id,
       SpotCategory category,
+      /** Nhóm khác ngoài nhóm chính, theo thứ tự của SpotCategory */
+      List<SpotCategory> extraCategories,
       String district,
       String districtLabel,
       String name,
