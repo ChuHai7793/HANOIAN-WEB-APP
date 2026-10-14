@@ -23,8 +23,22 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 const apiOrigin = process.env['API_ORIGIN'] ?? 'http://localhost:8080';
 
 const app = express();
-// Chống SSRF: chỉ render cho tên miền khai báo (NG_ALLOWED_HOSTS ưu tiên hơn danh sách này)
-const angularApp = new AngularNodeAppEngine({ allowedHosts: ['localhost', '127.0.0.1'] });
+// Chống SSRF: chỉ render cho tên miền khai báo. Danh sách truyền vào đây được ưu tiên hơn biến môi trường,
+// nên phải tự ghép NG_ALLOWED_HOSTS (tên miền trên Render) với localhost (chạy thử trên máy).
+const allowedHosts = [
+  'localhost',
+  '127.0.0.1',
+  ...(process.env['NG_ALLOWED_HOSTS'] ?? '')
+    .split(',')
+    .map((h) => h.trim())
+    .filter(Boolean),
+];
+const angularApp = new AngularNodeAppEngine({
+  allowedHosts,
+  // Render đứng trước server và gửi X-Forwarded-For/Host/Proto. Không tin các header này thì Angular lặng lẽ
+  // bỏ render trên server (trả khung trống như bản static).
+  trustProxyHeaders: true,
+});
 
 app.disable('x-powered-by');
 
