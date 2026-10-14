@@ -89,7 +89,10 @@ public final class SpotDtos {
       Instant createdAt,
       Instant updatedAt,
       /** Người đang xem đã lưu vào My place chưa (false ở kết quả thêm / sửa của admin) */
-      boolean inMyPlace) {}
+      boolean inMyPlace,
+      /** Điểm đánh giá trung bình (1 chữ số thập phân); null = chưa có đánh giá */
+      BigDecimal ratingAvg,
+      int ratingCount) {}
 
   public record SpotPage(List<SpotItem> items, long total, int page, int size) {}
 }

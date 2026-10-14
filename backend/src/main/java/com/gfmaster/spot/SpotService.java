@@ -270,6 +270,8 @@ public class SpotService {
         s.getVersion(),
         s.getCreatedAt(),
         s.getUpdatedAt(),
-        inMyPlace);
+        inMyPlace,
+        s.getRatingAvg(),
+        s.getRatingCount());
   }
 }

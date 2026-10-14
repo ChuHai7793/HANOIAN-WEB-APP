@@ -47,6 +47,9 @@ export interface SpotItem {
   photos: string[];
   /** Người đang xem đã lưu vào My place chưa */
   inMyPlace: boolean;
+  /** Điểm đánh giá trung bình của người dùng (null = chưa có) và số đánh giá */
+  ratingAvg: number | null;
+  ratingCount: number;
   googleMapsUrl: string;
   lat: number | null;
   lng: number | null;

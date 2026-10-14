@@ -26,6 +26,7 @@ import { photosOf } from '../../core/models/place.model';
 import { SavedSpotService } from '../../core/services/saved-spot.service';
 import { SpotDetailDialogComponent } from './spot-detail-dialog.component';
 import { LoginGate } from '../../core/auth/login-gate.service';
+import { ratingText } from '../../core/models/review.model';
 
 /** Lọc theo ngân sách: giá thấp nhất của chỗ chơi không quá mức này. */
 const BUDGETS: { value: number | null; label: string }[] = [
@@ -199,6 +200,9 @@ function nowHHmm(): string {
                 <div class="flex min-w-0 flex-col gap-1">
                   <h2 class="truncate text-base font-bold tracking-tight text-slate-900" [title]="item.name">{{ item.name }}</h2>
                   <div class="flex items-center gap-2">
+                    @if (item.ratingCount && item.ratingAvg !== null) {
+                      <span class="shrink-0 text-[13px] font-semibold text-slate-700" [attr.aria-label]="'Đánh giá ' + rating(item.ratingAvg) + ' trên 5, ' + item.ratingCount + ' lượt'"><span class="text-[#E29A2D]">★</span> {{ rating(item.ratingAvg) }} <span class="font-normal text-slate-400">({{ item.ratingCount }})</span></span>
+                    }
                     <span class="min-w-0 flex-1 truncate text-[13px] text-slate-500">{{ item.address || 'Chưa có địa chỉ' }}</span>
                     <app-vibe-tags class="shrink-0" [vibes]="item.vibes" />
                   </div>
@@ -259,6 +263,7 @@ function nowHHmm(): string {
         (closed)="detail.set(null)"
         (plan)="detail.set(null); addToPlan({ kind: 'spot', refId: $event.id, name: $event.name, district: $event.district })"
         (save)="saveSpot($event)"
+        (ratingChange)="onRatingChange(d.id, $event)"
       />
     }
   `,
@@ -291,6 +296,13 @@ export class SpotListPage implements OnInit {
   protected readonly rainy = signal(false);
   protected readonly districts = signal<DistrictOption[]>([]);
   protected readonly items = signal<SpotItem[]>([]);
+  protected readonly rating = ratingText;
+
+  /** Mình vừa viết / sửa / xoá đánh giá trong popup: cập nhật sao trên thẻ */
+  protected onRatingChange(id: string, r: { ratingAvg: number | null; ratingCount: number }): void {
+    this.items.update((list) => list.map((i) => (i.id === id ? { ...i, ...r } : i)));
+    if (this.detail()?.id === id) this.detail.set({ ...this.detail()!, ...r });
+  }
   /** Số chỗ chơi theo nhóm cho chip (theo mọi bộ lọc trừ nhóm) */
   protected readonly counts = signal<Record<string, number> | null>(null);
   protected readonly total = signal(0);

@@ -251,6 +251,8 @@ public class CatalogService {
         c.getCreatedAt(),
         c.getUpdatedAt(),
         inMyPlace,
-        fans);
+        fans,
+        c.getRatingAvg(),
+        c.getRatingCount());
   }
 }

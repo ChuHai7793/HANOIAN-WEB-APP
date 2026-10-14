@@ -6,11 +6,12 @@ import { IconComponent } from '../../shared/ui/icon.component';
 import { ModalComponent } from '../../shared/ui/modal.component';
 import { PhotoCarouselComponent } from '../../shared/ui/photo-carousel.component';
 import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
+import { ReviewsComponent } from '../../shared/ui/reviews.component';
 
 /** Popup chi tiết một chỗ chơi (Tìm chỗ chơi, My place): ảnh, giá, giờ, thời lượng, mô tả, các nút. */
 @Component({
   selector: 'app-spot-detail-dialog',
-  imports: [ModalComponent, IconComponent, PhotoCarouselComponent, VibeTagsComponent],
+  imports: [ReviewsComponent, ModalComponent, IconComponent, PhotoCarouselComponent, VibeTagsComponent],
   template: `
     @if (spot(); as d) {
       <app-modal [title]="d.name" [subtitle]="cat(d).label + ' · ' + d.districtLabel" width="max-w-lg" (dismiss)="closed.emit()">
@@ -48,6 +49,7 @@ import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
               <span class="mt-0.5 not-italic"><app-icon name="info" [size]="14" /></span>{{ d.hoursNote }}
             </p>
           }
+          <app-reviews target="spot" [targetId]="d.id" (summaryChange)="ratingChange.emit($event)" />
         </div>
         <div modalFooter class="flex flex-wrap justify-end gap-2">
           <a [href]="mapUrl(d)" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50">
@@ -81,6 +83,8 @@ export class SpotDetailDialogComponent {
   readonly closed = output<void>();
   readonly plan = output<SpotItem>();
   readonly save = output<SpotItem>();
+  /** Điểm đánh giá đổi (mình vừa viết / sửa / xoá) */
+  readonly ratingChange = output<{ ratingAvg: number | null; ratingCount: number }>();
 
   protected readonly photosOf = photosOf;
   protected readonly price = spotPriceText;

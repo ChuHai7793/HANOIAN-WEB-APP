@@ -92,7 +92,10 @@ public final class CatalogDtos {
       Instant createdAt,
       Instant updatedAt,
       boolean inMyPlace,
-      Integer fans) {}
+      Integer fans,
+      /** Điểm đánh giá trung bình (1 chữ số thập phân); null = chưa có đánh giá */
+      BigDecimal ratingAvg,
+      int ratingCount) {}
 
   public record CatalogPage(List<CatalogItem> items, long total, int page, int size) {}
 }

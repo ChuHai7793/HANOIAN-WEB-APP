@@ -72,6 +72,7 @@ public class SecurityConfig {
                         "/api/v1/catalog/districts",
                         "/api/v1/spots",
                         "/api/v1/spots/counts",
+                        "/api/v1/reviews",
                         "/api/v1/public/**")
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/v1/public/autoplan")
@@ -98,6 +99,9 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/v1/spots/*/my-place")
                     .authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/spots/*/my-place")
+                    .authenticated()
+                    // Đánh giá quán / chỗ chơi: của chính người viết, guest cũng viết được
+                    .requestMatchers("/api/v1/reviews/**")
                     .authenticated()
                     // "Tìm đối tượng": mỗi người quẹt, match bằng hồ sơ của chính mình
                     .requestMatchers("/api/v1/dating/**")

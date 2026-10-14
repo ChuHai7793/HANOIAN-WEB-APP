@@ -21,6 +21,8 @@ import { PhotoCarouselComponent } from '../../shared/ui/photo-carousel.component
 import { photosOf } from '../../core/models/place.model';
 import { LoginGate } from '../../core/auth/login-gate.service';
 import { AutoplanDialogComponent } from '../plans/autoplan-dialog.component';
+import { ratingText } from '../../core/models/review.model';
+import { ReviewsComponent } from '../../shared/ui/reviews.component';
 
 const CONFIGS: Record<PlaceType, PlaceTypeConfig> = {
   cafe: CAFE_CONFIG,
@@ -44,7 +46,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
  */
 @Component({
   selector: 'app-explore-page',
-  imports: [AutoplanDialogComponent, PhotoCarouselComponent, ModalComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
+  imports: [ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, ModalComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
@@ -186,6 +188,9 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
                 <div class="flex min-w-0 flex-col gap-1">
                   <h2 class="truncate text-base font-bold tracking-tight text-slate-900" [title]="item.name">{{ item.name }}</h2>
                   <div class="flex items-center gap-2">
+                    @if (item.ratingCount && item.ratingAvg !== null) {
+                      <span class="shrink-0 text-[13px] font-semibold text-slate-700" [attr.aria-label]="'Đánh giá ' + rating(item.ratingAvg) + ' trên 5, ' + item.ratingCount + ' lượt'"><span class="text-[#E29A2D]">★</span> {{ rating(item.ratingAvg) }} <span class="font-normal text-slate-400">({{ item.ratingCount }})</span></span>
+                    }
                     <span class="min-w-0 flex-1 truncate text-[13px] text-slate-500">{{ item.address || 'Chưa có địa chỉ' }} · <span class="font-medium text-slate-600">{{ item.districtLabel }}</span></span>
                     <app-vibe-tags class="shrink-0" [vibes]="item.vibes" />
                   </div>
@@ -266,7 +271,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
           <app-vibe-tags [vibes]="d.vibes" />
           <dl class="grid grid-cols-2 gap-3 rounded-xl bg-brand-50/60 p-3 text-sm">
             <div>
-              <dt class="text-xs text-slate-500">Đánh giá</dt>
+              <dt class="text-xs text-slate-500">HANOIVIBE chấm</dt>
               <dd class="flex items-center gap-1 font-semibold text-slate-900">
                 <span class="tracking-[1px] text-[#E29A2D]" aria-hidden="true">{{ stars(d.rating).on }}</span><span class="tracking-[1px] text-[#D9D3EA]" aria-hidden="true">{{ stars(d.rating).off }}</span>{{ d.rating }}.0
               </dd>
@@ -296,6 +301,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
           @if (d.fans) {
             <p class="flex items-center gap-1.5 text-[13px] text-brand-700"><app-icon name="heart" [size]="14" />{{ d.fans }} người hợp gu đã lưu quán này</p>
           }
+          <app-reviews target="place" [targetId]="d.id" (summaryChange)="onRatingChange(d.id, $event)" />
         </div>
         <div modalFooter class="flex flex-wrap justify-end gap-2">
           <a [href]="mapUrl(d)" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50">
@@ -359,6 +365,13 @@ export class ExplorePage implements OnInit {
   protected readonly district = signal('');
   protected readonly districts = signal<DistrictOption[]>([]);
   protected readonly items = signal<CatalogItem[]>([]);
+  protected readonly rating = ratingText;
+
+  /** Mình vừa viết / sửa / xoá đánh giá trong popup: cập nhật sao trên thẻ */
+  protected onRatingChange(id: string, r: { ratingAvg: number | null; ratingCount: number }): void {
+    this.items.update((list) => list.map((i) => (i.id === id ? { ...i, ...r } : i)));
+    if (this.detail()?.id === id) this.detail.set({ ...this.detail()!, ...r });
+  }
   /** Số quán theo loại cho chip (theo từ khoá + khu vực) */
   protected readonly counts = signal<TypeCounts | null>(null);
   protected readonly total = signal(0);

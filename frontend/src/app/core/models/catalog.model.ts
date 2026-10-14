@@ -11,6 +11,9 @@ export interface CatalogItem extends Omit<Place, 'district'> {
   districtLabel: string;
   inMyPlace: boolean;
   fans: number | null;
+  /** Điểm đánh giá trung bình của người dùng (null = chưa có) và số đánh giá */
+  ratingAvg: number | null;
+  ratingCount: number;
   /** Kiểu hẹn phù hợp (Autoplan) và nguồn nhãn */
   vibes: Vibe[];
   vibesSource: VibeSource;

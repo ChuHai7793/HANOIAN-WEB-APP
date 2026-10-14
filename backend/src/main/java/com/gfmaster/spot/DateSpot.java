@@ -109,4 +109,11 @@ public class DateSpot extends BaseEntity {
   @Column(name = "url", nullable = false, length = 1024)
   @BatchSize(size = 50)
   private List<String> photos = new ArrayList<>();
+
+  /** Điểm đánh giá công khai (V21): ReviewService cập nhật bằng SQL, JPA chỉ đọc. NULL = chưa có đánh giá */
+  @Column(name = "rating_avg", insertable = false, updatable = false)
+  private BigDecimal ratingAvg;
+
+  @Column(name = "rating_count", insertable = false, updatable = false)
+  private int ratingCount;
 }
