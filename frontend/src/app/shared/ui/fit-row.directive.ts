@@ -15,11 +15,17 @@ const MIN_HEIGHT_PHONE = 300;
 export class FitRowDirective implements OnDestroy {
   private readonly el = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private observer: ResizeObserver | null = null;
+  private frame = 0;
   private readonly update = () => {
     const top = this.el.getBoundingClientRect().top + window.scrollY;
     const min = window.innerWidth < 640 ? MIN_HEIGHT_PHONE : MIN_HEIGHT;
-    const height = Math.max(min, Math.floor(window.innerHeight - top - BOTTOM_GAP));
-    this.el.style.setProperty('--row-h', `${height}px`);
+    const height = `${Math.max(min, Math.floor(window.innerHeight - top - BOTTOM_GAP))}px`;
+    if (this.el.style.getPropertyValue('--row-h') !== height) this.el.style.setProperty('--row-h', height);
+  };
+  /** ResizeObserver: đổi --row-h ở khung hình sau, tránh lỗi "ResizeObserver loop" (vd. lúc thu gọn thanh bên) */
+  private readonly scheduleUpdate = () => {
+    cancelAnimationFrame(this.frame);
+    this.frame = requestAnimationFrame(this.update);
   };
 
   constructor() {
@@ -27,7 +33,7 @@ export class FitRowDirective implements OnDestroy {
       this.update();
       window.addEventListener('resize', this.update);
       if (typeof ResizeObserver !== 'undefined') {
-        this.observer = new ResizeObserver(this.update);
+        this.observer = new ResizeObserver(this.scheduleUpdate);
         this.observer.observe(this.el.parentElement ?? this.el);
       }
     });
@@ -36,5 +42,6 @@ export class FitRowDirective implements OnDestroy {
   ngOnDestroy(): void {
     window.removeEventListener('resize', this.update);
     this.observer?.disconnect();
+    cancelAnimationFrame(this.frame);
   }
 }

@@ -25,46 +25,72 @@ interface NavItem {
   alert?: () => number;
 }
 
+const COLLAPSED_KEY = 'gfm.sidebarCollapsed';
+
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 @Component({
   selector: 'app-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, LegacyImportDialogComponent, IconComponent],
   template: `
-    <div class="flex min-h-screen">
+    <!-- data-collapsed: thanh bên thu gọn (chỉ logo + icon), chỉ áp dụng màn rộng (lg:); điện thoại vẫn là menu trượt -->
+    <div class="group/shell flex min-h-screen" [attr.data-collapsed]="collapsed() ? '' : null">
       <!-- Sidebar -->
       <aside
-        class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform lg:translate-x-0"
+        class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-[width,transform] duration-200 lg:translate-x-0 lg:group-data-collapsed/shell:w-[72px]"
         [class.-translate-x-full]="!menuOpen()"
       >
-        <div class="flex shrink-0 items-center gap-3 px-6 pb-2 pt-6">
-          <img src="logo.png" alt="" class="h-11 w-auto" />
-          <div class="flex flex-col gap-0.5">
+        <div class="flex shrink-0 items-center gap-3 px-6 pb-2 pt-6 lg:group-data-collapsed/shell:flex-col lg:group-data-collapsed/shell:gap-2 lg:group-data-collapsed/shell:px-0 lg:group-data-collapsed/shell:pt-5">
+          <img src="logo.png" alt="" class="h-11 w-auto lg:group-data-collapsed/shell:h-9" />
+          <div class="flex min-w-0 flex-1 flex-col gap-0.5 lg:group-data-collapsed/shell:hidden">
             <span class="text-xl font-extrabold leading-none tracking-wide text-slate-900">HANOI<span class="text-brand-600">VIBE</span></span>
             <span class="text-xs text-slate-500">Hẹn ở đâu cũng đẹp</span>
           </div>
+          <button
+            type="button"
+            class="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:flex"
+            [attr.aria-label]="collapsed() ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'"
+            [title]="collapsed() ? 'Mở rộng thanh bên' : 'Thu gọn thanh bên'"
+            (click)="toggleCollapsed()"
+          >
+            <app-icon [name]="collapsed() ? 'sidebarExpand' : 'sidebarCollapse'" [size]="18" />
+          </button>
         </div>
 
         <!-- Menu dài hơn màn hình thì cuộn trong phần này, không chui xuống dưới khối tài khoản -->
-        <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-4" aria-label="Điều hướng chính">
+        <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-4 py-4 lg:group-data-collapsed/shell:px-3" aria-label="Điều hướng chính">
           @for (section of sections(); track section.title) {
             @if (section.title) {
-              <p class="px-3 pb-1.5 pt-5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <p class="px-3 pb-1.5 pt-5 text-[11px] font-bold uppercase tracking-wider text-slate-500 lg:group-data-collapsed/shell:hidden">
                 {{ section.title }}
               </p>
+              <!-- Thu gọn: thay tiêu đề nhóm bằng một vạch ngăn -->
+              <hr class="mx-2 my-3 hidden border-slate-200 lg:group-data-collapsed/shell:block" />
             }
             @for (item of section.items; track item.path) {
               <a
                 [routerLink]="item.path"
                 routerLinkActive="!bg-brand-100 !text-brand-800 font-semibold"
-                class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-[15px] text-slate-700 transition hover:bg-slate-50"
+                class="relative flex min-h-11 items-center gap-3 rounded-xl px-3 text-[15px] text-slate-700 transition hover:bg-slate-50 lg:group-data-collapsed/shell:justify-center lg:group-data-collapsed/shell:px-0"
+                [attr.title]="collapsed() ? item.label : null"
+                [attr.aria-label]="item.label"
                 (click)="menuOpen.set(false)"
               >
                 <app-icon [name]="item.icon" />
-                <span class="flex-1">{{ item.label }}</span>
+                <span class="flex-1 truncate lg:group-data-collapsed/shell:hidden">{{ item.label }}</span>
                 @if (item.alert && item.alert() > 0) {
-                  <span class="rounded-full bg-[#C2335F] px-2 py-0.5 text-[11px] font-bold text-white">{{ item.alert() }} mới</span>
+                  <span class="rounded-full bg-[#C2335F] px-2 py-0.5 text-[11px] font-bold text-white lg:group-data-collapsed/shell:hidden">{{ item.alert() }} mới</span>
+                  <!-- Thu gọn: chấm đỏ ở góc icon -->
+                  <span class="absolute right-2.5 top-2 hidden h-2.5 w-2.5 rounded-full bg-[#C2335F] ring-2 ring-white lg:group-data-collapsed/shell:block"></span>
                 }
                 @if (item.badge && auth.isLoggedIn()) {
-                  <span class="min-w-6 rounded-full bg-brand-100 px-1.5 py-0.5 text-center text-xs font-semibold text-brand-800">
+                  <span class="min-w-6 rounded-full bg-brand-100 px-1.5 py-0.5 text-center text-xs font-semibold text-brand-800 lg:group-data-collapsed/shell:hidden">
                     {{ item.badge() }}
                   </span>
                 }
@@ -73,12 +99,12 @@ interface NavItem {
           }
         </nav>
 
-        <div class="mx-4 shrink-0 border-t border-slate-200 bg-white px-2 pb-6 pt-4">
+        <div class="mx-4 shrink-0 border-t border-slate-200 bg-white px-2 pb-6 pt-4 lg:group-data-collapsed/shell:mx-3 lg:group-data-collapsed/shell:px-0">
           @if (auth.user(); as user) {
             <a
               routerLink="/profile"
-              class="-m-1.5 flex items-center gap-3 rounded-lg p-1.5 transition hover:bg-slate-50"
-              title="Hồ sơ của tôi"
+              class="-m-1.5 flex items-center gap-3 rounded-lg p-1.5 transition hover:bg-slate-50 lg:group-data-collapsed/shell:m-0 lg:group-data-collapsed/shell:justify-center"
+              [title]="collapsed() ? user.displayName + ' · Hồ sơ của tôi' : 'Hồ sơ của tôi'"
               (click)="menuOpen.set(false)"
             >
               @if (user.avatarUrl) {
@@ -90,7 +116,7 @@ interface NavItem {
                   {{ initial(user.displayName) }}
                 </span>
               }
-              <div class="min-w-0 flex-1">
+              <div class="min-w-0 flex-1 lg:group-data-collapsed/shell:hidden">
                 <p class="truncate text-sm font-semibold text-slate-900">
                   {{ user.displayName }}
                   @if (user.role === 'GUEST') {
@@ -102,7 +128,7 @@ interface NavItem {
                 <p class="truncate text-xs text-slate-500">{{ user.username ? '@' + user.username : user.email }}</p>
               </div>
             </a>
-            <div class="mt-3 flex gap-2">
+            <div class="mt-3 flex gap-2 lg:group-data-collapsed/shell:hidden">
               <button
                 type="button"
                 class="min-h-10 flex-1 rounded-[10px] border border-brand-200 bg-white px-3 text-[13px] font-semibold text-slate-700 transition hover:bg-brand-50"
@@ -121,8 +147,17 @@ interface NavItem {
             </div>
           } @else {
             <!-- Khách: mời tạo tài khoản để lưu quán, lập plan, hẹn hò -->
-            <p class="mb-3 text-xs text-slate-500">Tạo tài khoản miễn phí để lưu quán, lập plan và tìm người hẹn hò.</p>
-            <div class="flex gap-2">
+            <p class="mb-3 text-xs text-slate-500 lg:group-data-collapsed/shell:hidden">Tạo tài khoản miễn phí để lưu quán, lập plan và tìm người hẹn hò.</p>
+            <!-- Thu gọn: còn một icon đăng nhập -->
+            <a
+              routerLink="/login"
+              class="mx-auto hidden h-11 w-11 items-center justify-center rounded-xl text-brand-700 transition hover:bg-brand-50 lg:group-data-collapsed/shell:flex"
+              title="Đăng nhập / Đăng ký"
+              aria-label="Đăng nhập"
+            >
+              <app-icon name="login" />
+            </a>
+            <div class="flex gap-2 lg:group-data-collapsed/shell:hidden">
               <a
                 routerLink="/register"
                 class="flex min-h-10 flex-1 items-center justify-center rounded-[10px] bg-brand-600 px-3 text-[13px] font-semibold text-white transition hover:bg-brand-700"
@@ -150,7 +185,7 @@ interface NavItem {
       }
 
       <!-- Nội dung: sidebar đã fixed nên chừa lề trái bằng đúng bề rộng của nó -->
-      <div class="flex min-w-0 flex-1 flex-col lg:ml-64">
+      <div class="flex min-w-0 flex-1 flex-col transition-[margin] duration-200 lg:ml-64 lg:group-data-collapsed/shell:ml-[72px]">
         <header
           class="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:hidden"
         >
@@ -206,6 +241,17 @@ export class ShellComponent {
   private readonly inbox = inject(MatchInboxService);
 
   protected readonly menuOpen = signal(false);
+  /** Thanh bên thu gọn (màn rộng): nhớ theo trình duyệt */
+  protected readonly collapsed = signal(readCollapsed());
+
+  protected toggleCollapsed(): void {
+    this.collapsed.update((v) => !v);
+    try {
+      localStorage.setItem(COLLAPSED_KEY, this.collapsed() ? '1' : '0');
+    } catch {
+      // Chế độ ẩn danh / chặn lưu trữ: chỉ không nhớ được lựa chọn
+    }
+  }
   protected readonly bootstrap = inject(DataBootstrapService);
   protected readonly auth = inject(AuthService);
 
