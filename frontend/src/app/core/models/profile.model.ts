@@ -1,4 +1,3 @@
-import { Role } from '../auth/auth.service';
 
 export type Gender = 'male' | 'female' | 'other';
 
@@ -26,13 +25,3 @@ export interface Profile {
 }
 
 export type ProfileRequest = Omit<Profile, 'completedAt'>;
-
-/** Một dòng trong trang "Người dùng" của admin. */
-export interface AdminUser {
-  id: string;
-  email: string;
-  username: string | null;
-  role: Role;
-  createdAt: string;
-  profile: Profile;
-}

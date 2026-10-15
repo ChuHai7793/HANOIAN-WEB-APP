@@ -2,7 +2,6 @@ package com.gfmaster.profile;
 
 import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
-import com.gfmaster.profile.ProfileDtos.AdminUserResponse;
 import com.gfmaster.profile.ProfileDtos.ProfileRequest;
 import com.gfmaster.profile.ProfileDtos.ProfileResponse;
 import com.gfmaster.upload.storage.ImageUrls;
@@ -10,16 +9,12 @@ import com.gfmaster.user.User;
 import com.gfmaster.user.UserRepository;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Hồ sơ cá nhân: mỗi người chỉ đọc/sửa hồ sơ của chính mình; admin xem được hồ sơ của mọi người. */
+/** Hồ sơ cá nhân: mỗi người chỉ đọc/sửa hồ sơ của chính mình; admin xem hồ sơ của mọi người ở trang Người dùng (DatingAdminController). */
 @Service
 public class ProfileService {
 
@@ -71,23 +66,6 @@ public class ProfileService {
   @Transactional(readOnly = true)
   public String avatarUrl(UUID userId) {
     return profiles.findById(userId).map(p -> imageUrls.toPublic(p.getAvatarUrl())).orElse(null);
-  }
-
-  @Transactional(readOnly = true)
-  public List<AdminUserResponse> listForAdmin() {
-    Map<UUID, UserProfile> byUser =
-        profiles.findAll().stream().collect(Collectors.toMap(UserProfile::getUserId, Function.identity()));
-    return users.findAll(Sort.by(Sort.Direction.DESC, "createdAt")).stream()
-        .map(
-            u ->
-                new AdminUserResponse(
-                    u.getId(),
-                    u.getEmail(),
-                    u.getUsername(),
-                    u.getRole(),
-                    u.getCreatedAt(),
-                    toResponse(u, byUser.get(u.getId()))))
-        .toList();
   }
 
   private User loadUser(UUID userId) {

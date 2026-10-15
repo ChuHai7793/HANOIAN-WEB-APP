@@ -1,7 +1,6 @@
 package com.gfmaster.profile;
 
 import com.gfmaster.place.dto.PlaceRequest;
-import com.gfmaster.user.Role;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
@@ -9,7 +8,6 @@ import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 
 public final class ProfileDtos {
 
@@ -46,8 +44,4 @@ public final class ProfileDtos {
       List<String> interests,
       Instant completedAt,
       Long version) {}
-
-  /** Danh sách người dùng cho admin. {@code profile.version == null}: người đó chưa nhập hồ sơ. */
-  public record AdminUserResponse(
-      UUID id, String email, String username, Role role, Instant createdAt, ProfileResponse profile) {}
 }

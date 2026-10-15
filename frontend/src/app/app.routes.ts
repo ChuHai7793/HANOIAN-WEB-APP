@@ -145,17 +145,19 @@ export const routes: Routes = [
         canMatch: [authGuard],
         loadComponent: () => import('./features/profile/profile.page').then((m) => m.ProfilePage),
       },
-      {
-        path: 'admin/dating',
-        title: 'Quản trị Tìm đối tượng · HANOIVIBE',
-        canMatch: [adminGuard],
-        loadComponent: () => import('./features/admin/dating-admin.page').then((m) => m.DatingAdminPage),
-      },
+      // Trang cũ "Quản trị Tìm đối tượng" đã gộp vào "Người dùng"
+      { path: 'admin/dating', redirectTo: 'admin/users' },
       {
         path: 'admin/users',
         title: 'Người dùng · HANOIVIBE',
         canMatch: [adminGuard],
-        loadComponent: () => import('./features/admin/user-list.page').then((m) => m.UserListPage),
+        loadComponent: () => import('./features/admin/admin-users.page').then((m) => m.AdminUsersPage),
+      },
+      {
+        path: 'admin/users/:id',
+        title: 'Chi tiết người dùng · HANOIVIBE',
+        canMatch: [adminGuard],
+        loadComponent: () => import('./features/admin/admin-user-detail.page').then((m) => m.AdminUserDetailPage),
       },
     ],
   },

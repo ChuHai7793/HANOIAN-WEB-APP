@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE } from '../api/api';
 import { SILENT_CODES } from '../api/http-context';
-import { AdminUser, Profile, ProfileRequest } from '../models/profile.model';
+import { Profile, ProfileRequest } from '../models/profile.model';
 
 /**
  * Hồ sơ của chính người đang đăng nhập (guest cũng sửa được) và danh sách người dùng cho admin.
@@ -23,9 +23,5 @@ export class ProfileService {
         context: new HttpContext().set(SILENT_CODES, ['VERSION_CONFLICT']),
       }),
     );
-  }
-
-  adminUsers(): Promise<AdminUser[]> {
-    return firstValueFrom(this.http.get<AdminUser[]>(`${API_BASE}/admin/users`));
   }
 }

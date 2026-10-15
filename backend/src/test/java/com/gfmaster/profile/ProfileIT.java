@@ -70,16 +70,6 @@ class ProfileIT extends ApiTestSupport {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.phone").doesNotExist())
         .andExpect(jsonPath("$.version").value(1));
-
-    // Danh sách người dùng: chỉ admin
-    getAs(guest, "/api/v1/admin/users").andExpect(status().isForbidden());
-    JsonNode list = body(getAs(admin, "/api/v1/admin/users").andExpect(status().isOk()));
-    JsonNode row = null;
-    for (JsonNode u : list) if (u.get("id").asString().equals(guest.toString())) row = u;
-    assertThat(row).isNotNull();
-    assertThat(row.get("role").asString()).isEqualTo("GUEST");
-    assertThat(row.get("profile").get("displayName").asString()).isEqualTo("Lan 2");
-    assertThat(row.get("profile").get("city").asString()).isEqualTo("Hà Nội");
   }
 
   @Test

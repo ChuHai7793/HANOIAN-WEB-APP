@@ -87,6 +87,11 @@ class DatingSafetyIT extends ApiTestSupport {
     assertThat(activity.get("summary").get("reportsAgainst").asLong()).isEqualTo(1);
     assertThat(activity.get("likesGiven").get(0).get("user").get("id").asString()).isEqualTo(reporter.toString());
     getAs(admin, "/api/v1/admin/dating/stats").andExpect(status().isOk()).andExpect(jsonPath("$.openReports").isNumber());
+    // Trang chi tiết: trạng thái, hồ sơ đầy đủ và các báo cáo về người này
+    assertThat(activity.get("summary").get("status").asString()).isEqualTo("ON");
+    assertThat(activity.get("detail").get("gender").asString()).isEqualTo("female");
+    assertThat(activity.get("detail").get("missing")).isEmpty();
+    assertThat(activity.get("reports").get(0).get("reason").asString()).isEqualTo("harassment");
 
     // Xử lý báo cáo
     putJson(admin, "/api/v1/admin/dating/reports/" + report.get("id").asString(), "{\"status\": \"RESOLVED\"}")
@@ -114,6 +119,39 @@ class DatingSafetyIT extends ApiTestSupport {
   private String matchUp(UUID a, UUID b) throws Exception {
     swipe(a, b, true).andExpect(jsonPath("$.matched").value(false));
     return body(swipe(b, a, true).andExpect(jsonPath("$.matched").value(true))).get("match").get("id").asString();
+  }
+
+  @Test
+  void adminSeesEveryAccountWithItsDatingStatus() throws Exception {
+    UUID admin = newUser();
+    UUID fresh = newUser(); // vừa đăng ký, chưa có dòng hồ sơ
+    UUID noPhoto = newUser();
+    jdbc.update(
+        """
+        insert into user_profiles (user_id, birthday, gender, city, bio, created_at, updated_at, version)
+        values (?, ?, 'male', 'Hà Nội', '', now(), now(), 0)
+        """,
+        noPhoto, LocalDate.now().minusYears(25));
+    UUID on = enabled(22);
+
+    JsonNode rows = body(getAs(admin, "/api/v1/admin/dating/users").andExpect(status().isOk()));
+    java.util.Map<String, String> status = new java.util.HashMap<>();
+    for (JsonNode r : rows) status.put(r.get("user").get("id").asString(), r.get("status").asString());
+    assertThat(status).containsEntry(fresh.toString(), "NO_PROFILE");
+    assertThat(status).containsEntry(noPhoto.toString(), "INCOMPLETE");
+    assertThat(status).containsEntry(on.toString(), "ON");
+
+    // Chi tiết người chưa có hồ sơ: thiếu cả ảnh lẫn ngày sinh, chưa lưu gì
+    JsonNode fresh1 = body(getAs(admin, "/api/v1/admin/dating/users/" + fresh).andExpect(status().isOk()));
+    assertThat(fresh1.get("detail").get("missing")).hasSize(2);
+    assertThat(fresh1.get("detail").get("savedPlaces").asLong()).isZero();
+    assertThat(fresh1.get("summary").get("createdAt").isNull()).isFalse();
+    getAs(admin, "/api/v1/admin/dating/users/" + UUID.randomUUID()).andExpect(status().isNotFound());
+
+    JsonNode stats = body(getAs(admin, "/api/v1/admin/dating/stats"));
+    assertThat(stats.get("totalUsers").asLong()).isGreaterThanOrEqualTo(4);
+    assertThat(stats.get("noProfile").asLong()).isGreaterThanOrEqualTo(2);
+    assertThat(stats.get("incompleteProfiles").asLong()).isGreaterThanOrEqualTo(1);
   }
 
   private UUID enabled(int age) {

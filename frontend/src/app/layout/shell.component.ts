@@ -338,7 +338,6 @@ export class ShellComponent {
             items: [
               { path: '/admin/users', label: 'Người dùng', icon: 'users' },
               { path: '/admin/articles', label: 'Bài viết', icon: 'edit' },
-              { path: '/admin/dating', label: 'Tìm đối tượng', icon: 'shield' },
             ],
           } satisfies NavSection,
         ]

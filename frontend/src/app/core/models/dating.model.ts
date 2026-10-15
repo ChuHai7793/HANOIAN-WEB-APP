@@ -98,6 +98,11 @@ export interface AdminPerson {
 }
 
 export interface DatingStats {
+  totalUsers: number;
+  /** Chưa có dòng hồ sơ (mới đăng ký, chưa vào sửa hồ sơ) */
+  noProfile: number;
+  /** Có hồ sơ nhưng thiếu ảnh / ngày sinh, chưa bật được Tìm đối tượng */
+  incompleteProfiles: number;
   enabledUsers: number;
   bannedUsers: number;
   swipes: number;
@@ -116,8 +121,24 @@ export interface DatingReport {
   createdAt: string;
 }
 
+/** Trạng thái Tìm đối tượng của một tài khoản (trang Người dùng của admin) */
+export type DatingStatus = 'NO_PROFILE' | 'INCOMPLETE' | 'OFF' | 'ON' | 'BANNED';
+
+export const DATING_STATUSES: { value: DatingStatus; label: string; tone: string }[] = [
+  { value: 'ON', label: 'Đang bật', tone: 'bg-emerald-50 text-emerald-700' },
+  { value: 'OFF', label: 'Chưa bật', tone: 'bg-slate-100 text-slate-600' },
+  { value: 'INCOMPLETE', label: 'Hồ sơ thiếu', tone: 'bg-amber-50 text-amber-700' },
+  { value: 'NO_PROFILE', label: 'Chưa có hồ sơ', tone: 'bg-slate-100 text-slate-500' },
+  { value: 'BANNED', label: 'Bị khoá', tone: 'bg-rose-50 text-rose-700' },
+];
+
 export interface DatingUserRow {
   user: AdminPerson;
+  username: string | null;
+  role: 'ADMIN' | 'GUEST' | string;
+  createdAt: string;
+  city: string | null;
+  status: DatingStatus;
   enabled: boolean;
   banned: boolean;
   likesGiven: number;
@@ -126,11 +147,27 @@ export interface DatingUserRow {
   reportsAgainst: number;
 }
 
+/** Hồ sơ đầy đủ và mức dùng app của một người (trang chi tiết) */
+export interface AdminUserDetail {
+  gender: string | null;
+  birthday: string | null;
+  phone: string | null;
+  bio: string | null;
+  /** Còn thiếu gì để bật Tìm đối tượng */
+  missing: string[];
+  savedPlaces: number;
+  savedSpots: number;
+  plans: number;
+}
+
 export interface DatingActivity {
   summary: DatingUserRow;
+  detail: AdminUserDetail;
   likesGiven: ActivityEdge[];
   likesReceived: ActivityEdge[];
   matches: ActivityEdge[];
+  /** Các báo cáo về người này */
+  reports: DatingReport[];
 }
 
 /** Một người trong hoạt động của ai đó; {@code matchId} chỉ có ở danh sách match (để xem tin nhắn). */
