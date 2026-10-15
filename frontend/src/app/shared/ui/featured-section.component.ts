@@ -23,9 +23,9 @@ export interface FeaturedCard {
 /** Kéo quá chừng này (px) thì coi là kéo, không phải bấm mở */
 const DRAG_THRESHOLD = 6;
 /** Tự trượt 1 thẻ sau mỗi khoảng này */
-const AUTOPLAY_MS = 5000;
+const AUTOPLAY_MS = 3000;
 /** Người dùng vừa chạm / kéo / bấm ‹ ›: chờ chừng này rồi mới tự trượt tiếp */
-const RESUME_MS = 5000;
+const RESUME_MS = 3000;
 
 interface Slide {
   key: string;
@@ -39,8 +39,8 @@ interface Slide {
  * (nhớ theo trình duyệt) và tối đa 10 thẻ admin chọn, xếp một hàng ngang trượt được. Màn rộng ~3 thẻ / khung,
  * máy tính bảng ~2, điện thoại ~1,2. Xem tiếp bằng nút ‹ ›, giữ chuột rồi kéo, vuốt hoặc lăn ngang; thẻ dừng
  * ngay ngắn (scroll snap). Bấm thẻ (không kéo) mở chi tiết.
- * Thẻ tràn khỏi khung: vòng tròn liên tục (thẻ 1 nối sau thẻ cuối) và tự trượt 1 thẻ mỗi 5 giây; dừng khi rê
- * chuột / chạm / kéo / bấm ‹ › (chạy lại sau 5 giây) hoặc khi tab bị ẩn.
+ * Thẻ tràn khỏi khung: vòng tròn liên tục (thẻ 1 nối sau thẻ cuối) và tự trượt 1 thẻ mỗi 3 giây; dừng khi rê
+ * chuột / chạm / kéo / bấm ‹ › (chạy lại sau 3 giây) hoặc khi tab bị ẩn.
  */
 @Component({
   selector: 'app-featured-section',
