@@ -75,6 +75,16 @@ export class CatalogService {
     );
   }
 
+  /** Ảnh nền banner Khám phá quán; imageUrl null = ảnh mặc định */
+  banner(): Promise<{ imageUrl: string | null }> {
+    return firstValueFrom(this.http.get<{ imageUrl: string | null }>(`${API_BASE}/catalog/banner`));
+  }
+
+  /** Admin: đổi ảnh nền; null = quay về ảnh mặc định */
+  setBanner(imageUrl: string | null): Promise<{ imageUrl: string | null }> {
+    return firstValueFrom(this.http.put<{ imageUrl: string | null }>(`${API_BASE}/admin/catalog/banner`, { imageUrl }));
+  }
+
   /** Điểm hẹn nổi bật (công khai) */
   featured(): Promise<FeaturedItem[]> {
     return firstValueFrom(this.http.get<FeaturedItem[]>(`${API_BASE}/catalog/featured`));

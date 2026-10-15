@@ -1,5 +1,6 @@
 package com.gfmaster.catalog;
 
+import com.gfmaster.catalog.CatalogDtos.BannerSetting;
 import com.gfmaster.catalog.CatalogDtos.FeaturedRequest;
 import com.gfmaster.catalog.CatalogDtos.FeaturedItem;
 import com.gfmaster.catalog.CatalogDtos.CatalogItem;
@@ -49,6 +50,18 @@ public class CatalogController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "30") int size) {
     return catalog.search(userId, q, type, district, mine, page, size);
+  }
+
+  /** Công khai: ảnh nền banner Khám phá quán (imageUrl null = ảnh mặc định của frontend) */
+  @GetMapping("/api/v1/catalog/banner")
+  public BannerSetting banner() {
+    return catalog.banner();
+  }
+
+  /** Admin: đổi ảnh nền banner; imageUrl null = quay về ảnh mặc định */
+  @PutMapping("/api/v1/admin/catalog/banner")
+  public BannerSetting setBanner(@Valid @RequestBody BannerSetting body) {
+    return catalog.setBanner(body.imageUrl());
   }
 
   /** Công khai: điểm hẹn nổi bật (tối đa 6, admin chọn) cho đầu trang Khám phá quán */

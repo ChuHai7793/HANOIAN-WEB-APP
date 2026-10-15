@@ -1,5 +1,6 @@
 package com.gfmaster.catalog;
 
+import com.gfmaster.catalog.CatalogDtos.BannerSetting;
 import com.gfmaster.catalog.CatalogDtos.FeaturedRequest;
 import com.gfmaster.catalog.CatalogDtos.FeaturedItem;
 import java.util.HashMap;
@@ -66,6 +67,33 @@ public class CatalogService {
     this.imageUrls = imageUrls;
     this.dating = dating;
     this.jdbc = jdbc;
+  }
+
+  // ---- Ảnh nền banner Khám phá quán (admin đổi được) ----
+
+  static final String BANNER_KEY = "explore.banner";
+
+  /** Công khai: ảnh nền banner (URL công khai), null = dùng ảnh mặc định */
+  @Transactional(readOnly = true)
+  public BannerSetting banner() {
+    List<String> v =
+        jdbc.queryForList("SELECT value FROM app_settings WHERE key = :key", Map.of("key", BANNER_KEY), String.class);
+    return new BannerSetting(v.isEmpty() ? null : imageUrls.toPublic(v.getFirst()));
+  }
+
+  /** Admin: đổi ảnh nền; null / rỗng = quay về ảnh mặc định */
+  public BannerSetting setBanner(String imageUrl) {
+    if (imageUrl == null || imageUrl.isBlank()) {
+      jdbc.update("DELETE FROM app_settings WHERE key = :key", Map.of("key", BANNER_KEY));
+    } else {
+      jdbc.update(
+          """
+          INSERT INTO app_settings (key, value, updated_at) VALUES (:key, :value, now())
+          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at
+          """,
+          Map.of("key", BANNER_KEY, "value", imageUrls.toStored(imageUrl.strip())));
+    }
+    return banner();
   }
 
   // ---- Điểm hẹn nổi bật (admin chọn, tối đa 6) ----

@@ -10,6 +10,8 @@ public enum ImagePurpose {
   avatar("avatars"),
   dating("dating"),
   girlfriend("girlfriends"),
+  /** Ảnh nền banner (vd. đầu trang Khám phá quán) */
+  banner("banners"),
   misc("misc");
 
   final String folder;

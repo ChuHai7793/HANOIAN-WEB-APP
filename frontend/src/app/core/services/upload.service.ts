@@ -7,7 +7,7 @@ import { fileToCompressedBlob } from '../utils/image';
 export type UploadStatus = 'AWAITING_UPLOAD' | 'PROCESSING' | 'READY' | 'THUMB_PENDING' | 'FAILED';
 
 /** Ảnh dùng vào việc gì: quyết định thư mục trên storage (places/, spots/, avatars/…) */
-export type ImagePurpose = 'place' | 'spot' | 'avatar' | 'dating' | 'girlfriend';
+export type ImagePurpose = 'place' | 'spot' | 'avatar' | 'dating' | 'girlfriend' | 'banner';
 
 /** Thông tin để server đặt tên file dễ đọc, vd. places/2026/10/cafe-cuoi-ngo-k3f9a1c2.webp */
 export interface UploadMeta {

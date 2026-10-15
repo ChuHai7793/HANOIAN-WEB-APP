@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { errorCode, problemOf } from '../../core/api/api';
 import { AuthService } from '../../core/auth/auth.service';
 import { CatalogItem, FeaturedItem, DistrictOption, MY_PLACE_GROUP, TypeCounts } from '../../core/models/catalog.model';
@@ -25,6 +25,7 @@ import { ReviewsComponent } from '../../shared/ui/reviews.component';
 import { DetailModalComponent } from '../../shared/ui/detail-modal.component';
 import { FeaturedPlacesComponent } from './featured-places.component';
 import { FeaturedEditorComponent } from './featured-editor.component';
+import { UploadService } from '../../core/services/upload.service';
 
 const CONFIGS: Record<PlaceType, PlaceTypeConfig> = {
   cafe: CAFE_CONFIG,
@@ -47,6 +48,8 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
  * My place" (vào nhóm theo loại của quán). Chỉ admin thấy nút thêm mới, sửa, xoá.
  */
 const FEATURED_HIDDEN_KEY = 'gfm.featuredHidden';
+/** Ảnh nền mặc định: Hồ Gươm đêm, Radek Kucharski, CC BY 2.0 (Wikimedia Commons) */
+const DEFAULT_BANNER = '/banner/ho-guom-dem.webp';
 
 function readFeaturedHidden(): boolean {
   try {
@@ -61,47 +64,140 @@ function readFeaturedHidden(): boolean {
   imports: [FeaturedEditorComponent, FeaturedPlacesComponent, DetailModalComponent, ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
-      <header class="flex flex-wrap items-center justify-between gap-4">
-        <div class="flex flex-col">
-          <p class="flex items-center gap-3 text-[12px] font-bold uppercase tracking-[0.2em] text-brand-600">
-            <span class="h-px w-7 bg-brand-500"></span>Hà Nội, những điểm hẹn
-          </p>
-          <h1 class="mt-2 text-[28px] font-extrabold leading-tight tracking-tight text-slate-900 sm:text-[34px]">Khám phá quán.</h1>
-          <p class="mt-1 text-[14px] text-slate-500 sm:text-[15px]">Một góc thật xinh. Một câu chuyện mới. Một cuộc hẹn đáng nhớ.</p>
-        </div>
-        <button
-          type="button"
-          class="flex min-h-9 items-center gap-1.5 rounded-xl border border-brand-200 bg-white px-3.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 lg:ml-auto"
-          (click)="autoplanOpen.set(true)"
-        >
-          <app-icon name="shuffle" [size]="16" />Autoplan buổi hẹn
-        </button>
-        @if (canEdit()) {
-          <div class="relative">
+      <!-- Banner đầu trang: ảnh nền (admin đổi được, mặc định Hồ Gươm đêm) + lớp phủ tím, chữ giới thiệu và bộ lọc -->
+      <section class="relative isolate overflow-hidden rounded-[22px] bg-[#3b2a7a] text-white shadow-sm">
+        @if (bannerReady()) {
+          <!-- Ảnh mặc định: Tháp Rùa nằm ở nửa trên bên phải, nên canh ảnh lệch lên để không bị cắt mất tháp -->
+          <img [src]="bannerUrl()" alt="" class="absolute inset-0 -z-10 h-full w-full object-cover" [style.object-position]="customBanner() ? 'center' : '70% 28%'" />
+        }
+        <!-- Tông tím: đậm bên trái (chỗ có chữ), nhạt dần sang phải; tối nhẹ ở trên / dưới -->
+        <div class="absolute inset-0 -z-10 bg-gradient-to-r from-[#2d1f66]/90 via-[#4b33b0]/50 to-[#6d4fd6]/10"></div>
+        <div class="absolute inset-0 -z-10 bg-gradient-to-t from-[#24184f]/75 via-transparent to-[#24184f]/35"></div>
+
+        <div class="flex flex-col gap-5 p-4 pb-3 sm:p-6 sm:pb-9 lg:p-7 lg:pb-9">
+          <div class="flex items-center gap-2">
             <button
               type="button"
-              class="flex min-h-9 items-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700"
-              (click)="typeMenuOpen.set(!typeMenuOpen())"
+              class="flex h-9 items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 text-[13px] font-medium text-white backdrop-blur transition hover:bg-white/25"
+              (click)="cityHint()"
             >
-              <app-icon name="plus" [size]="18" [stroke]="2.4" />
-              Thêm quán
+              <app-icon name="pin" [size]="15" />Hà Nội<app-icon name="chevronDown" [size]="14" />
             </button>
-            @if (typeMenuOpen()) {
-              <div class="absolute right-0 z-30 mt-1 w-44 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-                @for (t of newTypes; track t.value) {
+            <div class="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                class="flex h-10 items-center gap-1.5 rounded-full bg-white px-3 text-sm font-semibold text-brand-700 shadow-lg shadow-brand-900/20 transition hover:bg-brand-50 sm:px-4"
+                aria-label="Autoplan buổi hẹn"
+                (click)="autoplanOpen.set(true)"
+              >
+                <app-icon name="shuffle" [size]="16" /><span class="max-sm:hidden">Autoplan buổi hẹn</span>
+              </button>
+              @if (canEdit()) {
+                <div class="relative">
                   <button
                     type="button"
-                    class="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                    (click)="openCreate(t.value)"
+                    class="flex h-10 items-center gap-2 rounded-full bg-brand-600 px-3 text-sm font-semibold text-white shadow-lg shadow-brand-900/30 transition hover:bg-brand-700 sm:px-5" aria-label="Thêm quán"
+                    (click)="typeMenuOpen.set(!typeMenuOpen())"
                   >
-                    {{ t.label }}
+                    <app-icon name="plus" [size]="18" [stroke]="2.4" />
+                    <span class="max-sm:hidden">Thêm quán</span>
                   </button>
-                }
-              </div>
-            }
+                  @if (typeMenuOpen()) {
+                    <div class="absolute right-0 z-30 mt-1 w-44 text-slate-700 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                      @for (t of newTypes; track t.value) {
+                        <button
+                          type="button"
+                          class="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                          (click)="openCreate(t.value)"
+                        >
+                          {{ t.label }}
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
           </div>
-        }
-      </header>
+
+          <div class="max-w-xl">
+            <p class="flex items-center gap-3 text-[12px] font-bold uppercase tracking-[0.2em] text-white/85">
+              <span class="h-px w-7 bg-white/60"></span>Hà Nội, những điểm hẹn
+            </p>
+            <h1 class="mt-2 text-[30px] font-extrabold leading-tight tracking-tight sm:text-[40px]">Khám phá quán.</h1>
+            <p class="mt-1 text-[14px] text-white/85 sm:text-[15px]">Một góc thật xinh. Một câu chuyện mới. Một cuộc hẹn đáng nhớ.</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="flex h-11 min-w-0 flex-[1_1_100%] items-center gap-2.5 rounded-full bg-white px-4 text-slate-500 shadow-lg shadow-brand-900/20 sm:max-w-[420px] sm:flex-[1_1_280px]">
+              <app-icon name="search" [size]="18" />
+              <span class="sr-only">Tìm quán</span>
+              <input
+                type="search"
+                [value]="q()"
+                (input)="onSearch($any($event.target).value)"
+                class="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                placeholder="Tìm theo tên, địa chỉ…"
+              />
+            </label>
+            <label class="flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm text-slate-700 shadow-lg shadow-brand-900/20">
+              <span class="text-brand-600"><app-icon name="pin" [size]="18" /></span>
+              <span class="sr-only">Khu vực</span>
+              <select
+                [value]="district()"
+                (change)="district.set($any($event.target).value); reload()"
+                class="cursor-pointer bg-transparent text-sm text-slate-900 outline-none"
+              >
+                <option value="">Mọi khu vực</option>
+                @for (d of districts(); track d.code) {
+                  <option [value]="d.code">{{ d.label }}</option>
+                }
+              </select>
+            </label>
+            <div role="group" aria-label="Loại quán" class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:flex-wrap">
+              @for (t of typeFilters; track t.value) {
+                <button
+                  type="button"
+                  [attr.aria-pressed]="type() === t.value"
+                  class="inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-[13px] shadow-lg shadow-brand-900/20 transition"
+                  [class]="type() === t.value
+                    ? 'bg-brand-600 font-semibold text-white'
+                    : 'bg-white font-medium text-slate-700 hover:bg-brand-50'"
+                  (click)="type.set(t.value); reload(false)"
+                >
+                  <app-icon [name]="t.icon" [size]="16" />
+                  {{ t.label }} · {{ counts()?.[t.value || 'all'] ?? '–' }}
+                </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Ghi công ảnh mặc định (CC BY 2.0) / admin đổi ảnh nền -->
+        <div class="flex items-center justify-end gap-3 px-4 pb-2 text-[10px] text-white/55 sm:absolute sm:bottom-2 sm:right-3 sm:px-0 sm:pb-0">
+          @if (!customBanner()) {
+            <a href="https://commons.wikimedia.org/wiki/File:Hoan_Kiem_Lake_at_night.jpg" target="_blank" rel="noopener" class="hover:text-white">
+              Ảnh: Radek Kucharski · CC BY 2.0 (đã thu nhỏ, phủ màu)
+            </a>
+          }
+          @if (canEdit()) {
+            <div class="relative">
+              <button type="button" class="rounded-full bg-black/30 px-2.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur hover:bg-black/45 disabled:opacity-60" [disabled]="bannerBusy()" (click)="bannerMenuOpen.set(!bannerMenuOpen())">
+                {{ bannerBusy() ? 'Đang tải ảnh…' : 'Đổi ảnh nền' }}
+              </button>
+              @if (bannerMenuOpen()) {
+                <div class="absolute bottom-full right-0 z-30 mb-1 w-48 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 text-sm text-slate-700 shadow-lg">
+                  <button type="button" class="block w-full px-3 py-2 text-left hover:bg-slate-50" (click)="bannerMenuOpen.set(false); bannerFile.click()">Tải ảnh lên…</button>
+                  @if (customBanner()) {
+                    <button type="button" class="block w-full px-3 py-2 text-left hover:bg-slate-50" (click)="resetBanner()">Dùng ảnh mặc định</button>
+                  }
+                </div>
+              }
+              <input #bannerFile type="file" accept="image/*" class="hidden" (change)="onBannerFile($event)" />
+            </div>
+          }
+        </div>
+      </section>
 
       <!-- Điểm hẹn nổi bật (admin chọn): ẩn / hiện, nhớ theo trình duyệt -->
       @if (featured().length || canEdit()) {
@@ -130,50 +226,6 @@ function readFeaturedHidden(): boolean {
         <span class="min-w-0 flex-1 truncate"><b class="text-slate-900">Đã có quán ưng ý?</b><span class="max-sm:hidden"> Bật Tìm đối tượng, quẹt và match rồi hẹn nhau ở quán bạn thích.</span></span>
         <span class="flex shrink-0 items-center gap-1 font-semibold text-brand-800">Tìm người đi cùng<app-icon name="arrowRight" [size]="14" [stroke]="2.4" /></span>
       </a>
-
-      <div class="flex flex-wrap items-center gap-2">
-        <label class="flex min-h-9 max-w-[420px] flex-[1_1_280px] items-center gap-2.5 rounded-xl border border-brand-200 bg-white px-3.5 text-slate-500">
-          <app-icon name="search" [size]="18" />
-          <span class="sr-only">Tìm quán</span>
-          <input
-            type="search"
-            [value]="q()"
-            (input)="onSearch($any($event.target).value)"
-            class="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-            placeholder="Tìm theo tên, địa chỉ…"
-          />
-        </label>
-        <label class="flex min-h-9 items-center gap-2 rounded-xl border border-brand-200 bg-white px-3 text-sm text-slate-700">
-          <span class="text-brand-600"><app-icon name="pin" [size]="18" /></span>
-          <span class="sr-only">Khu vực</span>
-          <select
-            [value]="district()"
-            (change)="district.set($any($event.target).value); reload()"
-            class="cursor-pointer bg-transparent text-sm text-slate-900 outline-none"
-          >
-            <option value="">Mọi khu vực</option>
-            @for (d of districts(); track d.code) {
-              <option [value]="d.code">{{ d.label }}</option>
-            }
-          </select>
-        </label>
-        <div role="group" aria-label="Loại quán" class="flex max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:flex-wrap gap-2">
-          @for (t of typeFilters; track t.value) {
-            <button
-              type="button"
-              [attr.aria-pressed]="type() === t.value"
-              class="inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-[13px] transition"
-              [class]="type() === t.value
-                ? 'border-brand-600 bg-brand-600 font-semibold text-white'
-                : 'border-brand-200 bg-white font-medium text-slate-700 hover:bg-brand-50'"
-              (click)="type.set(t.value); reload(false)"
-            >
-              <app-icon [name]="t.icon" [size]="16" />
-              {{ t.label }} · {{ counts()?.[t.value || 'all'] ?? '–' }}
-            </button>
-          }
-        </div>
-      </div>
 
       @if (loading() && items().length === 0) {
         <p class="text-sm text-slate-500">Đang tải…</p>
@@ -397,6 +449,43 @@ export class ExplorePage implements OnInit {
   protected readonly district = signal('');
   protected readonly districts = signal<DistrictOption[]>([]);
   protected readonly items = signal<CatalogItem[]>([]);
+  /** Ảnh nền banner: null = ảnh mặc định (Hồ Gươm đêm). bannerReady: đã biết ảnh nào, tránh nháy ảnh mặc định */
+  protected readonly customBanner = signal<string | null>(null);
+  protected readonly bannerReady = signal(false);
+  protected readonly bannerUrl = computed(() => this.customBanner() ?? DEFAULT_BANNER);
+  protected readonly bannerMenuOpen = signal(false);
+  protected readonly bannerBusy = signal(false);
+  private readonly uploads = inject(UploadService);
+
+  protected cityHint(): void {
+    this.toast.show('Sắp có thêm thành phố khác. Hiện HANOIVIBE dành cho Hà Nội.', 'info');
+  }
+
+  protected async onBannerFile(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    this.bannerBusy.set(true);
+    try {
+      const up = await this.uploads.uploadFile(file, 1920, undefined, { purpose: 'banner', name: 'banner kham pha quan' });
+      const res = await this.catalog.setBanner(up.url);
+      this.customBanner.set(res.imageUrl);
+      this.toast.success('Đã đổi ảnh nền.');
+    } catch {
+      // Lỗi HTTP đã được báo bằng toast
+    } finally {
+      this.bannerBusy.set(false);
+    }
+  }
+
+  protected async resetBanner(): Promise<void> {
+    this.bannerMenuOpen.set(false);
+    const res = await this.catalog.setBanner(null);
+    this.customBanner.set(res.imageUrl);
+    this.toast.success('Đã dùng lại ảnh nền mặc định.');
+  }
+
   /** Điểm hẹn nổi bật (admin chọn) */
   protected readonly featured = signal<FeaturedItem[]>([]);
   protected readonly featuredHidden = signal(readFeaturedHidden());
@@ -441,6 +530,11 @@ export class ExplorePage implements OnInit {
   async ngOnInit(): Promise<void> {
     void this.catalog.districts().then((d) => this.districts.set(d));
     void this.catalog.featured().then((f) => this.featured.set(f)).catch(() => undefined);
+    void this.catalog
+      .banner()
+      .then((b) => this.customBanner.set(b.imageUrl))
+      .catch(() => undefined)
+      .finally(() => this.bannerReady.set(true));
     // Mở từ "Gợi ý điểm hẹn" của Tìm đối tượng: /explore?q=<tên quán>
     this.q.set(this.route.snapshot.queryParamMap.get('q') ?? '');
     await this.reload();

@@ -106,5 +106,9 @@ public final class CatalogDtos {
       @Size(max = 60) String kicker,
       @NotBlank @Size(max = 120) String headline) {}
 
+  /** Ảnh nền banner Khám phá quán; null = frontend dùng ảnh mặc định */
+  public record BannerSetting(
+      @Size(max = 1024) @Pattern(regexp = PlaceRequest.IMAGE_URL, message = "Chỉ nhận URL http(s) hoặc /uploads/") String imageUrl) {}
+
   public record CatalogPage(List<CatalogItem> items, long total, int page, int size) {}
 }
