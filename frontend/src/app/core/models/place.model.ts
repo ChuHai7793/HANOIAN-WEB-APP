@@ -46,6 +46,9 @@ export interface Place {
   /** Chỉ dùng trong form của "Khám phá quán": mã quận (khu vực), bắt buộc ở đó */
   district?: string;
 
+  /** Quán gốc trong Khám phá quán (plan tham chiếu quán theo id này); null với quán tự nhập cũ */
+  catalogId?: string | null;
+
   /** Optimistic locking: gửi kèm khi sửa, server tăng sau mỗi lần ghi */
   version: number;
   createdAt: string;

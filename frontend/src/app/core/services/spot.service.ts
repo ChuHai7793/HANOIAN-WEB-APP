@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE } from '../api/api';
 import { SILENT_CODES } from '../api/http-context';
-import { SpotCategory, SpotItem, SpotPage } from '../models/spot.model';
+import { FeaturedSpot, FeaturedSpotRequest, SpotCategory, SpotItem, SpotPage } from '../models/spot.model';
 
 export interface SpotQuery {
   q?: string;
@@ -71,6 +71,26 @@ export class SpotService {
   }
 
   /** Trang riêng của chỗ chơi /cho-choi/{slug} */
+  /** Ảnh nền banner Tìm chỗ chơi; imageUrl null = ảnh mặc định */
+  banner(): Promise<{ imageUrl: string | null }> {
+    return firstValueFrom(this.http.get<{ imageUrl: string | null }>(`${API_BASE}/spots/banner`));
+  }
+
+  /** Admin: đổi ảnh nền banner; null = quay về ảnh mặc định */
+  setBanner(imageUrl: string | null): Promise<{ imageUrl: string | null }> {
+    return firstValueFrom(this.http.put<{ imageUrl: string | null }>(`${API_BASE}/admin/spots/banner`, { imageUrl }));
+  }
+
+  /** Chỗ chơi nổi bật (công khai) */
+  featured(): Promise<FeaturedSpot[]> {
+    return firstValueFrom(this.http.get<FeaturedSpot[]>(`${API_BASE}/spots/featured`));
+  }
+
+  /** Admin: thay danh sách chỗ chơi nổi bật (thứ tự = vị trí) */
+  setFeatured(list: FeaturedSpotRequest[]): Promise<FeaturedSpot[]> {
+    return firstValueFrom(this.http.put<FeaturedSpot[]>(`${API_BASE}/admin/spots/featured`, list));
+  }
+
   bySlug(slug: string): Promise<SpotItem> {
     return firstValueFrom(this.http.get<SpotItem>(`${API_BASE}/spots/by-slug/${encodeURIComponent(slug)}`));
   }

@@ -78,6 +78,8 @@ public class SecurityConfig {
                         "/api/v1/catalog/districts",
                         "/api/v1/spots",
                         "/api/v1/spots/counts",
+                        "/api/v1/spots/featured",
+                        "/api/v1/spots/banner",
                         "/api/v1/reviews",
                         "/api/v1/public/**")
                     .permitAll()

@@ -101,4 +101,13 @@ public final class SpotDtos {
       int ratingCount) {}
 
   public record SpotPage(List<SpotItem> items, long total, int page, int size) {}
+
+  /** Một chỗ chơi nổi bật: vị trí 1..6, dòng nhỏ, câu dẫn và chỗ chơi */
+  public record FeaturedSpot(int position, String kicker, String headline, SpotItem spot) {}
+
+  /** Admin chọn một chỗ chơi nổi bật (thứ tự trong danh sách là vị trí) */
+  public record FeaturedSpotRequest(
+      @NotNull UUID spotId,
+      @Size(max = 60) String kicker,
+      @NotBlank @Size(max = 120) String headline) {}
 }

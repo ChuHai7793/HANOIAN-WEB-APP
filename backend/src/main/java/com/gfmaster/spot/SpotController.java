@@ -2,6 +2,9 @@ package com.gfmaster.spot;
 
 import com.gfmaster.catalog.CatalogDistrict;
 import com.gfmaster.common.security.MyPlaceOwner;
+import com.gfmaster.catalog.CatalogDtos.BannerSetting;
+import com.gfmaster.spot.SpotDtos.FeaturedSpot;
+import com.gfmaster.spot.SpotDtos.FeaturedSpotRequest;
 import com.gfmaster.spot.SpotDtos.SpotItem;
 import com.gfmaster.spot.SpotDtos.SpotPage;
 import jakarta.validation.Valid;
@@ -65,6 +68,30 @@ public class SpotController {
   @GetMapping("/api/v1/spots/by-slug/{slug}")
   public SpotItem bySlug(@MyPlaceOwner(required = false) UUID userId, @PathVariable String slug) {
     return spots.bySlug(userId, slug);
+  }
+
+  /** Công khai: ảnh nền banner Tìm chỗ chơi (imageUrl null = ảnh mặc định của frontend) */
+  @GetMapping("/api/v1/spots/banner")
+  public BannerSetting banner() {
+    return spots.banner();
+  }
+
+  /** Admin: đổi ảnh nền banner; imageUrl null = quay về ảnh mặc định */
+  @PutMapping("/api/v1/admin/spots/banner")
+  public BannerSetting setBanner(@Valid @RequestBody BannerSetting body) {
+    return spots.setBanner(body.imageUrl());
+  }
+
+  /** Công khai: chỗ chơi nổi bật (admin chọn) */
+  @GetMapping("/api/v1/spots/featured")
+  public List<FeaturedSpot> featured(@MyPlaceOwner(required = false) UUID userId) {
+    return spots.featured(userId);
+  }
+
+  /** Admin: thay danh sách chỗ chơi nổi bật (tối đa 6, thứ tự = vị trí) */
+  @PutMapping("/api/v1/admin/spots/featured")
+  public List<FeaturedSpot> setFeatured(@RequestBody List<@Valid FeaturedSpotRequest> list) {
+    return spots.setFeatured(list);
   }
 
   @GetMapping("/api/v1/me/spots")

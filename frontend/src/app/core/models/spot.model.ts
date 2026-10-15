@@ -65,6 +65,23 @@ export interface SpotItem {
   updatedAt: string;
 }
 
+/** "Chỗ chơi nổi bật" do admin chọn (tối đa 6), ở đầu Tìm chỗ chơi */
+export interface FeaturedSpot {
+  position: number;
+  /** Dòng nhỏ phía trên, vd. "Cùng làm một thứ" */
+  kicker: string;
+  /** Câu dẫn lớn, xuống dòng bằng 
+ */
+  headline: string;
+  spot: SpotItem;
+}
+
+export interface FeaturedSpotRequest {
+  spotId: string;
+  kicker: string;
+  headline: string;
+}
+
 export interface SpotPage {
   items: SpotItem[];
   total: number;

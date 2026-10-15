@@ -29,4 +29,6 @@ public record PlaceResponse(
     Instant createdAt,
     Instant updatedAt,
     /** Quán sao chép từ Khám phá quán: mọi ảnh của quán gốc (ảnh đầu = imageUrl). Chỉ có ở danh sách My place. */
-    List<String> photos) {}
+    List<String> photos,
+    /** Quán gốc trong Khám phá quán (plan tham chiếu quán theo id này); null với quán tự nhập cũ */
+    UUID catalogId) {}

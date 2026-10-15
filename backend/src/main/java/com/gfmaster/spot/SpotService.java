@@ -7,6 +7,9 @@ import com.gfmaster.vibe.VibeDefaults.Tagged;
 import com.gfmaster.catalog.CatalogDistrict;
 import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
+import com.gfmaster.catalog.CatalogDtos.BannerSetting;
+import com.gfmaster.spot.SpotDtos.FeaturedSpot;
+import com.gfmaster.spot.SpotDtos.FeaturedSpotRequest;
 import com.gfmaster.spot.SpotDtos.SpotItem;
 import com.gfmaster.spot.SpotDtos.SpotPage;
 import com.gfmaster.spot.SpotDtos.SpotRequest;
@@ -119,6 +122,85 @@ public class SpotService {
     apply(req, s);
     applyVibes(req, s, false);
     return toItem(spots.saveAndFlush(s), false);
+  }
+
+  // ---- Ảnh nền banner Tìm chỗ chơi (admin đổi được) ----
+
+  static final String BANNER_KEY = "spots.banner";
+
+  /** Công khai: ảnh nền banner (URL công khai), null = frontend tự chọn ảnh mặc định */
+  @Transactional(readOnly = true)
+  public BannerSetting banner() {
+    List<String> v =
+        jdbc.queryForList("SELECT value FROM app_settings WHERE key = :key", Map.of("key", BANNER_KEY), String.class);
+    return new BannerSetting(v.isEmpty() ? null : imageUrls.toPublic(v.getFirst()));
+  }
+
+  /** Admin: đổi ảnh nền; null / rỗng = quay về ảnh mặc định */
+  public BannerSetting setBanner(String imageUrl) {
+    if (imageUrl == null || imageUrl.isBlank()) {
+      jdbc.update("DELETE FROM app_settings WHERE key = :key", Map.of("key", BANNER_KEY));
+    } else {
+      jdbc.update(
+          """
+          INSERT INTO app_settings (key, value, updated_at) VALUES (:key, :value, now())
+          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at
+          """,
+          Map.of("key", BANNER_KEY, "value", imageUrls.toStored(imageUrl.strip())));
+    }
+    return banner();
+  }
+
+  // ---- Chỗ chơi nổi bật (admin chọn, tối đa 6) ----
+
+  static final int MAX_FEATURED = 6;
+
+  private record FeaturedRow(int position, UUID spotId, String kicker, String headline) {}
+
+  /** Công khai: các chỗ chơi nổi bật theo vị trí, kèm "đã lưu" như danh sách. */
+  @Transactional(readOnly = true)
+  public List<FeaturedSpot> featured(UUID userId) {
+    List<FeaturedRow> rows =
+        jdbc.query(
+            "SELECT position, spot_id, kicker, headline FROM featured_spots ORDER BY position",
+            Map.of(),
+            (rs, i) ->
+                new FeaturedRow(
+                    rs.getInt("position"), rs.getObject("spot_id", UUID.class), rs.getString("kicker"), rs.getString("headline")));
+    if (rows.isEmpty()) return List.of();
+    List<UUID> ids = rows.stream().map(FeaturedRow::spotId).toList();
+    Map<UUID, DateSpot> byId = new HashMap<>();
+    spots.findAllById(ids).forEach(s -> byId.put(s.getId(), s));
+    Set<UUID> saved = savedAmong(userId, ids);
+    return rows.stream()
+        .filter(r -> byId.containsKey(r.spotId()))
+        .map(r -> new FeaturedSpot(r.position(), r.kicker(), r.headline(), toItem(byId.get(r.spotId()), saved.contains(r.spotId()))))
+        .toList();
+  }
+
+  /** Admin: thay toàn bộ danh sách nổi bật (thứ tự trong danh sách là vị trí; rỗng = tắt khối nổi bật). */
+  public List<FeaturedSpot> setFeatured(List<FeaturedSpotRequest> list) {
+    if (list.size() > MAX_FEATURED) {
+      throw new ApiException(ErrorCode.VALIDATION_FAILED, "Tối đa " + MAX_FEATURED + " chỗ chơi nổi bật.");
+    }
+    if (list.stream().map(FeaturedSpotRequest::spotId).distinct().count() != list.size()) {
+      throw new ApiException(ErrorCode.VALIDATION_FAILED, "Mỗi chỗ chơi chỉ chọn một lần.");
+    }
+    for (FeaturedSpotRequest f : list) {
+      if (!spots.existsById(f.spotId())) throw ApiException.notFound();
+    }
+    jdbc.update("DELETE FROM featured_spots", Map.of());
+    for (int i = 0; i < list.size(); i++) {
+      FeaturedSpotRequest f = list.get(i);
+      jdbc.update(
+          "INSERT INTO featured_spots (position, spot_id, kicker, headline) VALUES (:pos, :id, :kicker, :headline)",
+          Map.of(
+              "pos", i + 1,
+              "id", f.spotId(),
+              "kicker", f.kicker() == null ? "" : f.kicker().strip(),
+              "headline", f.headline().strip()));
+    }
+    return featured(null);
   }
 
   // ---- My place: lưu / bỏ chỗ chơi (mỗi người một danh sách) ----

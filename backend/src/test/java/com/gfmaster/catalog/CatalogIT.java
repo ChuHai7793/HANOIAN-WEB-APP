@@ -61,6 +61,8 @@ class CatalogIT extends ApiTestSupport {
         .andExpect(jsonPath("$.name").value("Cafe Giảng"))
         .andExpect(jsonPath("$.rating").value(5));
     getAs(guest, "/api/v1/places?type=cafe").andExpect(jsonPath("$", hasSize(1)));
+    // Bản trong My place nhớ quán gốc (để thêm vào plan từ My place)
+    getAs(guest, "/api/v1/places").andExpect(jsonPath("$[0].catalogId").value(giangId));
     getAs(admin, "/api/v1/places").andExpect(jsonPath("$", hasSize(0)));
     getAs(guest, "/api/v1/catalog?q=giảng").andExpect(jsonPath("$.items[0].inMyPlace").value(true));
     getAs(admin, "/api/v1/catalog?q=giảng").andExpect(jsonPath("$.items[0].inMyPlace").value(false));
