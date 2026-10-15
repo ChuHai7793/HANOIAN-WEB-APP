@@ -83,9 +83,9 @@ class FeaturedSpotsIT extends ApiTestSupport {
     putJson(admin, "/api/v1/admin/spots/featured", "[" + item + "," + item + "]").andExpect(status().isBadRequest());
     putJson(admin, "/api/v1/admin/spots/featured", "[{\"spotId\": \"%s\", \"headline\": \"\"}]".formatted(a))
         .andExpect(status().isBadRequest());
-    String[] seven = new String[7];
-    for (int i = 0; i < 7; i++) seven[i] = "{\"spotId\": \"%s\", \"headline\": \"x\"}".formatted(spot(admin, "P" + i + UUID.randomUUID()));
-    putJson(admin, "/api/v1/admin/spots/featured", "[" + String.join(",", java.util.Arrays.copyOf(seven, 6)) + "]").andExpect(status().isOk());
+    String[] seven = new String[11];
+    for (int i = 0; i < 11; i++) seven[i] = "{\"spotId\": \"%s\", \"headline\": \"x\"}".formatted(spot(admin, "P" + i + UUID.randomUUID()));
+    putJson(admin, "/api/v1/admin/spots/featured", "[" + String.join(",", java.util.Arrays.copyOf(seven, 10)) + "]").andExpect(status().isOk());
     putJson(admin, "/api/v1/admin/spots/featured", "[" + String.join(",", seven) + "]").andExpect(status().isBadRequest());
     putJson(admin, "/api/v1/admin/spots/featured", "[{\"spotId\": \"%s\", \"headline\": \"x\"}]".formatted(UUID.randomUUID()))
         .andExpect(status().isNotFound());

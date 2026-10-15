@@ -22,7 +22,7 @@ export interface FeaturedSlot {
   headline: string;
 }
 
-export const MAX_FEATURED = 6;
+export const MAX_FEATURED = 10;
 
 /** Chữ mẫu điền sẵn khi admin chọn mà chưa viết chữ (lần lượt theo vị trí) */
 const SAMPLES: Record<'place' | 'spot', { kicker: string; headline: string }[]> = {
@@ -33,6 +33,10 @@ const SAMPLES: Record<'place' | 'spot', { kicker: string; headline: string }[]> 
     { kicker: 'Hẹn tối nay', headline: 'Một bữa tối,\nhai câu chuyện.' },
     { kicker: 'Dạo phố cùng nhau', headline: 'Đi chậm thôi,\nHà Nội còn dài.' },
     { kicker: 'Cho ngày mưa', headline: 'Mưa ngoài kia,\nấm áp bên trong.' },
+    { kicker: 'Nhìn từ trên cao', headline: 'Cả thành phố\nlên đèn vì mình.' },
+    { kicker: 'Hẹn cuối tuần', headline: 'Sáng chủ nhật,\nchẳng cần vội.' },
+    { kicker: 'Ngọt một chút', headline: 'Chia đôi\nmột miếng bánh.' },
+    { kicker: 'Hẹn lần đầu', headline: 'Bắt đầu\nthật nhẹ nhàng.' },
   ],
   spot: [
     { kicker: 'Chỗ chơi nổi bật', headline: 'Dạo một vòng hồ,\nnắm tay thật lâu.' },
@@ -41,6 +45,10 @@ const SAMPLES: Record<'place' | 'spot', { kicker: string; headline: string }[]> 
     { kicker: 'Ngày mưa vẫn vui', headline: 'Mưa ngoài kia,\nvui trong này.' },
     { kicker: 'Chơi cho vui', headline: 'Ai thua\nthì bao trà sữa.' },
     { kicker: 'Cuối tuần này', headline: 'Đi chậm thôi,\nHà Nội còn dài.' },
+    { kicker: 'Ra ngoài trời', headline: 'Nắng nhẹ,\ngió mát, có nhau.' },
+    { kicker: 'Học cùng nhau', headline: 'Thử một điều\nchưa từng làm.' },
+    { kicker: 'Lưu giữ kỷ niệm', headline: 'Chụp một tấm\nđể nhớ lâu.' },
+    { kicker: 'Cho đôi chân', headline: 'Đi thật xa,\nrồi về cùng nhau.' },
   ],
 };
 
@@ -64,7 +72,7 @@ const TEXT = {
 };
 
 /**
- * Admin chọn danh sách nổi bật (tối đa 6) của Khám phá quán (`kind` place) hoặc Tìm chỗ chơi (spot): mỗi dòng
+ * Admin chọn danh sách nổi bật (tối đa 10) của Khám phá quán (`kind` place) hoặc Tìm chỗ chơi (spot): mỗi dòng
  * một quán / chỗ chơi + dòng nhỏ + câu dẫn (xuống dòng bằng Enter). Thứ tự trong danh sách là thứ tự trên hàng.
  */
 @Component({
@@ -166,7 +174,8 @@ export class FeaturedEditorComponent implements OnInit {
   protected choose(i: number, id: string): void {
     const s = this.slots()[i];
     // Chọn lần đầu: điền sẵn chữ mẫu để sửa lại
-    const sample = SAMPLES[this.kind()][i % MAX_FEATURED];
+    const samples = SAMPLES[this.kind()];
+    const sample = samples[i % samples.length];
     const fill = id && !s.headline ? { kicker: s.kicker || sample.kicker, headline: sample.headline } : {};
     this.patch(i, { id, ...fill });
   }

@@ -115,7 +115,7 @@ public class CatalogService {
 
   // ---- Điểm hẹn nổi bật (admin chọn, tối đa 6) ----
 
-  static final int MAX_FEATURED = 6;
+  static final int MAX_FEATURED = 10;
 
   private record FeaturedRow(int position, UUID catalogId, String kicker, String headline) {}
 

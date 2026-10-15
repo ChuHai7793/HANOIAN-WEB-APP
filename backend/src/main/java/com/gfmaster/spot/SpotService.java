@@ -153,7 +153,7 @@ public class SpotService {
 
   // ---- Chỗ chơi nổi bật (admin chọn, tối đa 6) ----
 
-  static final int MAX_FEATURED = 6;
+  static final int MAX_FEATURED = 10;
 
   private record FeaturedRow(int position, UUID spotId, String kicker, String headline) {}
 

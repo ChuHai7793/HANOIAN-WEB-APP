@@ -1,4 +1,4 @@
-import { afterNextRender, afterRenderEffect, Component, DestroyRef, ElementRef, inject, input, OnInit, output, signal, viewChild } from '@angular/core';
+import { afterNextRender, afterRenderEffect, Component, computed, DestroyRef, ElementRef, inject, input, OnInit, output, signal, viewChild } from '@angular/core';
 import { IconComponent } from './icon.component';
 
 /** Một thẻ nổi bật (quán hoặc chỗ chơi), trang cha dựng từ dữ liệu của mình */
@@ -22,12 +22,25 @@ export interface FeaturedCard {
 
 /** Kéo quá chừng này (px) thì coi là kéo, không phải bấm mở */
 const DRAG_THRESHOLD = 6;
+/** Tự trượt 1 thẻ sau mỗi khoảng này */
+const AUTOPLAY_MS = 5000;
+/** Người dùng vừa chạm / kéo / bấm ‹ ›: chờ chừng này rồi mới tự trượt tiếp */
+const RESUME_MS = 5000;
+
+interface Slide {
+  key: string;
+  card: FeaturedCard;
+  /** Bản sao (bộ đầu / cuối của vòng tròn): ẩn với trình đọc màn hình, không nhận Tab */
+  clone: boolean;
+}
 
 /**
  * Khối "nổi bật" ở đầu Khám phá quán / Tìm chỗ chơi: tiêu đề, nút admin "Chọn gợi ý nổi bật", nút ẩn / hiện
- * (nhớ theo trình duyệt) và tối đa 6 thẻ admin chọn, xếp một hàng ngang trượt được. Màn rộng ~3 thẻ / khung,
+ * (nhớ theo trình duyệt) và tối đa 10 thẻ admin chọn, xếp một hàng ngang trượt được. Màn rộng ~3 thẻ / khung,
  * máy tính bảng ~2, điện thoại ~1,2. Xem tiếp bằng nút ‹ ›, giữ chuột rồi kéo, vuốt hoặc lăn ngang; thẻ dừng
  * ngay ngắn (scroll snap). Bấm thẻ (không kéo) mở chi tiết.
+ * Thẻ tràn khỏi khung: vòng tròn liên tục (thẻ 1 nối sau thẻ cuối) và tự trượt 1 thẻ mỗi 5 giây; dừng khi rê
+ * chuột / chạm / kéo / bấm ‹ › (chạy lại sau 5 giây), khi tab bị ẩn hoặc máy bật giảm chuyển động.
  */
 @Component({
   selector: 'app-featured-section',
@@ -47,7 +60,7 @@ const DRAG_THRESHOLD = 6;
         }
       </div>
     }
-    <div class="relative" [class.hidden]="!cards().length || hidden()">
+    <div class="relative" [class.hidden]="!cards().length || hidden()" (mouseenter)="hovering = true" (mouseleave)="hovering = false; pause()" (focusin)="pause()">
       <div
         #track
         class="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden"
@@ -56,11 +69,15 @@ const DRAG_THRESHOLD = 6;
         [class.!snap-none]="dragging()"
         [class.!scroll-auto]="dragging()"
         (pointerdown)="dragStart($event)"
-        (scroll)="updateArrows()"
+        (scroll)="onScroll()"
       >
-        @for (f of cards(); track f.id) {
+        <!-- Vòng tròn: 3 bộ thẻ nối nhau (bộ giữa là thật, 2 bộ hai bên là bản sao để trượt mãi không hết) -->
+        @for (s of slides(); track s.key) {
+          @let f = s.card;
           <button
             type="button"
+            [attr.aria-hidden]="s.clone ? 'true' : null"
+            [attr.tabindex]="s.clone ? -1 : null"
             class="group relative block h-[230px] w-[82%] shrink-0 snap-start overflow-hidden rounded-2xl text-left sm:w-[calc((100%-1rem)/2)] md:h-[290px] xl:w-[calc((100%-2rem)/3)]"
             [attr.aria-label]="'Xem ' + f.name"
             (click)="onCardClick($event, f.id)"
@@ -141,6 +158,22 @@ export class FeaturedSectionComponent implements OnInit {
   protected readonly atStart = signal(true);
   protected readonly atEnd = signal(false);
   protected readonly dragging = signal(false);
+  /** Thẻ tràn khỏi khung: chạy vòng tròn (3 bộ thẻ) và tự trượt */
+  protected readonly loop = signal(false);
+
+  protected readonly slides = computed<Slide[]>(() => {
+    const cards = this.cards();
+    const copy = (n: number) => cards.map((card) => ({ key: `${n}:${card.id}`, card, clone: n !== 1 }));
+    return this.loop() ? [...copy(0), ...copy(1), ...copy(2)] : copy(1);
+  });
+
+  /** Chuột đang ở trên khối: không tự trượt */
+  protected hovering = false;
+  /** Không tự trượt trước thời điểm này (người dùng vừa tương tác) */
+  private pausedUntil = 0;
+  /** Vừa bật vòng tròn: nhảy tới bộ thẻ giữa sau khi vẽ xong */
+  private needsCenter = false;
+  private settleTimer: ReturnType<typeof setTimeout> | undefined;
 
   private dragX = 0;
   private dragScroll = 0;
@@ -148,18 +181,28 @@ export class FeaturedSectionComponent implements OnInit {
 
   constructor() {
     const destroyRef = inject(DestroyRef);
-    // Chỉ trên trình duyệt: đo xem hàng có tràn ngang không, theo dõi khi đổi cỡ
+    // Chỉ trên trình duyệt: đo xem hàng có tràn ngang không, theo dõi khi đổi cỡ; tự trượt
     afterNextRender(() => {
       this.updateArrows();
       const observer = new ResizeObserver(() => requestAnimationFrame(() => this.updateArrows()));
       observer.observe(this.track().nativeElement);
-      destroyRef.onDestroy(() => observer.disconnect());
+      const timer = setInterval(() => this.autoplay(), AUTOPLAY_MS);
+      destroyRef.onDestroy(() => {
+        observer.disconnect();
+        clearInterval(timer);
+        clearTimeout(this.settleTimer);
+      });
     });
-    // Danh sách đổi (admin vừa thêm / bớt) hoặc vừa hiện lại: đo lại
+    // Danh sách đổi (admin vừa thêm / bớt), vừa hiện lại hoặc vừa bật vòng tròn: đo lại
     afterRenderEffect(() => {
-      this.cards();
+      this.slides();
       this.hidden();
       this.updateArrows();
+      if (this.loop() && this.needsCenter) {
+        this.needsCenter = false;
+        const el = this.track().nativeElement;
+        this.jump(el.scrollLeft + this.setWidth());
+      }
     });
   }
 
@@ -182,20 +225,101 @@ export class FeaturedSectionComponent implements OnInit {
 
   /** Trượt gần một khung (số thẻ đang thấy) sang trái / phải; snap tự canh thẻ */
   protected page(direction: -1 | 1): void {
+    this.pause();
     const el = this.track().nativeElement;
-    el.scrollBy({ left: direction * el.clientWidth * 0.9, behavior: 'smooth' });
+    this.slide(direction * el.clientWidth * 0.9);
+  }
+
+  /** Người dùng vừa tương tác: tạm dừng tự trượt */
+  protected pause(): void {
+    this.pausedUntil = Date.now() + RESUME_MS;
   }
 
   protected updateArrows(): void {
+    if (this.hidden() || !this.cards().length) return; // đang ẩn: không đo được
     const el = this.track().nativeElement;
+    if (this.loop()) {
+      // Đổi cỡ màn hình làm mọi thẻ vừa khung: thôi vòng tròn
+      if (this.setWidth() <= el.clientWidth + 2) {
+        this.loop.set(false);
+        this.jump(0);
+        return;
+      }
+      this.canScroll.set(true);
+      this.atStart.set(false);
+      this.atEnd.set(false);
+      return;
+    }
     const max = el.scrollWidth - el.clientWidth;
     this.canScroll.set(max > 2);
     this.atStart.set(el.scrollLeft <= 2);
     this.atEnd.set(el.scrollLeft >= max - 2);
+    if (max > 2 && this.cards().length > 1) {
+      this.needsCenter = true;
+      this.loop.set(true);
+    }
+  }
+
+  protected onScroll(): void {
+    if (!this.loop()) this.updateArrows();
+    // Dừng trượt xong (nút, vuốt, tự trượt): trượt ra bộ bản sao thì nhảy về bộ giữa, mắt không thấy
+    clearTimeout(this.settleTimer);
+    this.settleTimer = setTimeout(() => this.recenter(), 150);
+  }
+
+  /** Bề rộng một bộ thẻ (gồm khoảng cách), = khoảng cách giữa thẻ đầu của bộ 1 và bộ 2 */
+  private setWidth(): number {
+    const items = this.track().nativeElement.children as HTMLCollectionOf<HTMLElement>;
+    const n = this.cards().length;
+    return items.length >= 2 * n ? items[n].offsetLeft - items[0].offsetLeft : 0;
+  }
+
+  /** Bước một thẻ */
+  private cardStep(): number {
+    const items = this.track().nativeElement.children as HTMLCollectionOf<HTMLElement>;
+    return items.length >= 2 ? items[1].offsetLeft - items[0].offsetLeft : 0;
+  }
+
+  private autoplay(): void {
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!this.loop() || this.hidden() || this.hovering || this.dragging() || document.hidden || reduceMotion) return;
+    if (Date.now() < this.pausedUntil) return;
+    this.slide(this.cardStep());
+  }
+
+  /** Trượt mượt một đoạn; sắp chạm mép của 3 bộ thì nhảy sang bộ bên cạnh trước (cùng vị trí thẻ) */
+  private slide(delta: number): void {
+    const el = this.track().nativeElement;
+    if (this.loop()) {
+      const set = this.setWidth();
+      const max = el.scrollWidth - el.clientWidth;
+      if (el.scrollLeft + delta > max - 2) this.jump(el.scrollLeft - set);
+      else if (el.scrollLeft + delta < 2) this.jump(el.scrollLeft + set);
+    }
+    el.scrollBy({ left: delta, behavior: 'smooth' });
+  }
+
+  /** Đang ở bộ bản sao: nhảy về vị trí tương ứng ở bộ giữa */
+  private recenter(): void {
+    if (!this.loop() || this.dragging()) return;
+    const el = this.track().nativeElement;
+    const set = this.setWidth();
+    if (!set) return;
+    if (el.scrollLeft < set * 0.5) this.jump(el.scrollLeft + set);
+    else if (el.scrollLeft >= set * 1.5) this.jump(el.scrollLeft - set);
+  }
+
+  /** Cuộn tức thì (không hiệu ứng) */
+  private jump(left: number): void {
+    const el = this.track().nativeElement;
+    el.style.scrollBehavior = 'auto';
+    el.scrollLeft = left;
+    el.style.scrollBehavior = '';
   }
 
   /** Giữ chuột rồi kéo ngang (cảm ứng dùng cuộn sẵn có của trình duyệt) */
   protected dragStart(e: PointerEvent): void {
+    this.pause(); // chạm / bấm vào hàng thẻ (cả vuốt cảm ứng): dừng tự trượt
     if (e.pointerType !== 'mouse' || e.button !== 0 || !this.canScroll()) return;
     const el = this.track().nativeElement;
     this.dragX = e.clientX;
@@ -212,6 +336,8 @@ export class FeaturedSectionComponent implements OnInit {
       window.removeEventListener('pointerup', up);
       // Bật lại snap để thẻ dừng ngay ngắn
       this.dragging.set(false);
+      this.pause();
+      this.onScroll();
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
