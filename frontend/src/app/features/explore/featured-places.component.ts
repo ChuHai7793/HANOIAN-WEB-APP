@@ -41,8 +41,10 @@ const DRAG_THRESHOLD = 6;
               <span class="absolute inset-0 bg-gradient-to-br from-brand-500 to-brand-800"></span>
             }
             <span class="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10"></span>
+            <!-- Mép trên tối nhẹ: dòng chữ nhỏ vẫn đọc được trên ảnh sáng -->
+            <span class="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/55 to-transparent"></span>
             @if (f.kicker) {
-              <span class="absolute inset-x-5 top-4 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.16em] text-white/90 md:inset-x-6 md:top-5 md:text-[13px]">
+              <span class="absolute inset-x-5 top-4 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.16em] text-white [text-shadow:0_1px_6px_rgb(0_0_0/0.45)] md:inset-x-6 md:top-5 md:text-[13px]">
                 @if (f.position === 1) {
                   <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
                 }

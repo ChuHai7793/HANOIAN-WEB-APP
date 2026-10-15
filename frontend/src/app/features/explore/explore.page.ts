@@ -201,7 +201,8 @@ function readFeaturedHidden(): boolean {
 
       <!-- Điểm hẹn nổi bật (admin chọn): ẩn / hiện, nhớ theo trình duyệt -->
       @if (featured().length || canEdit()) {
-        <div class="-mt-1 flex justify-end gap-4 text-[13px] font-medium">
+        <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] font-medium">
+          <h2 class="mr-auto text-lg font-bold tracking-tight text-slate-900">Điểm hẹn nổi bật</h2>
           @if (canEdit()) {
             <button type="button" class="text-brand-700 hover:underline" (click)="featuredEditorOpen.set(true)">Chọn gợi ý nổi bật</button>
           }
@@ -234,7 +235,9 @@ function readFeaturedHidden(): boolean {
           {{ q() || type() || district() ? 'Không tìm thấy quán phù hợp. Thử từ khoá khác nhé.' : 'Chưa có quán nào trong danh mục.' }}
         </div>
       } @else {
-        <span class="text-[13px] text-slate-500">{{ total() }} quán</span>
+        <h2 class="mt-2 flex items-baseline gap-2 text-lg font-bold tracking-tight text-slate-900">
+          {{ type() ? typeTitle() : 'Tất cả quán' }}<span class="text-sm font-medium text-slate-500">{{ total() }} quán</span>
+        </h2>
         <!-- Hàng thẻ đầu vừa khít màn hình, hàng sau cuộn mới thấy -->
         <div appFitRow class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
           @for (item of items(); track item.id) {
@@ -278,19 +281,22 @@ function readFeaturedHidden(): boolean {
                     <app-vibe-tags class="shrink-0" [vibes]="item.vibes" />
                   </div>
                 </div>
-                <div class="grid grid-cols-3 gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
-                  <a [href]="directions(item)" target="_blank" rel="noopener" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50"><app-icon name="navigate" [size]="14" />Chỉ đường</a>
-                  <button type="button" class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] border border-brand-200 px-1.5 text-xs font-medium text-slate-700 hover:bg-brand-50" (click)="addToPlan({ kind: 'place', refId: item.id, name: item.name, district: item.district })">
-                    <app-icon name="route" [size]="14" />Vào plan
+                <!-- Một nút chính (Lưu); Chỉ đường / Vào plan là icon, rê chuột thì hiện chữ -->
+                <div class="flex items-center gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
+                  <a [href]="directions(item)" target="_blank" rel="noopener" class="group/act flex h-9 items-center rounded-[10px] border border-brand-200 px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-brand-50 focus-visible:bg-brand-50" aria-label="Chỉ đường" title="Chỉ đường">
+                    <app-icon name="navigate" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[80px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[80px] group-focus-visible/act:opacity-100">Chỉ đường</span>
+                  </a>
+                  <button type="button" class="group/act flex h-9 items-center rounded-[10px] border border-brand-200 px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-brand-50 focus-visible:bg-brand-50" aria-label="Vào plan" title="Vào plan" (click)="addToPlan({ kind: 'place', refId: item.id, name: item.name, district: item.district })">
+                    <app-icon name="route" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[80px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[80px] group-focus-visible/act:opacity-100">Vào plan</span>
                   </button>
                   @if (item.inMyPlace) {
-                    <span class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] bg-brand-100 px-1.5 text-xs font-semibold text-brand-800">
+                    <span class="flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-100 px-2 text-xs font-semibold text-brand-800">
                       <app-icon name="heart" [size]="14" [filled]="true" />Đã lưu
                     </span>
                   } @else {
                     <button
                       type="button"
-                      class="flex min-h-9 items-center justify-center gap-1 whitespace-nowrap rounded-[10px] bg-brand-600 px-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                      class="flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-600 px-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
                       [disabled]="adding() === item.id"
                       (click)="addToMyPlace(item)"
                     >
@@ -484,6 +490,11 @@ export class ExplorePage implements OnInit {
     const res = await this.catalog.setBanner(null);
     this.customBanner.set(res.imageUrl);
     this.toast.success('Đã dùng lại ảnh nền mặc định.');
+  }
+
+  /** Tiêu đề khu danh sách theo chip loại quán đang chọn */
+  protected typeTitle(): string {
+    return this.typeFilters.find((t) => t.value === this.type())?.label ?? 'Tất cả quán';
   }
 
   /** Điểm hẹn nổi bật (admin chọn) */
