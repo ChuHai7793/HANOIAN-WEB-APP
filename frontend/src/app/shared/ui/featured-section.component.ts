@@ -40,7 +40,7 @@ interface Slide {
  * máy tính bảng ~2, điện thoại ~1,2. Xem tiếp bằng nút ‹ ›, giữ chuột rồi kéo, vuốt hoặc lăn ngang; thẻ dừng
  * ngay ngắn (scroll snap). Bấm thẻ (không kéo) mở chi tiết.
  * Thẻ tràn khỏi khung: vòng tròn liên tục (thẻ 1 nối sau thẻ cuối) và tự trượt 1 thẻ mỗi 5 giây; dừng khi rê
- * chuột / chạm / kéo / bấm ‹ › (chạy lại sau 5 giây), khi tab bị ẩn hoặc máy bật giảm chuyển động.
+ * chuột / chạm / kéo / bấm ‹ › (chạy lại sau 5 giây) hoặc khi tab bị ẩn.
  */
 @Component({
   selector: 'app-featured-section',
@@ -281,8 +281,9 @@ export class FeaturedSectionComponent implements OnInit {
   }
 
   private autoplay(): void {
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    if (!this.loop() || this.hidden() || this.hovering || this.dragging() || document.hidden || reduceMotion) return;
+    // Không xét prefers-reduced-motion: nhiều máy Windows tắt "Animation effects" mà người dùng không biết,
+    // khối nổi bật đứng yên là lỗi với họ (chủ sản phẩm muốn luôn trượt)
+    if (!this.loop() || this.hidden() || this.hovering || this.dragging() || document.hidden) return;
     if (Date.now() < this.pausedUntil) return;
     this.slide(this.cardStep());
   }
