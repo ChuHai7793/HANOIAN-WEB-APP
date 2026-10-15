@@ -86,20 +86,20 @@ function readFeaturedHidden(): boolean {
             <div class="ml-auto flex items-center gap-2">
               <button
                 type="button"
-                class="flex h-10 items-center gap-1.5 rounded-full bg-white px-3 text-sm font-semibold text-brand-700 shadow-lg shadow-brand-900/20 transition hover:bg-brand-50 sm:px-4"
+                class="flex h-8 items-center gap-1 rounded-full bg-white px-2 text-[12px] font-semibold text-brand-700 shadow-md shadow-brand-900/20 transition hover:bg-brand-50 sm:px-3"
                 aria-label="Autoplan buổi hẹn"
                 (click)="autoplanOpen.set(true)"
               >
-                <app-icon name="shuffle" [size]="16" /><span class="max-sm:hidden">Autoplan buổi hẹn</span>
+                <app-icon name="shuffle" [size]="14" /><span class="max-sm:hidden">Autoplan buổi hẹn</span>
               </button>
               @if (canEdit()) {
                 <div class="relative">
                   <button
                     type="button"
-                    class="flex h-10 items-center gap-2 rounded-full bg-brand-600 px-3 text-sm font-semibold text-white shadow-lg shadow-brand-900/30 transition hover:bg-brand-700 sm:px-5" aria-label="Thêm quán"
+                    class="flex h-8 items-center gap-1 rounded-full bg-brand-600 px-2 text-[12px] font-semibold text-white shadow-md shadow-brand-900/30 transition hover:bg-brand-700 sm:px-3" aria-label="Thêm quán"
                     (click)="typeMenuOpen.set(!typeMenuOpen())"
                   >
-                    <app-icon name="plus" [size]="18" [stroke]="2.4" />
+                    <app-icon name="plus" [size]="14" [stroke]="2.4" />
                     <span class="max-sm:hidden">Thêm quán</span>
                   </button>
                   @if (typeMenuOpen()) {
