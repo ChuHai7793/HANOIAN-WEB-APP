@@ -75,6 +75,11 @@ export class CatalogService {
     );
   }
 
+  /** Trang riêng của quán /quan/{slug} */
+  bySlug(slug: string): Promise<CatalogItem> {
+    return firstValueFrom(this.http.get<CatalogItem>(`${API_BASE}/catalog/by-slug/${encodeURIComponent(slug)}`));
+  }
+
   /** Ảnh nền banner Khám phá quán; imageUrl null = ảnh mặc định */
   banner(): Promise<{ imageUrl: string | null }> {
     return firstValueFrom(this.http.get<{ imageUrl: string | null }>(`${API_BASE}/catalog/banner`));

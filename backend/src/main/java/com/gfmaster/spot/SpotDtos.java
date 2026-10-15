@@ -62,6 +62,8 @@ public final class SpotDtos {
   /** Một chỗ chơi. {@code district}: mã quận; {@code districtLabel}: tên hiển thị. */
   public record SpotItem(
       UUID id,
+      /** Đường dẫn trang riêng: /quan/{slug} hoặc /cho-choi/{slug} */
+      String slug,
       SpotCategory category,
       /** Nhóm khác ngoài nhóm chính, theo thứ tự của SpotCategory */
       List<SpotCategory> extraCategories,

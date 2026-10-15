@@ -1,5 +1,6 @@
 package com.gfmaster.spot;
 
+import com.gfmaster.common.web.Slugs;
 import com.gfmaster.catalog.VenuePhotos;
 import com.gfmaster.vibe.VibeDefaults;
 import com.gfmaster.vibe.VibeDefaults.Tagged;
@@ -85,11 +86,29 @@ public class SpotService {
     return out;
   }
 
+  /** Gán đường dẫn trang riêng cho chỗ chơi mới (giữ nguyên khi đổi tên sau này) */
+  DateSpot withSlug(DateSpot s) {
+    if (s.getSlug() == null) s.setSlug(Slugs.unique(s.getName(), "cho-choi", spots::existsBySlug));
+    return s;
+  }
+
+  /** Trang riêng của chỗ chơi: /cho-choi/{slug}. Công khai. */
+  @Transactional(readOnly = true)
+  public SpotItem bySlug(UUID userId, String slug) {
+    DateSpot s = spots.findBySlug(slug).orElseThrow(ApiException::notFound);
+    boolean saved = userId != null && Boolean.TRUE.equals(
+        jdbc.queryForObject(
+            "SELECT EXISTS (SELECT 1 FROM saved_spots WHERE user_id = :u AND spot_id = :s)",
+            Map.of("u", userId, "s", s.getId()),
+            Boolean.class));
+    return toItem(s, saved);
+  }
+
   public SpotItem create(SpotRequest req) {
     DateSpot s = new DateSpot();
     apply(req, s);
     applyVibes(req, s, true);
-    return toItem(spots.saveAndFlush(s), false);
+    return toItem(spots.saveAndFlush(withSlug(s)), false);
   }
 
   public SpotItem update(UUID id, SpotRequest req) {
@@ -258,6 +277,7 @@ public class SpotService {
   private SpotItem toItem(DateSpot s, boolean inMyPlace) {
     return new SpotItem(
         s.getId(),
+        s.getSlug(),
         s.getCategory(),
         s.getExtraCategories().stream().sorted().toList(),
         s.getDistrict().name(),

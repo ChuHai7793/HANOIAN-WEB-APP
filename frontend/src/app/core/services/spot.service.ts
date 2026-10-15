@@ -30,7 +30,7 @@ function toParams(query: object): HttpParams {
 /** Dữ liệu admin gửi khi thêm/sửa chỗ chơi. `version`: bỏ qua khi thêm. */
 export type SpotRequest = Omit<
   SpotItem,
-  'id' | 'districtLabel' | 'createdAt' | 'updatedAt' | 'version' | 'vibesSource' | 'inMyPlace' | 'ratingAvg' | 'ratingCount'
+  'id' | 'districtLabel' | 'createdAt' | 'updatedAt' | 'version' | 'vibesSource' | 'inMyPlace' | 'ratingAvg' | 'ratingCount' | 'slug'
 > & {
   /** true = để hệ thống tự gán nhãn theo nhóm */
   vibesAuto?: boolean;
@@ -68,5 +68,10 @@ export class SpotService {
 
   remove(id: string): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`${API_BASE}/admin/spots/${id}`));
+  }
+
+  /** Trang riêng của chỗ chơi /cho-choi/{slug} */
+  bySlug(slug: string): Promise<SpotItem> {
+    return firstValueFrom(this.http.get<SpotItem>(`${API_BASE}/spots/by-slug/${encodeURIComponent(slug)}`));
   }
 }

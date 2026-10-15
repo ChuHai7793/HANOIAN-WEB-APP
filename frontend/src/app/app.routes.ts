@@ -86,6 +86,36 @@ export const routes: Routes = [
         loadComponent: () => import('./features/spots/spot-list.page').then((m) => m.SpotListPage),
       },
       {
+        path: 'quan/:slug',
+        data: { kind: 'place' },
+        loadComponent: () => import('./features/venue/venue.page').then((m) => m.VenuePage),
+      },
+      {
+        path: 'cho-choi/:slug',
+        data: { kind: 'spot' },
+        loadComponent: () => import('./features/venue/venue.page').then((m) => m.VenuePage),
+      },
+      {
+        path: 'cam-nang',
+        loadComponent: () => import('./features/articles/article-list.page').then((m) => m.ArticleListPage),
+      },
+      {
+        path: 'cam-nang/:slug',
+        loadComponent: () => import('./features/articles/article.page').then((m) => m.ArticlePage),
+      },
+      {
+        path: 'admin/articles',
+        title: 'Bài viết Cẩm nang · HANOIVIBE',
+        canMatch: [adminGuard],
+        loadComponent: () => import('./features/articles/article-admin-list.page').then((m) => m.ArticleAdminListPage),
+      },
+      {
+        path: 'admin/articles/:id',
+        title: 'Soạn bài · HANOIVIBE',
+        canMatch: [adminGuard],
+        loadComponent: () => import('./features/articles/article-editor.page').then((m) => m.ArticleEditorPage),
+      },
+      {
         path: 'dating',
         title: 'Tìm đối tượng · HANOIVIBE',
         canMatch: [authGuard],

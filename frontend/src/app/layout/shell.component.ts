@@ -319,6 +319,7 @@ export class ShellComponent {
         { path: '/explore', label: 'Khám phá quán', icon: 'compass' },
         { path: '/spots', label: 'Tìm chỗ chơi', icon: 'gate' },
         { path: '/quiz', label: 'Gu hẹn hò', icon: 'smile' },
+        { path: '/cam-nang', label: 'Cẩm nang', icon: 'book' },
         { path: '/places', label: 'My place', icon: 'bookmark', badge: () => this.places.items().length + this.savedSpots.count() },
         { path: '/dating', label: 'Tìm đối tượng', icon: 'heart', alert: () => this.inbox.unread() },
       ],
@@ -336,6 +337,7 @@ export class ShellComponent {
             title: 'Quản trị',
             items: [
               { path: '/admin/users', label: 'Người dùng', icon: 'users' },
+              { path: '/admin/articles', label: 'Bài viết', icon: 'edit' },
               { path: '/admin/dating', label: 'Tìm đối tượng', icon: 'shield' },
             ],
           } satisfies NavSection,

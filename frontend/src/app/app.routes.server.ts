@@ -11,5 +11,9 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'spots', renderMode: RenderMode.Server },
   { path: 'quiz', renderMode: RenderMode.Server },
   { path: 'p/:token', renderMode: RenderMode.Server },
+  { path: 'quan/:slug', renderMode: RenderMode.Server },
+  { path: 'cho-choi/:slug', renderMode: RenderMode.Server },
+  { path: 'cam-nang', renderMode: RenderMode.Server },
+  { path: 'cam-nang/:slug', renderMode: RenderMode.Server },
   { path: '**', renderMode: RenderMode.Client },
 ];

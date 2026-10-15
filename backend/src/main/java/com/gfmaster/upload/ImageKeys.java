@@ -1,9 +1,8 @@
 package com.gfmaster.upload;
 
+import com.gfmaster.common.web.Slugs;
 import java.security.SecureRandom;
-import java.text.Normalizer;
 import java.time.LocalDate;
-import java.util.Locale;
 
 /**
  * Tên file ảnh trên storage công khai: {@code {thư mục loại ảnh}/{yyyy}/{MM}/{tên-dễ-đọc}-{8 ký tự ngẫu nhiên}.webp},
@@ -26,12 +25,7 @@ final class ImageKeys {
 
   /** "Cafe Cuối Ngõ!" → "cafe-cuoi-ngo"; chỉ a-z, 0-9, "-"; rỗng thì "anh". */
   static String slug(String value) {
-    if (value == null) return "anh";
-    String s = value.replace('đ', 'd').replace('Đ', 'D');
-    s = Normalizer.normalize(s, Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
-    s = s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", "");
-    if (s.length() > MAX_SLUG) s = s.substring(0, MAX_SLUG).replaceAll("-+$", "");
-    return s.isEmpty() ? "anh" : s;
+    return Slugs.of(value, MAX_SLUG, "anh");
   }
 
   private static String randomSuffix() {

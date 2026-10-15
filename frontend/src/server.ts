@@ -42,6 +42,40 @@ const angularApp = new AngularNodeAppEngine({
 
 app.disable('x-powered-by');
 
+/** Tên miền đang được mở (sau proxy của Render), để viết URL tuyệt đối trong sitemap */
+function origin(req: express.Request): string {
+  const proto = (req.get('x-forwarded-proto') ?? req.protocol).split(',')[0].trim();
+  return `${proto}://${req.get('x-forwarded-host') ?? req.get('host')}`;
+}
+
+// Bản SSR là bản cho Google index (bản static chặn index bằng public/robots.txt)
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /p/\n\nSitemap: ${origin(req)}/sitemap.xml\n`);
+});
+
+/** sitemap.xml: trang chính + mọi quán, chỗ chơi, bài viết đã xuất bản (lấy từ backend) */
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const r = await fetch(`${apiOrigin}/api/v1/public/sitemap`);
+    const entries = r.ok ? ((await r.json()) as { path: string; updatedAt: string | null }[]) : [];
+    const base = origin(req);
+    const fixed = ['/explore', '/spots', '/cam-nang', '/quiz', '/autoplan'].map((path) => ({ path, updatedAt: null }));
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const urls = [...fixed, ...entries]
+      .map(
+        (e) =>
+          `  <url><loc>${esc(base + e.path)}</loc>${e.updatedAt ? `<lastmod>${e.updatedAt.slice(0, 10)}</lastmod>` : ''}</url>`,
+      )
+      .join('\n');
+    res
+      .type('application/xml')
+      .set('Cache-Control', 'public, max-age=3600')
+      .send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`);
+  } catch {
+    res.status(503).type('text/plain').send('Sitemap tạm thời không tạo được.');
+  }
+});
+
 app.use(
   createProxyMiddleware({
     target: apiOrigin,

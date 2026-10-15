@@ -52,6 +52,12 @@ public class CatalogController {
     return catalog.search(userId, q, type, district, mine, page, size);
   }
 
+  /** Công khai: trang riêng của quán /quan/{slug} */
+  @GetMapping("/api/v1/catalog/by-slug/{slug}")
+  public CatalogItem bySlug(@MyPlaceOwner(required = false) UUID userId, @PathVariable String slug) {
+    return catalog.bySlug(userId, slug);
+  }
+
   /** Công khai: ảnh nền banner Khám phá quán (imageUrl null = ảnh mặc định của frontend) */
   @GetMapping("/api/v1/catalog/banner")
   public BannerSetting banner() {

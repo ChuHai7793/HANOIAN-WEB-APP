@@ -1,0 +1,4 @@
+# Bản static (Render Static Site): không cho index, tránh trùng nội dung với bản SSR (tên miền chính).
+# Bản SSR trả robots.txt riêng (src/server.ts) cho phép index và chỉ tới sitemap.xml.
+User-agent: *
+Disallow: /

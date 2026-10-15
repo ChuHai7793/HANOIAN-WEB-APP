@@ -115,4 +115,8 @@ public class CatalogPlace extends BaseEntity {
 
   @Column(name = "rating_count", insertable = false, updatable = false)
   private int ratingCount;
+
+  /** Đường dẫn trang riêng (SEO), vd. cafe-cuoi-ngo; gán lúc tạo, giữ nguyên khi đổi tên */
+  @Column(length = 80, unique = true)
+  private String slug;
 }

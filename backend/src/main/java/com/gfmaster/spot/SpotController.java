@@ -61,6 +61,12 @@ public class SpotController {
   }
 
   /** My place: chỗ chơi đã lưu của người đang đăng nhập */
+  /** Công khai: trang riêng của chỗ chơi /cho-choi/{slug} */
+  @GetMapping("/api/v1/spots/by-slug/{slug}")
+  public SpotItem bySlug(@MyPlaceOwner(required = false) UUID userId, @PathVariable String slug) {
+    return spots.bySlug(userId, slug);
+  }
+
   @GetMapping("/api/v1/me/spots")
   public List<SpotItem> saved(@MyPlaceOwner UUID userId) {
     return spots.saved(userId);

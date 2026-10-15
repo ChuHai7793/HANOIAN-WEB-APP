@@ -65,6 +65,8 @@ public final class CatalogDtos {
    */
   public record CatalogItem(
       UUID id,
+      /** Đường dẫn trang riêng: /quan/{slug} hoặc /cho-choi/{slug} */
+      String slug,
       PlaceType type,
       String district,
       String districtLabel,

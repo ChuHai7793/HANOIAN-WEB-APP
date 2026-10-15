@@ -12,6 +12,8 @@ public enum ImagePurpose {
   girlfriend("girlfriends"),
   /** Ảnh nền banner (vd. đầu trang Khám phá quán) */
   banner("banners"),
+  /** Ảnh bìa bài viết Cẩm nang */
+  article("articles"),
   misc("misc");
 
   final String folder;

@@ -390,6 +390,7 @@ function readFeaturedHidden(): boolean {
           <app-reviews target="place" [targetId]="d.id" (summaryChange)="onRatingChange(d.id, $event)" />
         </div>
         <div modalFooter class="flex flex-wrap justify-end gap-2">
+          <a [routerLink]="['/quan', d.slug]" class="mr-auto flex min-h-10 items-center gap-1 text-[13px] font-semibold text-brand-700 hover:underline">Xem trang quán<app-icon name="arrowRight" [size]="14" [stroke]="2.4" /></a>
           <a [href]="mapUrl(d)" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50">
             <app-icon name="pin" [size]="15" />Maps
           </a>

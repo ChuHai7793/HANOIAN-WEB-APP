@@ -44,7 +44,8 @@ public class LegacyImageRenamer {
           new String[] {"place_catalog", "image_url"},
           new String[] {"catalog_photos", "url"},
           new String[] {"spot_photos", "url"},
-          new String[] {"app_settings", "value"});
+          new String[] {"app_settings", "value"},
+          new String[] {"articles", "cover_url"});
 
   /**
    * Ảnh đang được dùng ở đâu, theo thứ tự ưu tiên khi một ảnh dùng ở nhiều chỗ (vd. quán trong Khám phá quán

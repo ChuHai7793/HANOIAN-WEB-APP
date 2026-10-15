@@ -1,5 +1,6 @@
 package com.gfmaster.catalog;
 
+import com.gfmaster.common.web.Slugs;
 import com.gfmaster.catalog.CatalogDtos.BannerSetting;
 import com.gfmaster.catalog.CatalogDtos.FeaturedRequest;
 import com.gfmaster.catalog.CatalogDtos.FeaturedItem;
@@ -67,6 +68,22 @@ public class CatalogService {
     this.imageUrls = imageUrls;
     this.dating = dating;
     this.jdbc = jdbc;
+  }
+
+  /** Gán đường dẫn trang riêng cho quán mới (giữ nguyên khi đổi tên sau này) */
+  CatalogPlace withSlug(CatalogPlace c) {
+    if (c.getSlug() == null) c.setSlug(Slugs.unique(c.getName(), "quan", catalog::existsBySlug));
+    return c;
+  }
+
+  /** Trang riêng của quán: /quan/{slug}. Công khai; có "đã lưu" / "người hợp gu" nếu đã đăng nhập. */
+  @Transactional(readOnly = true)
+  public CatalogItem bySlug(UUID userId, String slug) {
+    CatalogPlace c = catalog.findBySlug(slug).orElseThrow(ApiException::notFound);
+    List<UUID> ids = List.of(c.getId());
+    boolean saved = userId != null && !places.findCatalogIdsInMyPlace(userId, ids).isEmpty();
+    Map<UUID, Integer> fans = userId != null && dating.canSeeDeck(userId) ? dating.fansOf(userId, ids) : null;
+    return toItem(c, saved, fans == null ? null : fans.getOrDefault(c.getId(), 0));
   }
 
   // ---- Ảnh nền banner Khám phá quán (admin đổi được) ----
@@ -215,7 +232,7 @@ public class CatalogService {
     CatalogPlace c = new CatalogPlace();
     apply(req, c);
     applyVibes(req, c, true);
-    return toItem(catalog.saveAndFlush(c), false, null);
+    return toItem(catalog.saveAndFlush(withSlug(c)), false, null);
   }
 
   public CatalogItem update(UUID id, CatalogRequest req) {
@@ -321,6 +338,7 @@ public class CatalogService {
   private CatalogItem toItem(CatalogPlace c, boolean inMyPlace, Integer fans) {
     return new CatalogItem(
         c.getId(),
+        c.getSlug(),
         c.getType(),
         c.getDistrict().name(),
         c.getDistrict().label(),
