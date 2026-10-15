@@ -9,8 +9,8 @@ import { ModalComponent } from '../../shared/ui/modal.component';
 import { DistrictOption } from '../../core/models/catalog.model';
 import { RatingStarsComponent } from '../../shared/ui/rating-stars.component';
 import { ImagePickerComponent } from '../../shared/ui/image-picker.component';
-import { CUISINES, photosOf, Place, PRICE_RANGES, PriceRange } from '../../core/models/place.model';
-import { PlaceTypeConfig } from './place.config';
+import { CUISINES, photosOf, Place, PlaceType, PRICE_RANGES, PriceRange } from '../../core/models/place.model';
+import { BAR_CONFIG, CAFE_CONFIG, PlaceTypeConfig, RESTAURANT_CONFIG } from './place.config';
 import { embedMapUrl, isShortMapsLink, parseGmapUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
 import { nowIso } from '../../core/utils/id';
 import { MapsService } from '../../core/services/maps.service';
@@ -21,12 +21,24 @@ import { VibePickerComponent } from '../../shared/ui/vibe-picker.component';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { PhotoListEditorComponent } from '../../shared/ui/photo-list-editor.component';
 
+const CONFIG_BY_TYPE: Record<PlaceType, PlaceTypeConfig> = {
+  cafe: CAFE_CONFIG,
+  bar: BAR_CONFIG,
+  restaurant: RESTAURANT_CONFIG,
+};
+
+const TYPE_OPTIONS = [
+  { type: 'cafe' as PlaceType, label: 'Cafe', icon: CAFE_CONFIG.icon },
+  { type: 'bar' as PlaceType, label: 'Bar', icon: BAR_CONFIG.icon },
+  { type: 'restaurant' as PlaceType, label: 'Quán ăn', icon: RESTAURANT_CONFIG.icon },
+];
+
 @Component({
   selector: 'app-place-form',
   imports: [PhotoListEditorComponent, VibePickerComponent, ReactiveFormsModule, ModalComponent, RatingStarsComponent, ImagePickerComponent, IconComponent],
   template: `
     <app-modal
-      [title]="place() ? 'Sửa ' + config().title.toLowerCase() : config().addLabel"
+      [title]="place() ? 'Sửa ' + cfg().title.toLowerCase() : cfg().addLabel"
       subtitle="Dán link Google Maps để tự lấy toạ độ"
       width="max-w-3xl"
       (dismiss)="cancel.emit()"
@@ -35,6 +47,29 @@ import { PhotoListEditorComponent } from '../../shared/ui/photo-list-editor.comp
         <!-- Thông tin cơ bản -->
         <div class="grid gap-4 sm:grid-cols-2">
           @if (districts(); as list) {
+            <!-- Chỉ form Khám phá quán (admin): đổi được loại quán, kể cả khi sửa -->
+            <div class="sm:col-span-2">
+              <p class="mb-1.5 text-sm font-medium text-slate-700">Loại quán <span class="text-rose-500">*</span></p>
+              <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Loại quán">
+                @for (t of typeOptions; track t.type) {
+                  <button
+                    type="button"
+                    role="radio"
+                    [attr.aria-checked]="type() === t.type"
+                    class="flex min-h-10 items-center gap-2 rounded-xl border px-4 text-sm transition"
+                    [class]="type() === t.type ? 'border-brand-500 bg-brand-50 font-semibold text-brand-800' : 'border-slate-200 text-slate-600 hover:border-brand-200'"
+                    (click)="type.set(t.type)"
+                  >
+                    <app-icon [name]="t.icon" [size]="16" />{{ t.label }}
+                  </button>
+                }
+              </div>
+              @if (typeChangeHint(); as hint) {
+                <p class="mt-1.5 flex items-start gap-1.5 text-xs text-amber-700">
+                  <span class="mt-px"><app-icon name="info" [size]="13" /></span>{{ hint }}
+                </p>
+              }
+            </div>
             <div class="sm:col-span-2">
               <label class="mb-1.5 block text-sm font-medium text-slate-700">
                 Khu vực <span class="text-rose-500">*</span>
@@ -137,7 +172,7 @@ import { PhotoListEditorComponent } from '../../shared/ui/photo-list-editor.comp
           </div>
 
           <!-- Trường riêng theo loại quán -->
-          @if (config().showCuisine) {
+          @if (cfg().showCuisine) {
             <div class="sm:col-span-2">
               <label class="mb-1.5 block text-sm font-medium text-slate-700">Loại món</label>
               <select
@@ -151,7 +186,7 @@ import { PhotoListEditorComponent } from '../../shared/ui/photo-list-editor.comp
             </div>
           }
 
-          @if (config().showAmenities) {
+          @if (cfg().showAmenities) {
             <div class="flex items-center gap-6 sm:col-span-2">
               <label class="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
                 <input type="checkbox" formControlName="hasWifi" class="h-4 w-4 rounded accent-brand-600" />
@@ -283,6 +318,7 @@ export class PlaceFormComponent {
   private readonly maps = inject(MapsService);
   private resolveTimer?: ReturnType<typeof setTimeout>;
 
+  /** Loại quán khi mở form (màn đang đứng); form Khám phá quán cho đổi sang loại khác */
   readonly config = input.required<PlaceTypeConfig>();
   /** null = thêm mới */
   readonly place = input<Place | null>(null);
@@ -298,6 +334,24 @@ export class PlaceFormComponent {
 
   protected readonly priceRanges = PRICE_RANGES;
   protected readonly cuisines = CUISINES;
+  protected readonly typeOptions = TYPE_OPTIONS;
+
+  /** Loại đang chọn: quyết định tiêu đề, ô "Loại món" hay "Wifi / chỗ đậu xe", nhãn kiểu hẹn tự gán */
+  protected readonly type = signal<PlaceType>('cafe');
+  protected readonly cfg = computed(() => CONFIG_BY_TYPE[this.type()]);
+  /** Sửa quán và vừa đổi loại: báo phần thông tin sẽ không được lưu */
+  protected readonly typeChangeHint = computed(() => {
+    const before = this.place()?.type;
+    const after = this.type();
+    if (!before || before === after) return null;
+    const label = CONFIG_BY_TYPE[after].title.toLowerCase();
+    const lost = before === 'restaurant' ? '"Loại món"' : after === 'restaurant' ? '"Wifi" và "Chỗ đậu xe"' : null;
+    return (
+      `Đổi sang ${label}: ` +
+      (lost ? `thông tin ${lost} sẽ không được lưu. ` : '') +
+      'Quán trong My place của người đã lưu cũng đổi loại theo.'
+    );
+  });
 
   protected readonly coords = signal<{ lat: number; lng: number } | null>(null);
   protected readonly coordinateError = signal(false);
@@ -332,7 +386,7 @@ export class PlaceFormComponent {
     initialValue: this.form.controls.priceRange.value,
   });
   protected readonly defaultVibes = computed(() =>
-    defaultPlaceVibes(this.config().type, this.price() as PriceRange),
+    defaultPlaceVibes(this.type(), this.price() as PriceRange),
   );
 
   protected readonly mapPreview = computed<SafeResourceUrl>(() => {
@@ -343,6 +397,7 @@ export class PlaceFormComponent {
 
   // Component được tạo mới mỗi lần mở modal nên nạp một lần ở ngOnInit là đủ.
   ngOnInit(): void {
+    this.type.set(this.place()?.type ?? this.config().type);
     if (this.districts()) {
       this.form.controls.district.setValidators(Validators.required);
       this.form.controls.district.updateValueAndValidity();
@@ -463,13 +518,13 @@ export class PlaceFormComponent {
     if (this.form.invalid || this.photosUploading()) return;
 
     const v = this.form.getRawValue();
-    const cfg = this.config();
+    const cfg = this.cfg();
     const existing = this.place();
     const c = this.coords();
 
     const result: Place = {
       id: existing?.id ?? '',
-      type: cfg.type,
+      type: this.type(),
       name: v.name.trim(),
       address: v.address.trim(),
       priceRange: v.priceRange as Place['priceRange'],

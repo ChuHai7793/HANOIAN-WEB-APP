@@ -117,6 +117,41 @@ class CatalogIT extends ApiTestSupport {
   }
 
   @Test
+  void adminChangesTypeAndSavedCopiesFollow() throws Exception {
+    JsonNode item =
+        body(
+            postAs(
+                    admin,
+                    "/api/v1/admin/catalog",
+                    """
+                    {"type": "restaurant", "district": "DONG_DA", "name": "Đổi loại", "priceRange": "cheap",
+                     "rating": 4, "openTime": "07:00", "closeTime": "21:00", "cuisine": "Món Việt"}
+                    """)
+                .andExpect(status().isCreated()));
+    String id = item.get("id").asString();
+    postAs(guest, "/api/v1/catalog/" + id + "/my-place", "").andExpect(status().isCreated());
+
+    // Quán ăn → cafe: bỏ loại món, nhận wifi / chỗ đỗ xe
+    putAs(
+            admin,
+            id,
+            """
+            {"type": "cafe", "district": "DONG_DA", "name": "Đổi loại", "priceRange": "cheap", "rating": 4,
+             "openTime": "07:00", "closeTime": "21:00", "cuisine": "Món Việt", "hasWifi": true, "hasParking": false,
+             "version": 0}
+            """)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.type").value("cafe"))
+        .andExpect(jsonPath("$.cuisine").isEmpty())
+        .andExpect(jsonPath("$.hasWifi").value(true));
+    getAs(guest, "/api/v1/catalog?type=cafe&q=Đổi loại").andExpect(jsonPath("$.total").value(1));
+    getAs(guest, "/api/v1/catalog?type=restaurant&q=Đổi loại").andExpect(jsonPath("$.total").value(0));
+    // Bản đã lưu trong My place của guest sang nhóm cafe theo
+    getAs(guest, "/api/v1/places?type=cafe").andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].cuisine").isEmpty());
+    getAs(guest, "/api/v1/places?type=restaurant").andExpect(jsonPath("$", hasSize(0)));
+  }
+
+  @Test
   void districtIsRequiredAndValidated() throws Exception {
     postAs(
             admin,
