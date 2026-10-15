@@ -298,6 +298,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
 
     @if (detail(); as d) {
       <app-detail-modal [title]="d.name" [subtitle]="typeLabels[d.type] + ' · ' + d.districtLabel" [photos]="photosOf(d)" (dismiss)="detail.set(null)">
+        <a modalHeaderLink [routerLink]="['/quan', d.slug]" class="flex items-center gap-1 text-[13px] font-semibold text-brand-700 hover:underline">Xem trang quán<app-icon name="arrowRight" [size]="14" [stroke]="2.4" /></a>
         <div class="flex flex-col gap-4">
           <p class="flex items-start gap-1.5 text-sm text-slate-600">
             <span class="mt-0.5 text-slate-400"><app-icon name="pin" [size]="15" /></span>{{ d.address || 'Chưa có địa chỉ' }}
@@ -337,8 +338,8 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
           }
           <app-reviews target="place" [targetId]="d.id" (summaryChange)="onRatingChange(d.id, $event)" />
         </div>
-        <div modalFooter class="flex flex-wrap justify-end gap-2">
-          <a [routerLink]="['/quan', d.slug]" class="mr-auto flex min-h-10 items-center gap-1 text-[13px] font-semibold text-brand-700 hover:underline">Xem trang quán<app-icon name="arrowRight" [size]="14" [stroke]="2.4" /></a>
+        <!-- Một hàng: các nút phụ bên trái, Lưu (nút chính) dồn sang phải; màn hẹp mới xuống dòng -->
+        <div modalFooter class="flex flex-wrap items-center gap-2">
           <a [href]="mapUrl(d)" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50">
             <app-icon name="pin" [size]="15" />Maps
           </a>
@@ -352,14 +353,19 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
           >
             <app-icon name="route" [size]="15" />Vào plan
           </button>
-          @if (!d.inMyPlace) {
+          @if (d.inMyPlace) {
+            <span class="ml-auto flex min-h-10 items-center justify-center gap-1.5 rounded-[10px] bg-brand-100 max-sm:w-full px-3.5 text-[13px] font-semibold text-brand-800">
+              <app-icon name="heart" [size]="15" [filled]="true" />Đã lưu
+            </span>
+          } @else {
             <button
               type="button"
-              class="flex min-h-10 items-center gap-1.5 rounded-[10px] bg-brand-600 px-3.5 text-[13px] font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+              class="ml-auto flex min-h-10 items-center justify-center gap-1.5 rounded-[10px] bg-brand-600 px-4 max-sm:w-full text-[13px] font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+              title="Lưu vào My place"
               [disabled]="adding() === d.id"
               (click)="addToMyPlace(d); detail.set(null)"
             >
-              <app-icon name="plus" [size]="15" [stroke]="2.4" />Lưu vào My place
+              <app-icon name="plus" [size]="15" [stroke]="2.4" />Lưu
             </button>
           }
         </div>

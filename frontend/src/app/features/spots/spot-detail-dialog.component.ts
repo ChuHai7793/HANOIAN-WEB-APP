@@ -15,6 +15,7 @@ import { ReviewsComponent } from '../../shared/ui/reviews.component';
   template: `
     @if (spot(); as d) {
       <app-detail-modal [title]="d.name" [subtitle]="categoriesText(d) + ' · ' + d.districtLabel" [photos]="photosOf(d)" (dismiss)="closed.emit()">
+        <a modalHeaderLink [routerLink]="['/cho-choi', d.slug]" class="flex items-center gap-1 text-[13px] font-semibold text-brand-700 hover:underline">Xem trang<app-icon name="arrowRight" [size]="14" [stroke]="2.4" /></a>
         <div class="flex flex-col gap-4">
           <p class="flex items-start gap-1.5 text-sm text-slate-600">
             <span class="mt-0.5 text-slate-400"><app-icon name="pin" [size]="15" /></span>{{ d.address || 'Chưa có địa chỉ' }}
@@ -48,8 +49,8 @@ import { ReviewsComponent } from '../../shared/ui/reviews.component';
           }
           <app-reviews target="spot" [targetId]="d.id" (summaryChange)="ratingChange.emit($event)" />
         </div>
-        <div modalFooter class="flex flex-wrap justify-end gap-2">
-          <a [routerLink]="['/cho-choi', d.slug]" class="mr-auto flex min-h-10 items-center gap-1 text-[13px] font-semibold text-brand-700 hover:underline">Xem trang<app-icon name="arrowRight" [size]="14" [stroke]="2.4" /></a>
+        <!-- Một hàng: các nút phụ bên trái, Lưu (nút chính) dồn sang phải; màn hẹp mới xuống dòng -->
+        <div modalFooter class="flex flex-wrap items-center gap-2">
           <a [href]="mapUrl(d)" target="_blank" rel="noopener" class="flex min-h-10 items-center gap-1.5 rounded-[10px] border border-brand-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-brand-50">
             <app-icon name="pin" [size]="15" />Maps
           </a>
@@ -64,9 +65,13 @@ import { ReviewsComponent } from '../../shared/ui/reviews.component';
               <app-icon name="calendar" [size]="15" />Đặt chỗ
             </a>
           }
-          @if (!saved()) {
-            <button type="button" class="flex min-h-10 items-center gap-1.5 rounded-[10px] bg-brand-600 px-3.5 text-[13px] font-semibold text-white hover:bg-brand-700" (click)="save.emit(d)">
-              <app-icon name="plus" [size]="15" [stroke]="2.4" />Lưu vào My place
+          @if (saved()) {
+            <span class="ml-auto flex min-h-10 items-center justify-center gap-1.5 rounded-[10px] bg-brand-100 max-sm:w-full px-3.5 text-[13px] font-semibold text-brand-800">
+              <app-icon name="heart" [size]="15" [filled]="true" />Đã lưu
+            </span>
+          } @else {
+            <button type="button" class="ml-auto flex min-h-10 items-center justify-center gap-1.5 rounded-[10px] bg-brand-600 px-4 max-sm:w-full text-[13px] font-semibold text-white hover:bg-brand-700" title="Lưu vào My place" (click)="save.emit(d)">
+              <app-icon name="plus" [size]="15" [stroke]="2.4" />Lưu
             </button>
           }
         </div>

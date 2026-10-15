@@ -6,6 +6,7 @@ import { PhotoCarouselComponent } from './photo-carousel.component';
  * Popup chi tiết quán / chỗ chơi, ở giữa màn hình. Màn rộng: cột trái chỉ có ảnh (hiện trọn, nền là chính ảnh làm
  * mờ, mũi tên mờ khi có nhiều ảnh), cột phải: tiêu đề + nội dung tự cuộn + hàng nút ({@code [modalFooter]}) ở dưới.
  * Điện thoại: ảnh ở trên, thông tin ở dưới. Không có ảnh: chỉ cột thông tin (popup hẹp lại).
+ * {@code [modalHeaderLink]}: link nhỏ nằm cuối dòng phụ dưới tiêu đề (vd. "Xem trang →").
  */
 @Component({
   selector: 'app-detail-modal',
@@ -36,9 +37,10 @@ import { PhotoCarouselComponent } from './photo-carousel.component';
           <header class="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-6 py-4">
             <div class="min-w-0">
               <h2 class="text-lg font-semibold text-slate-900">{{ title() }}</h2>
-              @if (subtitle()) {
-                <p class="mt-0.5 text-sm text-slate-500">{{ subtitle() }}</p>
-              }
+              <p class="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-slate-500">
+                {{ subtitle() }}
+                <ng-content select="[modalHeaderLink]" />
+              </p>
             </div>
             <button
               type="button"
