@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { errorCode } from '../../core/api/api';
 import { LoginGate } from '../../core/auth/login-gate.service';
 import { CatalogItem } from '../../core/models/catalog.model';
-import { photosOf, PLACE_LABELS, priceLabel } from '../../core/models/place.model';
+import { photosOf, PLACE_LABELS, placePriceDetail } from '../../core/models/place.model';
 import { ratingText } from '../../core/models/review.model';
 import { durationText, spotCategory, SpotItem, spotPriceText } from '../../core/models/spot.model';
 import { SeoService } from '../../core/seo/seo.service';
@@ -248,7 +248,7 @@ export class VenuePage implements OnDestroy {
       lng: p.lng,
       googleMapsUrl: p.googleMapsUrl,
       facts: [
-        { label: 'Mức giá', value: priceLabel(p.priceRange) },
+        { label: 'Mức giá', value: placePriceDetail(p) },
         { label: 'Giờ mở cửa', value: `${p.openTime}–${p.closeTime}` },
         p.type === 'restaurant' ? { label: 'Món', value: p.cuisine || '—' } : { label: 'Tiện ích', value: amenities },
         { label: 'HANOIVIBE chấm', value: `${p.rating}/5` },
@@ -323,6 +323,11 @@ export class VenuePage implements OnDestroy {
       };
     }
     if (v.kind === 'place' && raw.type === 'restaurant' && raw.cuisine) jsonLd['servesCuisine'] = raw.cuisine;
+    // Khoảng giá thật cho Google, vd. "80.000–150.000 ₫"
+    if (v.kind === 'place' && raw.priceFrom !== null && raw.priceFrom !== undefined) {
+      const vnd = (n: number) => n.toLocaleString('vi-VN');
+      jsonLd['priceRange'] = raw.priceTo ? `${vnd(raw.priceFrom)}–${vnd(raw.priceTo)} ₫` : `Từ ${vnd(raw.priceFrom)} ₫`;
+    }
     if (v.ratingCount > 0 && v.ratingAvg !== null) {
       jsonLd['aggregateRating'] = { '@type': 'AggregateRating', ratingValue: v.ratingAvg, reviewCount: v.ratingCount, bestRating: 5, worstRating: 1 };
     }

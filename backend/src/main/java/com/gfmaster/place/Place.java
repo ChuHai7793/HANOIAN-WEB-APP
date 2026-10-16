@@ -37,6 +37,12 @@ public class Place extends OwnedEntity {
   @Column(nullable = false, length = 20)
   private PriceRange priceRange;
 
+  /** Giá cụ thể VNĐ/người; null = chưa nhập (chỉ có nhóm giá) */
+  private Integer priceFrom;
+
+  /** null = chỉ có giá từ */
+  private Integer priceTo;
+
   @JdbcTypeCode(SqlTypes.SMALLINT)
   @Column(nullable = false)
   private int rating;

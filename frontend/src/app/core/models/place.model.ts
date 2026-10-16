@@ -1,4 +1,5 @@
 import type { IconName } from '../../shared/ui/icon.component';
+import { shortVnd } from '../utils/money';
 
 export type PlaceType = 'cafe' | 'restaurant' | 'bar';
 
@@ -23,6 +24,10 @@ export interface Place {
   name: string;
   address: string;
   priceRange: PriceRange;
+  /** Giá cụ thể VNĐ/người; null / vắng = chưa nhập (chỉ có nhóm giá) */
+  priceFrom?: number | null;
+  /** null = chỉ có giá từ */
+  priceTo?: number | null;
   rating: number; // 1..5
   openTime: string; // 'HH:mm'
   closeTime: string; // 'HH:mm'
@@ -75,6 +80,31 @@ export const CUISINES: string[] = [
   'Chay',
   'Ăn vặt',
 ];
+
+/**
+ * Giá để hiện: có giá cụ thể thì "80k–150k/người" / "Từ 80k/người", chưa có thì tên nhóm giá ("Tầm trung").
+ * {@code unit} false: bỏ "/người" (huy hiệu nhỏ trên thẻ).
+ */
+export function placePriceText(p: Pick<Place, 'priceRange' | 'priceFrom' | 'priceTo'>, unit = true): string {
+  if (p.priceFrom === null || p.priceFrom === undefined) return priceLabel(p.priceRange);
+  const range = p.priceTo ? `${shortVnd(p.priceFrom)}–${shortVnd(p.priceTo)}` : `Từ ${shortVnd(p.priceFrom)}`;
+  return unit ? `${range}/người` : range;
+}
+
+/** Ô "Mức giá" ở popup / trang quán: "80k–150k/người · Tầm trung", chưa có giá cụ thể thì "Tầm trung" */
+export function placePriceDetail(p: Pick<Place, 'priceRange' | 'priceFrom' | 'priceTo'>): string {
+  const label = priceLabel(p.priceRange);
+  return p.priceFrom === null || p.priceFrom === undefined ? label : `${placePriceText(p)} · ${label}`;
+}
+
+/** Nhóm giá theo giá cụ thể (lấy giữa khoảng), cùng mốc với PRICE_RANGES: <50k, 50–150k, 150–400k, >400k */
+export function priceRangeFor(from: number, to: number | null): PriceRange {
+  const mid = to ? (from + to) / 2 : from;
+  if (mid < 50_000) return 'cheap';
+  if (mid < 150_000) return 'medium';
+  if (mid < 400_000) return 'high';
+  return 'luxury';
+}
 
 export function priceLabel(value: PriceRange): string {
   return PRICE_RANGES.find((p) => p.value === value)?.label ?? value;

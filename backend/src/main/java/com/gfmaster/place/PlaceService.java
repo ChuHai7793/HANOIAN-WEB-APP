@@ -71,7 +71,7 @@ public class PlaceService {
     return new PlaceResponse(
         r.id(), r.type(), r.name(), r.address(), r.priceRange(), r.rating(), r.openTime(), r.closeTime(), r.imageUrl(),
         r.note(), r.googleMapsUrl(), r.lat(), r.lng(), r.hasWifi(), r.hasParking(), r.cuisine(), r.version(),
-        r.createdAt(), r.updatedAt(), photos, r.catalogId());
+        r.createdAt(), r.updatedAt(), photos, r.catalogId(), r.priceFrom(), r.priceTo());
   }
 
   /** Ảnh của các quán gốc trong Khám phá quán (một truy vấn cho cả danh sách), dạng trả về. */

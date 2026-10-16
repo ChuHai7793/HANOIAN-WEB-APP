@@ -35,6 +35,9 @@ public final class CatalogDtos {
       @NotBlank @Size(max = 120) String name,
       @Size(max = 255) String address,
       @NotNull PriceRange priceRange,
+      /** Giá cụ thể VNĐ/người (null = chưa nhập); priceTo null = chỉ có giá từ */
+      @Min(0) @Max(100_000_000) Integer priceFrom,
+      @Min(0) @Max(100_000_000) Integer priceTo,
       @Min(1) @Max(5) int rating,
       @NotNull LocalTime openTime,
       @NotNull LocalTime closeTime,
@@ -73,6 +76,9 @@ public final class CatalogDtos {
       String name,
       String address,
       PriceRange priceRange,
+      /** Giá cụ thể VNĐ/người; null = chưa nhập */
+      Integer priceFrom,
+      Integer priceTo,
       int rating,
       LocalTime openTime,
       LocalTime closeTime,

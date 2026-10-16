@@ -2,7 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { errorCode, problemOf } from '../../core/api/api';
 import { AuthService } from '../../core/auth/auth.service';
 import { CatalogItem, FeaturedItem, DistrictOption, MY_PLACE_GROUP, TypeCounts } from '../../core/models/catalog.model';
-import { Place, PlaceType, priceLabel } from '../../core/models/place.model';
+import { Place, placePriceDetail, placePriceText, PlaceType } from '../../core/models/place.model';
 import { CatalogRequest, CatalogService } from '../../core/services/catalog.service';
 import { PlaceService } from '../../core/services/place.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -211,6 +211,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
                     {{ item.fans }} người hợp gu đã lưu
                   </span>
                 }
+                <span class="absolute bottom-3 left-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">{{ cardPrice(item) }}</span>
                 @if (canEdit()) {
                   <div class="absolute bottom-3 right-3 flex gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
                     <button type="button" class="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm text-slate-600 hover:text-brand-700" title="Sửa" (click)="openEdit(item)"><app-icon name="edit" [size]="14" /></button>
@@ -537,7 +538,12 @@ export class ExplorePage implements OnInit {
   }
 
   protected priceText(item: CatalogItem): string {
-    return priceLabel(item.priceRange);
+    return placePriceDetail(item);
+  }
+
+  /** Huy hiệu trên thẻ: "80k–150k" hoặc tên nhóm giá */
+  protected cardPrice(item: CatalogItem): string {
+    return placePriceText(item, false);
   }
 
   protected mapUrl(item: CatalogItem): string {

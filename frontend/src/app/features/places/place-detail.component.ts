@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ModalComponent } from '../../shared/ui/modal.component';
 import { RatingStarsComponent } from '../../shared/ui/rating-stars.component';
-import { Place, PLACE_ICONS, priceLabel } from '../../core/models/place.model';
+import { Place, PLACE_ICONS, placePriceDetail } from '../../core/models/place.model';
 import { PlaceLinkService } from '../../core/services/place-link.service';
 import { GirlfriendService } from '../../core/services/girlfriend.service';
 import { Girlfriend } from '../../core/models/girlfriend.model';
@@ -210,7 +210,7 @@ export class PlaceDetailComponent {
   readonly dismiss = output<void>();
 
   protected readonly icon = computed(() => PLACE_ICONS[this.place().type]);
-  protected readonly priceText = computed(() => priceLabel(this.place().priceRange));
+  protected readonly priceText = computed(() => placePriceDetail(this.place()));
   protected readonly distanceText = computed(() => {
     const km = this.distanceKm();
     return km === null ? '' : formatDistance(km);

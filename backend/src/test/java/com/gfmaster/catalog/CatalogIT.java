@@ -152,6 +152,41 @@ class CatalogIT extends ApiTestSupport {
   }
 
   @Test
+  void placeHasConcretePricePerPersonCopiedToMyPlace() throws Exception {
+    JsonNode item =
+        body(
+            postAs(
+                    admin,
+                    "/api/v1/admin/catalog",
+                    """
+                    {"type": "restaurant", "district": "HOAN_KIEM", "name": "Giá cụ thể", "priceRange": "medium",
+                     "priceFrom": 80000, "priceTo": 150000, "rating": 4, "openTime": "10:00", "closeTime": "21:00"}
+                    """)
+                .andExpect(status().isCreated()));
+    assertThat(item.get("priceFrom").asInt()).isEqualTo(80000);
+    assertThat(item.get("priceTo").asInt()).isEqualTo(150000);
+    String id = item.get("id").asString();
+    postAs(guest, "/api/v1/catalog/" + id + "/my-place", "").andExpect(status().isCreated());
+    getAs(guest, "/api/v1/places?type=restaurant").andExpect(jsonPath("$[0].priceFrom").value(80000)).andExpect(jsonPath("$[0].priceTo").value(150000));
+
+    // "Đến" nhỏ hơn "từ", hoặc có "đến" mà không có "từ": 400
+    String base = """
+        {"type": "restaurant", "district": "HOAN_KIEM", "name": "Giá cụ thể", "priceRange": "medium", %s
+         "rating": 4, "openTime": "10:00", "closeTime": "21:00", "version": 0}
+        """;
+    putAs(admin, id, base.formatted("\"priceFrom\": 150000, \"priceTo\": 80000,")).andExpect(status().isBadRequest());
+    putAs(admin, id, base.formatted("\"priceTo\": 80000,")).andExpect(status().isBadRequest());
+    putAs(admin, id, base.formatted("\"priceFrom\": -1,")).andExpect(status().isBadRequest());
+
+    // Chỉ có giá từ; bản trong My place đổi theo
+    putAs(admin, id, base.formatted("\"priceFrom\": 60000,"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.priceFrom").value(60000))
+        .andExpect(jsonPath("$.priceTo").isEmpty());
+    getAs(guest, "/api/v1/places?type=restaurant").andExpect(jsonPath("$[0].priceFrom").value(60000)).andExpect(jsonPath("$[0].priceTo").isEmpty());
+  }
+
+  @Test
   void districtIsRequiredAndValidated() throws Exception {
     postAs(
             admin,

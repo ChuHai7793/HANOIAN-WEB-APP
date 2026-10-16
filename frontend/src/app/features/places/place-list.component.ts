@@ -3,7 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PlaceService } from '../../core/services/place.service';
 import { PlaceLinkService } from '../../core/services/place-link.service';
 import { ToastService } from '../../core/services/toast.service';
-import { Place, PlaceType, PriceRange, PRICE_RANGES, priceLabel } from '../../core/models/place.model';
+import { Place, placePriceText, PlaceType, PriceRange, PRICE_RANGES } from '../../core/models/place.model';
 import { PlaceDetailComponent } from './place-detail.component';
 import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
 import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component';
@@ -232,7 +232,7 @@ interface PlaceRow {
                     <div class="flex items-center gap-2">
                       <span class="shrink-0 text-[13px] font-semibold text-slate-700" [attr.aria-label]="'HANOIVIBE chấm ' + item.place.rating + ' trên 5'"><span class="text-[#E29A2D]">★</span> {{ item.place.rating }}</span>
                       <span class="min-w-0 flex-1 truncate text-[13px] text-slate-500">{{ item.place.address || 'Chưa có địa chỉ' }}</span>
-                      <span class="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700">{{ priceText(item.place.priceRange) }}</span>
+                      <span class="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700">{{ priceText(item.place) }}</span>
                     </div>
                   </div>
                   <!-- Một nút chính (Vào plan); Chỉ đường / Bỏ là icon, rê chuột thì hiện chữ -->
@@ -538,8 +538,9 @@ export class PlaceListComponent implements OnInit {
     return { on: '★'.repeat(rating), off: '★'.repeat(5 - rating) };
   }
 
-  protected priceText(value: PriceRange): string {
-    return priceLabel(value);
+  /** Chip trên thẻ: "80k–150k" hoặc tên nhóm giá */
+  protected priceText(place: Place): string {
+    return placePriceText(place, false);
   }
 
   protected distanceText(km: number): string {

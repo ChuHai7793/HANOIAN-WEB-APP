@@ -31,4 +31,7 @@ public record PlaceResponse(
     /** Quán sao chép từ Khám phá quán: mọi ảnh của quán gốc (ảnh đầu = imageUrl). Chỉ có ở danh sách My place. */
     List<String> photos,
     /** Quán gốc trong Khám phá quán (plan tham chiếu quán theo id này); null với quán tự nhập cũ */
-    UUID catalogId) {}
+    UUID catalogId,
+    /** Giá cụ thể VNĐ/người; null = chưa nhập (chỉ có nhóm giá) */
+    Integer priceFrom,
+    Integer priceTo) {}

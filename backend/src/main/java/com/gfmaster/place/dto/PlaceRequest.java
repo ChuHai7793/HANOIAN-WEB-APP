@@ -32,7 +32,10 @@ public record PlaceRequest(
     @DecimalMin("-180") @DecimalMax("180") BigDecimal lng,
     Boolean hasWifi,
     Boolean hasParking,
-    @Size(max = 50) String cuisine) {
+    @Size(max = 50) String cuisine,
+    /** Giá cụ thể VNĐ/người (null = chưa nhập); priceTo null = chỉ có giá từ */
+    @Min(0) @Max(100_000_000) Integer priceFrom,
+    @Min(0) @Max(100_000_000) Integer priceTo) {
 
   /** Chặn data URL (base64): ảnh phải upload qua /uploads/image. */
   public static final String IMAGE_URL = "^$|^(https?://|/uploads/).*";

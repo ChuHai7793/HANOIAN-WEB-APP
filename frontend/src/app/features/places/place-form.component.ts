@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, input, output, signal } from '@angular/core';
 import {
   FormBuilder,
   ReactiveFormsModule,
@@ -9,13 +9,14 @@ import { ModalComponent } from '../../shared/ui/modal.component';
 import { DistrictOption } from '../../core/models/catalog.model';
 import { RatingStarsComponent } from '../../shared/ui/rating-stars.component';
 import { ImagePickerComponent } from '../../shared/ui/image-picker.component';
-import { CUISINES, photosOf, Place, PlaceType, PRICE_RANGES, PriceRange } from '../../core/models/place.model';
+import { CUISINES, photosOf, Place, placePriceText, PlaceType, PRICE_RANGES, PriceRange, priceRangeFor } from '../../core/models/place.model';
 import { BAR_CONFIG, CAFE_CONFIG, PlaceTypeConfig, RESTAURANT_CONFIG } from './place.config';
 import { embedMapUrl, isShortMapsLink, parseGmapUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
 import { nowIso } from '../../core/utils/id';
 import { MapsService } from '../../core/services/maps.service';
 import { errorMessage } from '../../core/api/api';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { merge } from 'rxjs';
 import { defaultPlaceVibes, Vibe, VibeChoice, VibeSource } from '../../core/models/vibe.model';
 import { VibePickerComponent } from '../../shared/ui/vibe-picker.component';
 import { IconComponent } from '../../shared/ui/icon.component';
@@ -126,6 +127,22 @@ const TYPE_OPTIONS = [
             />
             @if (invalid('address')) {
               <p class="mt-1 text-xs text-rose-600">Vui lòng nhập địa chỉ.</p>
+            }
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="mb-1.5 block text-sm font-medium text-slate-700">
+              Giá mỗi người <span class="font-normal text-slate-400">(VNĐ, không bắt buộc)</span>
+            </label>
+            <div class="flex items-center gap-2">
+              <input type="number" min="0" step="1000" formControlName="priceFrom" placeholder="Từ, vd. 80000" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100" />
+              <span class="text-slate-400">–</span>
+              <input type="number" min="0" step="1000" formControlName="priceTo" placeholder="Đến (nếu có)" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100" />
+            </div>
+            @if (priceError()) {
+              <p class="mt-1 text-xs text-rose-600">{{ priceError() }}</p>
+            } @else if (pricePreview()) {
+              <p class="mt-1 text-xs text-slate-500">Hiện là <b class="text-slate-700">{{ pricePreview() }}</b>; khoảng giá bên dưới tự chọn theo, vẫn sửa tay được.</p>
             }
           </div>
 
@@ -369,6 +386,8 @@ export class PlaceFormComponent {
     name: ['', [Validators.required, Validators.minLength(2)]],
     address: ['', Validators.required],
     priceRange: ['medium'],
+    priceFrom: [null as number | null, Validators.min(0)],
+    priceTo: [null as number | null, Validators.min(0)],
     openTime: ['08:00'],
     closeTime: ['22:00'],
     note: [''],
@@ -385,6 +404,25 @@ export class PlaceFormComponent {
   private readonly price = toSignal(this.form.controls.priceRange.valueChanges, {
     initialValue: this.form.controls.priceRange.value,
   });
+  private readonly priceFromValue = toSignal(this.form.controls.priceFrom.valueChanges, { initialValue: null });
+  private readonly priceToValue = toSignal(this.form.controls.priceTo.valueChanges, { initialValue: null });
+  /** "80k–150k/người" khi đã nhập giá cụ thể */
+  protected readonly pricePreview = computed(() => {
+    const from = this.priceFromValue();
+    if (from === null || from === undefined) return '';
+    return placePriceText({ priceRange: 'medium', priceFrom: from, priceTo: this.priceToValue() ?? null });
+  });
+  protected readonly priceError = computed(() => {
+    const from = this.priceFromValue();
+    const to = this.priceToValue();
+    if (to !== null && to !== undefined && (from === null || from === undefined)) return 'Nhập "Từ" trước, hoặc xoá "Đến".';
+    if (from !== null && from !== undefined && to !== null && to !== undefined && to < from) return '"Đến" phải từ "Từ" trở lên.';
+    return '';
+  });
+  /** Đang nạp quán để sửa: không tự đổi khoảng giá admin đã chọn */
+  private patching = false;
+  private readonly destroyRef = inject(DestroyRef);
+
   protected readonly defaultVibes = computed(() =>
     defaultPlaceVibes(this.type(), this.price() as PriceRange),
   );
@@ -404,6 +442,14 @@ export class PlaceFormComponent {
     }
     const source = this.vibesSource();
     if (source && source !== 'default') this.vibeChoice.set({ vibes: this.vibes() ?? [], auto: false });
+    // Nhập giá cụ thể: tự chọn khoảng giá theo (admin vẫn sửa tay được sau đó)
+    merge(this.form.controls.priceFrom.valueChanges, this.form.controls.priceTo.valueChanges)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        const { priceFrom, priceTo } = this.form.getRawValue();
+        if (this.patching || priceFrom === null || priceFrom < 0 || (priceTo !== null && priceTo < priceFrom)) return;
+        this.form.controls.priceRange.setValue(priceRangeFor(priceFrom, priceTo));
+      });
     this.patchFromInput();
   }
 
@@ -411,10 +457,13 @@ export class PlaceFormComponent {
     const existing = this.place();
     if (!existing) return;
 
+    this.patching = true;
     this.form.patchValue({
       name: existing.name,
       address: existing.address,
       priceRange: existing.priceRange,
+      priceFrom: existing.priceFrom ?? null,
+      priceTo: existing.priceTo ?? null,
       openTime: existing.openTime,
       closeTime: existing.closeTime,
       note: existing.note,
@@ -428,6 +477,7 @@ export class PlaceFormComponent {
       hasParking: existing.hasParking ?? false,
       district: existing.district ?? '',
     });
+    this.patching = false;
     this.ratingValue.set(existing.rating);
     this.imageUrl.set(existing.imageUrl);
     this.photos.set(photosOf(existing));
@@ -515,7 +565,7 @@ export class PlaceFormComponent {
 
   protected submit(): void {
     this.form.markAllAsTouched();
-    if (this.form.invalid || this.photosUploading()) return;
+    if (this.form.invalid || this.priceError() || this.photosUploading()) return;
 
     const v = this.form.getRawValue();
     const cfg = this.cfg();
@@ -528,6 +578,8 @@ export class PlaceFormComponent {
       name: v.name.trim(),
       address: v.address.trim(),
       priceRange: v.priceRange as Place['priceRange'],
+      priceFrom: v.priceFrom ?? null,
+      priceTo: v.priceFrom === null ? null : (v.priceTo ?? null),
       rating: this.ratingValue(),
       openTime: v.openTime,
       closeTime: v.closeTime,

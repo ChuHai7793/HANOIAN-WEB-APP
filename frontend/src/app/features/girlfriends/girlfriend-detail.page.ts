@@ -9,7 +9,7 @@ import {
   PLACE_ICONS,
   PLACE_LABELS,
   PlaceType,
-  priceLabel,
+  placePriceText,
 } from '../../core/models/place.model';
 import { PlaceLink } from '../../core/models/place-link.model';
 import { GirlfriendFormComponent } from './girlfriend-form.component';
@@ -491,7 +491,7 @@ export class GirlfriendDetailPage {
   }
 
   protected priceText(place: Place): string {
-    return priceLabel(place.priceRange);
+    return placePriceText(place);
   }
 
   protected formatDate(value: string): string {

@@ -269,6 +269,11 @@ public class CatalogService {
     c.setName(r.name().trim());
     c.setAddress(r.address() == null ? "" : r.address().trim());
     c.setPriceRange(r.priceRange());
+    if (r.priceTo() != null && (r.priceFrom() == null || r.priceTo() < r.priceFrom())) {
+      throw new ApiException(ErrorCode.VALIDATION_FAILED, "Giá đến phải từ giá bắt đầu trở lên.");
+    }
+    c.setPriceFrom(r.priceFrom());
+    c.setPriceTo(r.priceFrom() == null ? null : r.priceTo());
     c.setRating(r.rating());
     c.setOpenTime(r.openTime());
     c.setCloseTime(r.closeTime());
@@ -316,7 +321,9 @@ public class CatalogService {
         c.getLng(),
         c.getHasWifi(),
         c.getHasParking(),
-        c.getCuisine());
+        c.getCuisine(),
+        c.getPriceFrom(),
+        c.getPriceTo());
   }
 
   private static Specification<CatalogPlace> filter(String q, PlaceType type, CatalogDistrict district) {
@@ -345,6 +352,8 @@ public class CatalogService {
         c.getName(),
         c.getAddress(),
         c.getPriceRange(),
+        c.getPriceFrom(),
+        c.getPriceTo(),
         c.getRating(),
         c.getOpenTime(),
         c.getCloseTime(),

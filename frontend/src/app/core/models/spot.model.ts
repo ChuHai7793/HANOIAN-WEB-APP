@@ -1,5 +1,6 @@
 import type { IconName } from '../../shared/ui/icon.component';
 import type { Vibe, VibeSource } from './vibe.model';
+import { shortVnd } from '../utils/money';
 
 export type SpotCategory =
   | 'entertainment'
@@ -94,12 +95,6 @@ export function spotCategory(value: SpotCategory): { icon: IconName; label: stri
 }
 
 /** 150000 → "150k", 1200000 → "1,2tr" */
-function shortVnd(value: number): string {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}tr`;
-  if (value >= 1000) return `${(value / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}k`;
-  return `${value}đ`;
-}
-
 /** "Miễn phí", "40k/người", "150k–300k/người", "Đến 50k/người" */
 export function spotPriceText(spot: Pick<SpotItem, 'priceFrom' | 'priceTo'>): string {
   if (spot.priceFrom === 0 && !spot.priceTo) return 'Miễn phí';
