@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.gfmaster.spot.SpotDtos.SpotRequest;
+import com.gfmaster.vibe.Vibe;
 import java.util.List;
 
 /**
@@ -48,9 +49,15 @@ public class SpotController {
       @RequestParam(required = false) Integer maxPrice,
       @RequestParam(required = false) Boolean indoor,
       @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime openAt,
+      @RequestParam(required = false) Integer minDuration,
+      @RequestParam(required = false) Integer maxDuration,
+      @RequestParam(required = false) Boolean noBooking,
+      @RequestParam(required = false) List<Vibe> vibe,
+      @RequestParam(required = false) String sort,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "30") int size) {
-    return spots.search(userId, q, category, district, maxPrice, indoor, openAt, page, size);
+    SpotFilter f = SpotFilter.of(q, category, district, maxPrice, indoor, openAt, minDuration, maxDuration, noBooking, vibe);
+    return spots.search(userId, f, sort, page, size);
   }
 
   @GetMapping("/api/v1/spots/counts")
@@ -59,8 +66,12 @@ public class SpotController {
       @RequestParam(required = false) CatalogDistrict district,
       @RequestParam(required = false) Integer maxPrice,
       @RequestParam(required = false) Boolean indoor,
-      @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime openAt) {
-    return spots.counts(q, district, maxPrice, indoor, openAt);
+      @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime openAt,
+      @RequestParam(required = false) Integer minDuration,
+      @RequestParam(required = false) Integer maxDuration,
+      @RequestParam(required = false) Boolean noBooking,
+      @RequestParam(required = false) List<Vibe> vibe) {
+    return spots.counts(SpotFilter.of(q, null, district, maxPrice, indoor, openAt, minDuration, maxDuration, noBooking, vibe));
   }
 
   /** My place: chỗ chơi đã lưu của người đang đăng nhập */

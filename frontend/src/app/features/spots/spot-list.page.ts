@@ -1,5 +1,30 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import {
+  DURATION_OPTIONS,
+  DURATION_RANGES,
+  EMPTY_SPOT_FILTERS,
+  nowHHmm,
+  removeSpotFilter,
+  SPOT_BUDGETS,
+  SPOT_SORTS,
+  SpotDuration,
+  SpotFilters,
+  spotFilterChips,
+  spotFilterCount,
+  spotFiltersFromParams,
+  spotFiltersToParams,
+  toggleIn,
+  VIBE_OPTIONS,
+} from '../../core/models/filters.model';
+import {
+  ActiveFiltersComponent,
+  ChoiceChipsComponent,
+  FilterButtonComponent,
+  FilterGroupComponent,
+  FilterSheetComponent,
+  FilterSwitchComponent,
+} from '../../shared/ui/filter-sheet.component';
 import { errorCode, problemOf } from '../../core/api/api';
 import { AuthService } from '../../core/auth/auth.service';
 import { DistrictOption } from '../../core/models/catalog.model';
@@ -34,23 +59,9 @@ import { FeaturedCard, FeaturedSectionComponent } from '../../shared/ui/featured
 import { FeaturedEditorComponent } from '../../shared/ui/featured-editor.component';
 import { DEFAULT_BANNER, DEFAULT_BANNER_CREDIT, editableBanner, PageBannerComponent } from '../../shared/ui/page-banner.component';
 
-/** Lọc theo ngân sách: giá thấp nhất của chỗ chơi không quá mức này. */
-const BUDGETS: { value: number | null; label: string }[] = [
-  { value: null, label: 'Mọi mức giá' },
-  { value: 0, label: 'Miễn phí' },
-  { value: 200_000, label: 'Dưới 200k' },
-  { value: 500_000, label: 'Dưới 500k' },
-];
-
 /** "Giải trí trong nhà" → "Giải trí": nhãn ngắn cho thẻ và chip */
 function shortCategory(value: SpotCategory): string {
   return SPOT_CATEGORIES.find((c) => c.value === value)?.short ?? spotCategory(value).label;
-}
-
-/** Giờ hiện tại của máy người xem, dạng "HH:mm" */
-function nowHHmm(): string {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 /**
@@ -59,7 +70,7 @@ function nowHHmm(): string {
  */
 @Component({
   selector: 'app-spot-list-page',
-  imports: [RouterLink, PageBannerComponent, FeaturedSectionComponent, FeaturedEditorComponent, AutoplanDialogComponent, SpotDetailDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
+  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, ActiveFiltersComponent, FilterButtonComponent, RouterLink, PageBannerComponent, FeaturedSectionComponent, FeaturedEditorComponent, AutoplanDialogComponent, SpotDetailDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <!-- Banner đầu trang như Khám phá quán: ảnh nền (admin đổi được; chưa đổi thì lấy ảnh chỗ chơi nổi bật đầu tiên) -->
@@ -118,7 +129,7 @@ function nowHHmm(): string {
                 placeholder="Tìm theo tên, địa chỉ…"
               />
             </label>
-            <!-- Điện thoại: khu vực, giá, giờ mở, ngày mưa gom thành một hàng vuốt ngang -->
+            <!-- Điện thoại: khu vực và nút Bộ lọc gom thành một hàng vuốt ngang -->
             <div class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:flex-wrap">
               <label class="flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm text-slate-700 shadow-lg shadow-brand-900/20">
                 <span class="text-brand-600"><app-icon name="pin" [size]="18" /></span>
@@ -134,37 +145,7 @@ function nowHHmm(): string {
                   }
                 </select>
               </label>
-              <label class="flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm text-slate-700 shadow-lg shadow-brand-900/20">
-                <span class="text-brand-600"><app-icon name="wallet" [size]="18" /></span>
-                <span class="sr-only">Ngân sách</span>
-                <select
-                  [value]="budgetIndex()"
-                  (change)="budgetIndex.set(+$any($event.target).value); reload()"
-                  class="cursor-pointer bg-transparent text-sm text-slate-900 outline-none"
-                >
-                  @for (b of budgets; track $index) {
-                    <option [value]="$index">{{ b.label }}</option>
-                  }
-                </select>
-              </label>
-              <button
-                type="button"
-                [attr.aria-pressed]="openNow()"
-                class="inline-flex h-11 items-center gap-1.5 rounded-full text-[13px] shadow-lg shadow-brand-900/20 transition px-4"
-                [class]="openNow() ? 'bg-brand-600 font-semibold text-white' : 'bg-white font-medium text-slate-700 hover:bg-brand-50'"
-                (click)="openNow.set(!openNow()); reload()"
-              >
-                <app-icon name="clock" [size]="16" />Đang mở cửa
-              </button>
-              <button
-                type="button"
-                [attr.aria-pressed]="rainy()"
-                class="inline-flex h-11 items-center gap-1.5 rounded-full text-[13px] shadow-lg shadow-brand-900/20 transition px-4"
-                [class]="rainy() ? 'bg-brand-600 font-semibold text-white' : 'bg-white font-medium text-slate-700 hover:bg-brand-50'"
-                (click)="rainy.set(!rainy()); reload()"
-              >
-                <app-icon name="umbrella" [size]="16" />Ngày mưa
-              </button>
+              <app-filter-button [count]="filterCount()" (open)="filterOpen.set(true)" />
             </div>
           </div>
           <div role="group" aria-label="Nhóm chỗ chơi" class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:flex-wrap">
@@ -214,6 +195,7 @@ function nowHHmm(): string {
         <span class="flex shrink-0 items-center gap-1 font-semibold text-brand-800">Khám phá quán<app-icon name="arrowRight" [size]="14" [stroke]="2.4" /></span>
       </a>
 
+      <app-active-filters [items]="filterChips()" (remove)="removeFilter($event)" (clear)="clearFilters()" />
       @if (loading() && items().length === 0) {
         <p class="text-sm text-slate-500">Đang tải…</p>
       } @else if (items().length === 0) {
@@ -312,6 +294,30 @@ function nowHHmm(): string {
       }
     </div>
 
+    @if (filterOpen()) {
+      <app-filter-sheet [resultLabel]="'Xem ' + total() + ' chỗ'" [activeCount]="filterCount()" (closed)="filterOpen.set(false)" (cleared)="clearFilters()">
+        <app-filter-group title="Ngân sách" hint="giá thấp nhất mỗi người">
+          <app-choice-chips [options]="budgetOptions" [selected]="[filters().budget]" (toggle)="setFilter({ budget: filters().budget === $event ? null : $any($event) })" />
+        </app-filter-group>
+        <app-filter-group title="Thời lượng">
+          <app-choice-chips [options]="durationOptions" [selected]="[filters().duration]" (toggle)="setFilter({ duration: filters().duration === $event ? '' : $any($event) })" />
+        </app-filter-group>
+        <app-filter-group title="Kiểu hẹn">
+          <app-choice-chips [options]="vibeOptions" [selected]="filters().vibes" (toggle)="setFilter({ vibes: toggleIn(filters().vibes, $any($event)) })" />
+        </app-filter-group>
+        <app-filter-group title="Giờ mở cửa & thời tiết">
+          <div class="flex flex-col gap-2">
+            <app-filter-switch label="Đang mở cửa" icon="clock" [on]="filters().openNow" (toggle)="setFilter({ openNow: !filters().openNow })" />
+            <app-filter-switch label="Ngày mưa: chỉ chỗ trong nhà" icon="umbrella" [on]="filters().rainy" (toggle)="setFilter({ rainy: !filters().rainy })" />
+            <app-filter-switch label="Không cần đặt trước" icon="calendar" [on]="filters().noBooking" (toggle)="setFilter({ noBooking: !filters().noBooking })" />
+          </div>
+        </app-filter-group>
+        <app-filter-group title="Sắp xếp">
+          <app-choice-chips [options]="sortOptions" [selected]="[filters().sort]" (toggle)="setFilter({ sort: $any($event) })" />
+        </app-filter-group>
+      </app-filter-sheet>
+    }
+
     @if (formOpen()) {
       <app-spot-form [spot]="editing()" [districts]="districts()" (save)="save($event)" (cancel)="closeForm()" />
     }
@@ -362,7 +368,6 @@ export class SpotListPage implements OnInit {
   private readonly toast = inject(ToastService);
 
   protected readonly categories = SPOT_CATEGORIES;
-  protected readonly budgets = BUDGETS;
   protected readonly canEdit = inject(AuthService).canEdit;
   protected readonly cat = (item: SpotItem) => spotCategory(item.category);
   protected readonly price = spotPriceText;
@@ -371,10 +376,6 @@ export class SpotListPage implements OnInit {
   protected readonly q = signal('');
   protected readonly category = signal<SpotCategory | ''>('');
   protected readonly district = signal('');
-  protected readonly budgetIndex = signal(0);
-  protected readonly openNow = signal(false);
-  /** Ngày mưa: chỉ chỗ trong nhà */
-  protected readonly rainy = signal(false);
   protected readonly districts = signal<DistrictOption[]>([]);
   protected readonly items = signal<SpotItem[]>([]);
   protected readonly rating = ratingText;
@@ -430,6 +431,8 @@ export class SpotListPage implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    const params = this.route.snapshot.queryParamMap;
+    this.filters.set(spotFiltersFromParams(Object.fromEntries(params.keys.map((k) => [k, params.get(k)]))));
     void this.catalog.districts().then((d) => this.districts.set(d));
     this.reloadFeatured();
     this.banner.load();
@@ -464,7 +467,40 @@ export class SpotListPage implements OnInit {
   }
 
   protected hasFilter(): boolean {
-    return !!(this.q() || this.category() || this.district() || this.budgetIndex() || this.openNow() || this.rainy());
+    return !!(this.q() || this.category() || this.district() || this.filterCount());
+  }
+
+  /** Bộ lọc chi tiết (bảng "Bộ lọc"): áp dụng ngay, ghi lên đường dẫn */
+  protected readonly filters = signal<SpotFilters>(EMPTY_SPOT_FILTERS);
+  protected readonly filterOpen = signal(false);
+  protected readonly filterChips = computed(() => spotFilterChips(this.filters()));
+  protected readonly filterCount = computed(() => spotFilterCount(this.filters()));
+  protected readonly budgetOptions = SPOT_BUDGETS;
+  protected readonly durationOptions = DURATION_OPTIONS;
+  protected readonly vibeOptions = VIBE_OPTIONS;
+  protected readonly sortOptions = SPOT_SORTS;
+  protected readonly toggleIn = toggleIn;
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private filterTimer?: ReturnType<typeof setTimeout>;
+
+  protected setFilter(patch: Partial<SpotFilters>): void {
+    this.applyFilters({ ...this.filters(), ...patch });
+  }
+
+  protected removeFilter(key: string): void {
+    this.applyFilters(removeSpotFilter(this.filters(), key));
+  }
+
+  protected clearFilters(): void {
+    this.applyFilters(EMPTY_SPOT_FILTERS);
+  }
+
+  private applyFilters(next: SpotFilters): void {
+    this.filters.set(next);
+    void this.router.navigate([], { queryParams: spotFiltersToParams(next), queryParamsHandling: 'merge', replaceUrl: true });
+    clearTimeout(this.filterTimer);
+    this.filterTimer = setTimeout(() => void this.reload(), 200);
   }
 
   protected onSearch(value: string): void {
@@ -492,9 +528,12 @@ export class SpotListPage implements OnInit {
     return {
       q: this.q().trim(),
       district: this.district(),
-      maxPrice: BUDGETS[this.budgetIndex()].value,
-      indoor: this.rainy() ? true : null,
-      openAt: this.openNow() ? nowHHmm() : '',
+      maxPrice: this.filters().budget,
+      indoor: this.filters().rainy ? true : null,
+      openAt: this.filters().openNow ? nowHHmm() : '',
+      ...(this.filters().duration ? DURATION_RANGES[this.filters().duration as Exclude<SpotDuration, ''>] : {}),
+      noBooking: this.filters().noBooking,
+      vibe: this.filters().vibes,
     };
   }
 
@@ -507,7 +546,7 @@ export class SpotListPage implements OnInit {
     const seq = ++this.requestSeq;
     this.loading.set(true);
     try {
-      const res = await this.spots.search({ ...this.filter(), category: this.category(), page: this.page, size: 30 });
+      const res = await this.spots.search({ ...this.filter(), category: this.category(), sort: this.filters().sort, page: this.page, size: 30 });
       if (seq !== this.requestSeq) return;
       this.items.set(append ? [...this.items(), ...res.items] : res.items);
       this.total.set(res.total);

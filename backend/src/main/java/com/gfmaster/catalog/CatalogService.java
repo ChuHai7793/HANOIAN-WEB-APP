@@ -13,6 +13,12 @@ import com.gfmaster.catalog.CatalogDtos.CatalogPage;
 import com.gfmaster.catalog.CatalogDtos.CatalogRequest;
 import com.gfmaster.catalog.CatalogDtos.DistrictOption;
 import com.gfmaster.common.error.ApiException;
+import com.gfmaster.common.jpa.OpenHours;
+import com.gfmaster.place.PriceRange;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import com.gfmaster.common.error.ErrorCode;
 import com.gfmaster.dating.DatingRepository;
 import com.gfmaster.place.PlaceRepository;
@@ -182,16 +188,11 @@ public class CatalogService {
    * nếu không chip khác luôn bằng 0). Khoá {@code all} là tổng.
    */
   @Transactional(readOnly = true)
-  public Map<String, Long> counts(String q, CatalogDistrict district) {
+  public Map<String, Long> counts(CatalogFilter f) {
     Map<String, Long> out = new LinkedHashMap<>();
-    out.put("all", catalog.count(filter(q, null, district)));
-    for (PlaceType t : PlaceType.values()) out.put(t.name(), catalog.count(filter(q, t, district)));
+    out.put("all", catalog.count(filter(f.withType(null))));
+    for (PlaceType t : PlaceType.values()) out.put(t.name(), catalog.count(filter(f.withType(t))));
     return out;
-  }
-
-  @Transactional(readOnly = true)
-  public CatalogPage search(UUID userId, String q, PlaceType type, CatalogDistrict district, int page, int size) {
-    return search(userId, q, type, district, false, page, size);
   }
 
   /**
@@ -199,10 +200,9 @@ public class CatalogService {
    * có trong My place (hộp chọn điểm của Plan).
    */
   @Transactional(readOnly = true)
-  public CatalogPage search(
-      UUID userId, String q, PlaceType type, CatalogDistrict district, boolean mine, int page, int size) {
+  public CatalogPage search(UUID userId, CatalogFilter f, String sort, boolean mine, int page, int size) {
     int pageSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
-    Specification<CatalogPlace> spec = filter(q, type, district);
+    Specification<CatalogPlace> spec = filter(f);
     if (mine && userId != null) {
       spec =
           spec.and(
@@ -213,10 +213,25 @@ public class CatalogService {
                 return root.get("id").in(sub);
               });
     }
-    Page<CatalogPlace> result =
-        catalog.findAll(
-            spec,
-            PageRequest.of(Math.max(page, 0), pageSize, Sort.by("name").and(Sort.by("id"))));
+    Sort order =
+        switch (sort == null ? "" : sort) {
+          case "rating" -> Sort.by(Sort.Direction.DESC, "rating").and(Sort.by("name")).and(Sort.by("id"));
+          case "newest" -> Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by("id"));
+          // Giá thấp trước: theo giá thấp nhất (biểu thức, không đặt được qua Sort) nên tự orderBy
+          case "price" -> {
+            spec =
+                spec.and(
+                    (root, query, cb) -> {
+                      if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+                        query.orderBy(cb.asc(minPrice(root, cb)), cb.asc(root.get("name")), cb.asc(root.get("id")));
+                      }
+                      return cb.conjunction();
+                    });
+            yield Sort.unsorted();
+          }
+          default -> Sort.by("name").and(Sort.by("id"));
+        };
+    Page<CatalogPlace> result = catalog.findAll(spec, PageRequest.of(Math.max(page, 0), pageSize, order));
     List<UUID> ids = result.getContent().stream().map(CatalogPlace::getId).toList();
     Set<UUID> saved = ids.isEmpty() || userId == null ? Set.of() : new HashSet<>(places.findCatalogIdsInMyPlace(userId, ids));
     // "Người hợp gu đã lưu": chỉ khi người xem đã đăng nhập và đang bật Tìm đối tượng
@@ -326,10 +341,38 @@ public class CatalogService {
         c.getPriceTo());
   }
 
-  private static Specification<CatalogPlace> filter(String q, PlaceType type, CatalogDistrict district) {
+  /** Giá thấp nhất mỗi người: giá cụ thể, chưa có thì mức thấp nhất của nhóm giá */
+  private static Expression<Integer> minPrice(Root<CatalogPlace> root, CriteriaBuilder cb) {
+    Expression<Integer> byRange =
+        cb.<PriceRange, Integer>selectCase(root.get("priceRange"))
+            .when(PriceRange.cheap, 0)
+            .when(PriceRange.medium, 50_000)
+            .when(PriceRange.high, 150_000)
+            .otherwise(400_000);
+    return cb.coalesce(root.<Integer>get("priceFrom"), byRange);
+  }
+
+  private static Specification<CatalogPlace> filter(CatalogFilter f) {
     Specification<CatalogPlace> spec = (root, query, cb) -> cb.conjunction();
-    if (type != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("type"), type));
-    if (district != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("district"), district));
+    String q = f.q();
+    if (f.type() != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("type"), f.type()));
+    if (f.district() != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("district"), f.district()));
+    if (!f.prices().isEmpty()) spec = spec.and((root, query, cb) -> root.get("priceRange").in(f.prices()));
+    if (f.budget() != null) spec = spec.and((root, query, cb) -> cb.le(minPrice(root, cb), f.budget()));
+    if (f.minStars() != null) spec = spec.and((root, query, cb) -> cb.ge(root.get("rating"), f.minStars()));
+    // Chỉ quán ăn có loại món, nên chọn loại món là chỉ còn quán ăn
+    if (!f.cuisines().isEmpty()) spec = spec.and((root, query, cb) -> root.get("cuisine").in(f.cuisines()));
+    if (!f.vibes().isEmpty()) {
+      spec =
+          spec.and(
+              (root, query, cb) ->
+                  cb.or(f.vibes().stream().map(v -> cb.like(root.get("vibesText"), "%" + v.name() + "%")).toArray(Predicate[]::new)));
+    }
+    if (f.openAt() != null) {
+      spec = spec.and((root, query, cb) -> OpenHours.isOpenAt(cb, root.get("openTime"), root.get("closeTime"), f.openAt(), false));
+    }
+    if (f.wifi()) spec = spec.and((root, query, cb) -> cb.isTrue(root.get("hasWifi")));
+    if (f.parking()) spec = spec.and((root, query, cb) -> cb.isTrue(root.get("hasParking")));
     if (q != null && !q.isBlank()) {
       String like = "%" + q.trim().toLowerCase(Locale.ROOT).replace("%", "\\%").replace("_", "\\_") + "%";
       spec =

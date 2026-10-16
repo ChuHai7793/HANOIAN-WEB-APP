@@ -187,6 +187,56 @@ class CatalogIT extends ApiTestSupport {
   }
 
   @Test
+  void detailedFiltersAndSort() throws Exception {
+    // Rẻ, cafe chill mở cả ngày, có wifi
+    place("""
+        {"type": "cafe", "district": "BA_DINH", "name": "A cafe", "priceRange": "cheap", "priceFrom": 30000, "priceTo": 45000,
+         "rating": 3, "openTime": "07:00", "closeTime": "22:00", "hasWifi": true, "hasParking": false, "vibes": ["chill"]}
+        """);
+    // Quán ăn Nhật tầm trung, lãng mạn, chưa nhập giá cụ thể (tính từ 50k)
+    place("""
+        {"type": "restaurant", "district": "BA_DINH", "name": "B sushi", "priceRange": "medium", "rating": 5,
+         "openTime": "11:00", "closeTime": "21:00", "cuisine": "Món Nhật", "vibes": ["romantic"]}
+        """);
+    // Bar sang, mở qua đêm
+    place("""
+        {"type": "bar", "district": "BA_DINH", "name": "C bar", "priceRange": "luxury", "priceFrom": 450000,
+         "rating": 4, "openTime": "18:00", "closeTime": "02:00", "vibes": ["romantic", "active"]}
+        """);
+
+    getAs(guest, "/api/v1/catalog?price=cheap,medium").andExpect(jsonPath("$.total").value(2));
+    // Ngân sách: giá thấp nhất ≤ 50k (B sushi chưa có giá, tính 50k theo nhóm tầm trung)
+    getAs(guest, "/api/v1/catalog?budget=50000").andExpect(jsonPath("$.total").value(2));
+    getAs(guest, "/api/v1/catalog?budget=40000").andExpect(jsonPath("$.items[0].name").value("A cafe")).andExpect(jsonPath("$.total").value(1));
+    getAs(guest, "/api/v1/catalog?stars=4").andExpect(jsonPath("$.total").value(2));
+    getAs(guest, "/api/v1/catalog?cuisine=Món Nhật,Món Việt").andExpect(jsonPath("$.items[0].name").value("B sushi")).andExpect(jsonPath("$.total").value(1));
+    getAs(guest, "/api/v1/catalog?vibe=romantic").andExpect(jsonPath("$.total").value(2));
+    getAs(guest, "/api/v1/catalog?vibe=chill,active").andExpect(jsonPath("$.total").value(2));
+    getAs(guest, "/api/v1/catalog?wifi=true").andExpect(jsonPath("$.total").value(1));
+    // Đang mở: 23:30 chỉ còn bar mở qua đêm; 12:00 cafe và quán ăn
+    getAs(guest, "/api/v1/catalog?openAt=23:30").andExpect(jsonPath("$.items[0].name").value("C bar")).andExpect(jsonPath("$.total").value(1));
+    getAs(guest, "/api/v1/catalog?openAt=12:00").andExpect(jsonPath("$.total").value(2));
+    // Kết hợp nhiều bộ lọc
+    getAs(guest, "/api/v1/catalog?vibe=romantic&stars=5&budget=100000").andExpect(jsonPath("$.total").value(1));
+
+    // Sắp xếp
+    getAs(guest, "/api/v1/catalog?sort=rating").andExpect(jsonPath("$.items[0].name").value("B sushi"));
+    getAs(guest, "/api/v1/catalog?sort=price")
+        .andExpect(jsonPath("$.items[0].name").value("A cafe"))
+        .andExpect(jsonPath("$.items[2].name").value("C bar"));
+
+    // Số trên chip loại quán theo bộ lọc
+    getAs(guest, "/api/v1/catalog/counts?vibe=romantic")
+        .andExpect(jsonPath("$.all").value(2))
+        .andExpect(jsonPath("$.cafe").value(0))
+        .andExpect(jsonPath("$.restaurant").value(1));
+  }
+
+  private void place(String json) throws Exception {
+    postAs(admin, "/api/v1/admin/catalog", json).andExpect(status().isCreated());
+  }
+
+  @Test
   void districtIsRequiredAndValidated() throws Exception {
     postAs(
             admin,

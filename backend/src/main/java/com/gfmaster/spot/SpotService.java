@@ -14,9 +14,8 @@ import com.gfmaster.spot.SpotDtos.SpotItem;
 import com.gfmaster.spot.SpotDtos.SpotPage;
 import com.gfmaster.spot.SpotDtos.SpotRequest;
 import com.gfmaster.upload.storage.ImageUrls;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.Expression;
-import java.time.LocalTime;
+import com.gfmaster.common.jpa.OpenHours;
+import jakarta.persistence.criteria.Predicate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -57,21 +56,15 @@ public class SpotService {
    * người xem (client gửi, server không đoán múi giờ); chỗ không có giờ cố định luôn tính là đang mở.
    */
   @Transactional(readOnly = true)
-  public SpotPage search(
-      UUID userId,
-      String q,
-      SpotCategory category,
-      CatalogDistrict district,
-      Integer maxPrice,
-      Boolean indoor,
-      LocalTime openAt,
-      int page,
-      int size) {
+  public SpotPage search(UUID userId, SpotFilter f, String sort, int page, int size) {
     int pageSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
-    Page<DateSpot> result =
-        spots.findAll(
-            filter(q, category, district, maxPrice, indoor, openAt),
-            PageRequest.of(Math.max(page, 0), pageSize, Sort.by("name").and(Sort.by("id"))));
+    Sort order =
+        switch (sort == null ? "" : sort) {
+          case "price" -> Sort.by("priceFrom").and(Sort.by("name")).and(Sort.by("id"));
+          case "newest" -> Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by("id"));
+          default -> Sort.by("name").and(Sort.by("id"));
+        };
+    Page<DateSpot> result = spots.findAll(filter(f), PageRequest.of(Math.max(page, 0), pageSize, order));
     Set<UUID> saved = savedAmong(userId, result.getContent().stream().map(DateSpot::getId).toList());
     List<SpotItem> items = result.getContent().stream().map(s -> toItem(s, saved.contains(s.getId()))).toList();
     return new SpotPage(items, result.getTotalElements(), result.getNumber(), pageSize);
@@ -79,12 +72,11 @@ public class SpotService {
 
   /** Số chỗ chơi theo từng nhóm cho chip lọc, theo mọi bộ lọc khác đang chọn. Khoá {@code all} là tổng. */
   @Transactional(readOnly = true)
-  public Map<String, Long> counts(
-      String q, CatalogDistrict district, Integer maxPrice, Boolean indoor, LocalTime openAt) {
+  public Map<String, Long> counts(SpotFilter f) {
     Map<String, Long> out = new LinkedHashMap<>();
-    out.put("all", spots.count(filter(q, null, district, maxPrice, indoor, openAt)));
+    out.put("all", spots.count(filter(f.withCategory(null))));
     for (SpotCategory c : SpotCategory.values()) {
-      out.put(c.name(), spots.count(filter(q, c, district, maxPrice, indoor, openAt)));
+      out.put(c.name(), spots.count(filter(f.withCategory(c))));
     }
     return out;
   }
@@ -303,8 +295,12 @@ public class SpotService {
     return s == null ? "" : s.trim();
   }
 
-  private static Specification<DateSpot> filter(
-      String q, SpotCategory category, CatalogDistrict district, Integer maxPrice, Boolean indoor, LocalTime openAt) {
+  private static Specification<DateSpot> filter(SpotFilter f) {
+    String q = f.q();
+    SpotCategory category = f.category();
+    CatalogDistrict district = f.district();
+    Integer maxPrice = f.maxPrice();
+    Boolean indoor = f.indoor();
     Specification<DateSpot> spec = (root, query, cb) -> cb.conjunction();
     // Nhóm chính hoặc một trong các nhóm khác
     if (category != null) {
@@ -316,28 +312,17 @@ public class SpotService {
     if (district != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("district"), district));
     if (maxPrice != null) spec = spec.and((root, query, cb) -> cb.le(root.get("priceFrom"), maxPrice));
     if (indoor != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("indoor"), indoor));
-    if (openAt != null) {
-      // So bằng số giây trong ngày: bind thẳng LocalTime vào điều kiện bị quy đổi qua jdbc.time_zone=UTC
-      // nên lệch theo múi giờ của JVM (10:00 thành 03:00 ở UTC+7)
-      double t = openAt.toSecondOfDay();
+    if (f.openAt() != null) {
+      spec = spec.and((root, query, cb) -> OpenHours.isOpenAt(cb, root.get("openTime"), root.get("closeTime"), f.openAt(), true));
+    }
+    if (f.minDuration() != null) spec = spec.and((root, query, cb) -> cb.ge(root.get("durationMin"), f.minDuration()));
+    if (f.maxDuration() != null) spec = spec.and((root, query, cb) -> cb.le(root.get("durationMin"), f.maxDuration()));
+    if (f.noBooking()) spec = spec.and((root, query, cb) -> cb.isFalse(root.get("needsBooking")));
+    if (!f.vibes().isEmpty()) {
       spec =
           spec.and(
-              (root, query, cb) -> {
-                var open = secondOfDay(cb, root.get("openTime"));
-                var close = secondOfDay(cb, root.get("closeTime"));
-                Expression<Double> openAtSec = cb.literal(t);
-                return cb.or(
-                    cb.isNull(root.get("openTime")),
-                    // Trong ngày: open ≤ t < close
-                    cb.and(
-                        cb.lessThanOrEqualTo(open, close),
-                        cb.lessThanOrEqualTo(open, openAtSec),
-                        cb.greaterThan(close, openAtSec)),
-                    // Qua nửa đêm (close < open): t ≥ open hoặc t < close
-                    cb.and(
-                        cb.greaterThan(open, close),
-                        cb.or(cb.lessThanOrEqualTo(open, openAtSec), cb.greaterThan(close, openAtSec))));
-              });
+              (root, query, cb) ->
+                  cb.or(f.vibes().stream().map(v -> cb.like(root.get("vibesText"), "%" + v.name() + "%")).toArray(Predicate[]::new)));
     }
     if (q != null && !q.isBlank()) {
       String like = "%" + q.trim().toLowerCase(Locale.ROOT).replace("%", "\\%").replace("_", "\\_") + "%";
@@ -351,10 +336,6 @@ public class SpotService {
     return spec;
   }
 
-  /** Postgres date_part('epoch', time): số giây tính từ 00:00 */
-  private static Expression<Double> secondOfDay(CriteriaBuilder cb, Expression<LocalTime> time) {
-    return cb.function("date_part", Double.class, cb.literal("epoch"), time);
-  }
 
   private SpotItem toItem(DateSpot s, boolean inMyPlace) {
     return new SpotItem(

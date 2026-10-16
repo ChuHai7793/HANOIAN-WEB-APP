@@ -1,10 +1,11 @@
-import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE } from '../api/api';
 import { SILENT_CODES } from '../api/http-context';
 import { CatalogItem, CatalogPage, DistrictOption, FeaturedItem, FeaturedRequest, TypeCounts } from '../models/catalog.model';
-import { Place, PlaceType } from '../models/place.model';
+import { Place, PlaceType, PriceRange } from '../models/place.model';
+import { toQueryParams } from '../api/query-params';
 import { Vibe } from '../models/vibe.model';
 
 export interface CatalogQuery {
@@ -13,6 +14,17 @@ export interface CatalogQuery {
   district?: string;
   /** Chỉ quán đã có trong My place của mình */
   mine?: boolean;
+  /** Bộ lọc chi tiết (xem CatalogFilter ở backend) */
+  price?: PriceRange[];
+  budget?: number | null;
+  stars?: number | null;
+  cuisine?: string[];
+  vibe?: Vibe[];
+  /** "HH:mm" theo giờ người xem: chỉ quán đang mở */
+  openAt?: string;
+  wifi?: boolean;
+  parking?: boolean;
+  sort?: string;
   page?: number;
   size?: number;
 }
@@ -35,19 +47,12 @@ export class CatalogService {
   private readonly http = inject(HttpClient);
 
   search(query: CatalogQuery): Promise<CatalogPage> {
-    let params = new HttpParams();
-    for (const [key, value] of Object.entries(query)) {
-      if (value !== undefined && value !== null && value !== '') params = params.set(key, String(value));
-    }
-    return firstValueFrom(this.http.get<CatalogPage>(`${API_BASE}/catalog`, { params }));
+    return firstValueFrom(this.http.get<CatalogPage>(`${API_BASE}/catalog`, { params: toQueryParams(query) }));
   }
 
-  /** Số quán theo loại, theo từ khoá và khu vực (không theo loại). */
-  counts(query: Pick<CatalogQuery, 'q' | 'district'>): Promise<TypeCounts> {
-    let params = new HttpParams();
-    if (query.q) params = params.set('q', query.q);
-    if (query.district) params = params.set('district', query.district);
-    return firstValueFrom(this.http.get<TypeCounts>(`${API_BASE}/catalog/counts`, { params }));
+  /** Số quán theo loại, theo mọi bộ lọc trừ loại. */
+  counts(query: Omit<CatalogQuery, 'type' | 'mine' | 'sort' | 'page' | 'size'>): Promise<TypeCounts> {
+    return firstValueFrom(this.http.get<TypeCounts>(`${API_BASE}/catalog/counts`, { params: toQueryParams(query) }));
   }
 
   districts(): Promise<DistrictOption[]> {

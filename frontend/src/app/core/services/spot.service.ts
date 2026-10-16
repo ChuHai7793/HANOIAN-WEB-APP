@@ -1,9 +1,11 @@
-import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { API_BASE } from '../api/api';
 import { SILENT_CODES } from '../api/http-context';
 import { FeaturedSpot, FeaturedSpotRequest, SpotCategory, SpotItem, SpotPage } from '../models/spot.model';
+import { Vibe } from '../models/vibe.model';
+import { toQueryParams } from '../api/query-params';
 
 export interface SpotQuery {
   q?: string;
@@ -14,18 +16,19 @@ export interface SpotQuery {
   indoor?: boolean | null;
   /** "HH:mm" theo giờ của người xem: chỉ lấy chỗ đang mở */
   openAt?: string;
+  /** Thời lượng gợi ý (phút) */
+  minDuration?: number;
+  maxDuration?: number;
+  /** Chỉ chỗ không cần đặt trước */
+  noBooking?: boolean;
+  vibe?: Vibe[];
+  sort?: string;
   page?: number;
   size?: number;
 }
 
 /** Chỉ gửi bộ lọc có giá trị (0 vẫn gửi: "miễn phí"). */
-function toParams(query: object): HttpParams {
-  let params = new HttpParams();
-  for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined && value !== null && value !== '') params = params.set(key, String(value));
-  }
-  return params;
-}
+const toParams = toQueryParams;
 
 /** Dữ liệu admin gửi khi thêm/sửa chỗ chơi. `version`: bỏ qua khi thêm. */
 export type SpotRequest = Omit<

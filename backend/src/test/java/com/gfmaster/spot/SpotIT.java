@@ -198,6 +198,33 @@ class SpotIT extends ApiTestSupport {
             .content(body));
   }
 
+  @Test
+  void detailedFiltersAndSort() throws Exception {
+    postAs(admin, "/api/v1/admin/spots", """
+        {"category": "workshop", "district": "HOAN_KIEM", "name": "Nến thơm", "priceFrom": 250000, "durationMin": 120,
+         "indoor": true, "needsBooking": true, "vibes": ["romantic"]}
+        """).andExpect(status().isCreated());
+    postAs(admin, "/api/v1/admin/spots", """
+        {"category": "outdoor", "district": "HOAN_KIEM", "name": "Dạo hồ", "priceFrom": 0, "durationMin": 60,
+         "indoor": false, "vibes": ["chill"]}
+        """).andExpect(status().isCreated());
+    postAs(admin, "/api/v1/admin/spots", """
+        {"category": "entertainment", "district": "HOAN_KIEM", "name": "Boardgame", "priceFrom": 40000, "durationMin": 180,
+         "indoor": true, "vibes": ["active"]}
+        """).andExpect(status().isCreated());
+
+    getAs(guest, "/api/v1/spots?maxDuration=60").andExpect(jsonPath("$.items[0].name").value("Dạo hồ")).andExpect(jsonPath("$.total").value(1));
+    getAs(guest, "/api/v1/spots?minDuration=61&maxDuration=120").andExpect(jsonPath("$.items[0].name").value("Nến thơm")).andExpect(jsonPath("$.total").value(1));
+    getAs(guest, "/api/v1/spots?minDuration=121").andExpect(jsonPath("$.items[0].name").value("Boardgame"));
+    getAs(guest, "/api/v1/spots?noBooking=true").andExpect(jsonPath("$.total").value(2));
+    getAs(guest, "/api/v1/spots?vibe=romantic,active").andExpect(jsonPath("$.total").value(2));
+    getAs(guest, "/api/v1/spots?indoor=true&maxPrice=100000").andExpect(jsonPath("$.items[0].name").value("Boardgame")).andExpect(jsonPath("$.total").value(1));
+    getAs(guest, "/api/v1/spots?sort=price")
+        .andExpect(jsonPath("$.items[0].name").value("Dạo hồ"))
+        .andExpect(jsonPath("$.items[2].name").value("Nến thơm"));
+    getAs(guest, "/api/v1/spots/counts?noBooking=true").andExpect(jsonPath("$.all").value(2)).andExpect(jsonPath("$.workshop").value(0));
+  }
+
   private static String museum(String name, Long version) {
     return """
         {"category": "museum", "district": "HOAN_KIEM", "name": "%s", "address": "36 Lý Thường Kiệt",

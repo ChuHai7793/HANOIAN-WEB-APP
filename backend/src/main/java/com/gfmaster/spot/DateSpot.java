@@ -99,6 +99,10 @@ public class DateSpot extends BaseEntity {
   @Column(nullable = false, length = 40)
   private Set<Vibe> vibes = EnumSet.noneOf(Vibe.class);
 
+  /** Cùng cột vibes dạng chữ ("chill,romantic"), chỉ đọc: để bộ lọc so LIKE */
+  @Column(name = "vibes", insertable = false, updatable = false)
+  private String vibesText;
+
   @Convert(converter = VibeConverters.SourceConverter.class)
   @Column(nullable = false, length = 10)
   private VibeSource vibesSource = VibeSource.DEFAULT;

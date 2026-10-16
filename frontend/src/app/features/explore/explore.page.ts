@@ -8,7 +8,32 @@ import { PlaceService } from '../../core/services/place.service';
 import { ToastService } from '../../core/services/toast.service';
 import { directionsUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
 import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import {
+  CUISINE_OPTIONS,
+  EMPTY_PLACE_FILTERS,
+  nowHHmm,
+  PLACE_BUDGETS,
+  PLACE_SORTS,
+  PlaceFilters,
+  placeFilterChips,
+  placeFilterCount,
+  placeFiltersFromParams,
+  placeFiltersToParams,
+  PRICE_OPTIONS,
+  removePlaceFilter,
+  STAR_OPTIONS,
+  toggleIn,
+  VIBE_OPTIONS,
+} from '../../core/models/filters.model';
+import {
+  ActiveFiltersComponent,
+  ChoiceChipsComponent,
+  FilterButtonComponent,
+  FilterGroupComponent,
+  FilterSheetComponent,
+  FilterSwitchComponent,
+} from '../../shared/ui/filter-sheet.component';
 import { IconComponent, IconName } from '../../shared/ui/icon.component';
 import { PlaceFormComponent } from '../places/place-form.component';
 import { BAR_CONFIG, CAFE_CONFIG, PlaceTypeConfig, RESTAURANT_CONFIG } from '../places/place.config';
@@ -50,7 +75,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
 
 @Component({
   selector: 'app-explore-page',
-  imports: [PageBannerComponent, FeaturedEditorComponent, FeaturedSectionComponent, DetailModalComponent, ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
+  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, FeaturedEditorComponent, FeaturedSectionComponent, DetailModalComponent, ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <!-- Banner đầu trang: ảnh nền (admin đổi được, mặc định Hồ Gươm đêm) + lớp phủ tím, chữ giới thiệu và bộ lọc -->
@@ -137,6 +162,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
               }
             </select>
           </label>
+          <app-filter-button [count]="filterCount()" (open)="filterOpen.set(true)" />
           <div role="group" aria-label="Loại quán" class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:flex-wrap">
             @for (t of typeFilters; track t.value) {
               <button
@@ -176,11 +202,12 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
         <span class="flex shrink-0 items-center gap-1 font-semibold text-brand-800">Tìm người đi cùng<app-icon name="arrowRight" [size]="14" [stroke]="2.4" /></span>
       </a>
 
+      <app-active-filters [items]="filterChips()" (remove)="removeFilter($event)" (clear)="clearFilters()" />
       @if (loading() && items().length === 0) {
         <p class="text-sm text-slate-500">Đang tải…</p>
       } @else if (items().length === 0) {
         <div class="rounded-[20px] border border-dashed border-brand-300 bg-white px-6 py-12 text-center text-sm text-slate-500">
-          {{ q() || type() || district() ? 'Không tìm thấy quán phù hợp. Thử từ khoá khác nhé.' : 'Chưa có quán nào trong danh mục.' }}
+          {{ filterCount() ? 'Không có quán nào hợp bộ lọc. Thử bỏ bớt bộ lọc nhé.' : q() || type() || district() ? 'Không tìm thấy quán phù hợp. Thử từ khoá khác nhé.' : 'Chưa có quán nào trong danh mục.' }}
         </div>
       } @else {
         <h2 class="mt-2 flex items-baseline gap-2 text-lg font-bold tracking-tight text-slate-900">
@@ -271,6 +298,40 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
         }
       }
     </div>
+
+    @if (filterOpen()) {
+      <app-filter-sheet [resultLabel]="'Xem ' + total() + ' quán'" [activeCount]="filterCount()" (closed)="filterOpen.set(false)" (cleared)="clearFilters()">
+        <app-filter-group title="Mức giá">
+          <app-choice-chips [options]="priceOptions" [selected]="filters().prices" (toggle)="setFilter({ prices: toggleIn(filters().prices, $any($event)) })" />
+        </app-filter-group>
+        <app-filter-group title="Ngân sách" hint="giá thấp nhất mỗi người">
+          <app-choice-chips [options]="budgetOptions" [selected]="[filters().budget]" (toggle)="setFilter({ budget: filters().budget === $event ? null : $any($event) })" />
+        </app-filter-group>
+        <app-filter-group title="Số sao" hint="HANOIVIBE chấm">
+          <app-choice-chips [options]="starOptions" [selected]="[filters().stars]" (toggle)="setFilter({ stars: filters().stars === $event ? null : $any($event) })" />
+        </app-filter-group>
+        @if (type() === '' || type() === 'restaurant') {
+          <app-filter-group title="Loại món" hint="chỉ quán ăn">
+            <app-choice-chips [options]="cuisineOptions" [selected]="filters().cuisines" (toggle)="pickCuisine($any($event))" />
+          </app-filter-group>
+        }
+        <app-filter-group title="Kiểu hẹn">
+          <app-choice-chips [options]="vibeOptions" [selected]="filters().vibes" (toggle)="setFilter({ vibes: toggleIn(filters().vibes, $any($event)) })" />
+        </app-filter-group>
+        <app-filter-group title="Giờ mở cửa & tiện ích">
+          <div class="flex flex-col gap-2">
+            <app-filter-switch label="Đang mở cửa" icon="clock" [on]="filters().openNow" (toggle)="setFilter({ openNow: !filters().openNow })" />
+            @if (type() !== 'restaurant') {
+              <app-filter-switch label="Có wifi" icon="wifi" [on]="filters().wifi" (toggle)="setFilter({ wifi: !filters().wifi })" />
+              <app-filter-switch label="Có chỗ đậu xe" icon="parking" [on]="filters().parking" (toggle)="setFilter({ parking: !filters().parking })" />
+            }
+          </div>
+        </app-filter-group>
+        <app-filter-group title="Sắp xếp">
+          <app-choice-chips [options]="sortOptions" [selected]="[filters().sort]" (toggle)="setFilter({ sort: $any($event) })" />
+        </app-filter-group>
+      </app-filter-sheet>
+    }
 
     @if (formType(); as type) {
       <app-place-form
@@ -479,13 +540,71 @@ export class ExplorePage implements OnInit {
   private requestSeq = 0;
 
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  /** Bộ lọc chi tiết (bảng "Bộ lọc"): áp dụng ngay, ghi lên đường dẫn */
+  protected readonly filters = signal<PlaceFilters>(EMPTY_PLACE_FILTERS);
+  protected readonly filterOpen = signal(false);
+  protected readonly filterChips = computed(() => placeFilterChips(this.filters()));
+  protected readonly filterCount = computed(() => placeFilterCount(this.filters()));
+  protected readonly priceOptions = PRICE_OPTIONS;
+  protected readonly budgetOptions = PLACE_BUDGETS;
+  protected readonly starOptions = STAR_OPTIONS;
+  protected readonly cuisineOptions = CUISINE_OPTIONS;
+  protected readonly vibeOptions = VIBE_OPTIONS;
+  protected readonly sortOptions = PLACE_SORTS;
+  protected readonly toggleIn = toggleIn;
+  private filterTimer?: ReturnType<typeof setTimeout>;
+
+  protected setFilter(patch: Partial<PlaceFilters>): void {
+    this.applyFilters({ ...this.filters(), ...patch });
+  }
+
+  protected removeFilter(key: string): void {
+    this.applyFilters(removePlaceFilter(this.filters(), key));
+  }
+
+  protected clearFilters(): void {
+    this.applyFilters(EMPTY_PLACE_FILTERS);
+  }
+
+  /** Chọn loại món ở "Tất cả": chuyển sang Quán ăn (chỉ quán ăn có loại món) */
+  protected pickCuisine(cuisine: string): void {
+    const cuisines = toggleIn(this.filters().cuisines, cuisine);
+    if (cuisines.length && this.type() !== 'restaurant') this.type.set('restaurant');
+    this.setFilter({ cuisines });
+  }
+
+  private applyFilters(next: PlaceFilters): void {
+    this.filters.set(next);
+    void this.router.navigate([], { queryParams: placeFiltersToParams(next), queryParamsHandling: 'merge', replaceUrl: true });
+    clearTimeout(this.filterTimer);
+    this.filterTimer = setTimeout(() => void this.reload(), 200);
+  }
+
+  /** Bộ lọc chi tiết dạng tham số API */
+  private filterQuery() {
+    const f = this.filters();
+    return {
+      price: f.prices,
+      budget: f.budget,
+      stars: f.stars,
+      cuisine: f.cuisines,
+      vibe: f.vibes,
+      openAt: f.openNow ? nowHHmm() : '',
+      wifi: f.wifi,
+      parking: f.parking,
+    };
+  }
 
   async ngOnInit(): Promise<void> {
     void this.catalog.districts().then((d) => this.districts.set(d));
     this.reloadFeatured();
     this.banner.load();
     // Mở từ "Gợi ý điểm hẹn" của Tìm đối tượng: /explore?q=<tên quán>
-    this.q.set(this.route.snapshot.queryParamMap.get('q') ?? '');
+    const params = this.route.snapshot.queryParamMap;
+    this.q.set(params.get('q') ?? '');
+    this.filters.set(placeFiltersFromParams(Object.fromEntries(params.keys.map((k) => [k, params.get(k)]))));
     await this.reload();
   }
 
@@ -499,10 +618,11 @@ export class ExplorePage implements OnInit {
   protected async reload(withCounts = true): Promise<void> {
     this.page = 0;
     if (withCounts) {
-      const filter = { q: this.q().trim(), district: this.district() };
+      const filter = { q: this.q().trim(), district: this.district(), ...this.filterQuery() };
+      const key = JSON.stringify(filter);
       void this.catalog.counts(filter).then((c) => {
         // Bỏ kết quả cũ nếu bộ lọc đã đổi trong lúc chờ
-        if (filter.q === this.q().trim() && filter.district === this.district()) this.counts.set(c);
+        if (key === JSON.stringify({ q: this.q().trim(), district: this.district(), ...this.filterQuery() })) this.counts.set(c);
       });
     }
     await this.load(false);
@@ -521,6 +641,8 @@ export class ExplorePage implements OnInit {
         q: this.q().trim(),
         type: this.type(),
         district: this.district(),
+        ...this.filterQuery(),
+        sort: this.filters().sort,
         page: this.page,
         size: 30,
       });
