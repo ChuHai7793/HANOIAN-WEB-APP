@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Sinh thumbnail 320px cho một upload. Chạy nền, được gọi từ consumer của event image.uploaded. */
+/** Sinh hai bản nhỏ (320px, 800px) cho một upload. Chạy nền, được gọi từ consumer của event image.uploaded. */
 @Service
 public class ThumbnailService {
 
@@ -38,8 +38,11 @@ public class ThumbnailService {
       log.debug("Skip thumbnail for upload {}: not pending", uploadId);
       return;
     }
-    ProcessedImage thumb = processor.thumbnail(storage.get(upload.getStorageKey()));
+    byte[] original = storage.get(upload.getStorageKey());
+    ProcessedImage thumb = processor.thumbnail(original);
     String url = storage.put(UploadService.thumbKeyOf(upload.getStorageKey()), thumb.bytes(), upload.getMimeType());
+    ProcessedImage card = processor.card(original);
+    storage.put(UploadService.cardKeyOf(upload.getStorageKey()), card.bytes(), upload.getMimeType());
     upload.setThumbUrl(url);
     upload.setStatus(UploadStatus.READY);
   }

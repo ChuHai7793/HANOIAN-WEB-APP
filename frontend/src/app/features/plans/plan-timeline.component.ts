@@ -23,7 +23,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
           <div class="flex w-[70px] shrink-0 flex-col items-center pt-3 text-center">
             <span class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">{{ i + 1 }}</span>
             <span class="mt-1 text-sm font-semibold text-slate-900">{{ s.arrival }}</span>
-            <span class="text-[11px] text-slate-400">đến {{ s.departure }}</span>
+            <span class="text-xs text-slate-400">đến {{ s.departure }}</span>
           </div>
           <div class="min-w-0 flex-1 rounded-2xl border border-brand-100 bg-white p-3 sm:p-4">
             <div class="flex gap-3">
@@ -41,7 +41,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
                 @if (s.warnings.length) {
                   <div class="mt-1.5 flex flex-wrap gap-1.5">
                     @for (w of s.warnings; track w) {
-                      <span class="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium" [class]="warningClass(w)">
+                      <span class="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium" [class]="warningClass(w)">
                         <app-icon [name]="warningMeta(w).tone === 'info' ? 'info' : 'alert'" [size]="12" />{{ warningMeta(w).label }}
                       </span>
                     }

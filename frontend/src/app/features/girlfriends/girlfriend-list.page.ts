@@ -58,7 +58,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
                   <div class="flex h-14 w-14 items-center justify-center rounded-full bg-brand-100 text-brand-600"><app-icon name="user" [size]="24" /></div>
                 }
                 @if (m.unread > 0) {
-                  <span class="absolute -right-1 -top-1 rounded-full bg-rose-600 px-1.5 text-[11px] font-bold text-white">{{ m.unread }}</span>
+                  <span class="absolute -right-1 -top-1 rounded-full bg-rose-600 px-1.5 text-xs font-bold text-white">{{ m.unread }}</span>
                 }
               </div>
               <div class="min-w-0 flex-1">
@@ -174,19 +174,19 @@ import { IconComponent } from '../../shared/ui/icon.component';
 
             <dl class="mt-4 grid grid-cols-4 gap-1 rounded-lg bg-slate-50 p-3 text-center">
               <div>
-                <dt class="text-[11px] text-slate-400">Bên nhau</dt>
+                <dt class="text-xs text-slate-400">Bên nhau</dt>
                 <dd class="text-sm font-semibold text-slate-700">{{ together(gf) }}</dd>
               </div>
               <div>
-                <dt class="text-[11px] text-slate-400">Quán ăn</dt>
+                <dt class="text-xs text-slate-400">Quán ăn</dt>
                 <dd class="text-sm font-semibold text-slate-700">{{ countOf(gf.id, 'restaurant') }}</dd>
               </div>
               <div>
-                <dt class="text-[11px] text-slate-400">Cafe</dt>
+                <dt class="text-xs text-slate-400">Cafe</dt>
                 <dd class="text-sm font-semibold text-slate-700">{{ countOf(gf.id, 'cafe') }}</dd>
               </div>
               <div>
-                <dt class="text-[11px] text-slate-400">Bar</dt>
+                <dt class="text-xs text-slate-400">Bar</dt>
                 <dd class="text-sm font-semibold text-slate-700">{{ countOf(gf.id, 'bar') }}</dd>
               </div>
             </dl>

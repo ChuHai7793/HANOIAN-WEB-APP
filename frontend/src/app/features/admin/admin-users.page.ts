@@ -42,8 +42,8 @@ type Tab = 'users' | 'reports';
       }
 
       <div class="mb-4 flex rounded-lg bg-slate-100 p-1 text-sm sm:inline-flex">
-        <button type="button" class="rounded-md px-3 py-1.5 font-medium" [class]="tab() === 'users' ? 'bg-white shadow-sm' : 'text-slate-500'" (click)="setTab('users')"><app-icon name="users" [size]="14" class="mr-1.5 align-middle" />Người dùng</button>
-        <button type="button" class="rounded-md px-3 py-1.5 font-medium" [class]="tab() === 'reports' ? 'bg-white shadow-sm' : 'text-slate-500'" (click)="setTab('reports')">
+        <button type="button" class="min-h-10 flex-1 rounded-md px-3 font-medium sm:flex-none" [class]="tab() === 'users' ? 'bg-white shadow-sm' : 'text-slate-500'" (click)="setTab('users')"><app-icon name="users" [size]="14" class="mr-1.5 align-middle" />Người dùng</button>
+        <button type="button" class="min-h-10 flex-1 rounded-md px-3 font-medium sm:flex-none" [class]="tab() === 'reports' ? 'bg-white shadow-sm' : 'text-slate-500'" (click)="setTab('reports')">
           <app-icon name="flag" [size]="14" class="mr-1.5 align-middle" />Báo cáo
           @if (stats()?.openReports) {
             <span class="ml-1 rounded-full bg-rose-100 px-1.5 text-xs font-semibold text-rose-700">{{ stats()?.openReports }}</span>
@@ -61,9 +61,9 @@ type Tab = 'users' | 'reports';
             placeholder="Tìm theo tên, email, thành phố…"
           />
           <div class="flex flex-wrap gap-1.5 text-xs">
-            <button type="button" class="rounded-full px-3 py-1" [class]="filter() === '' ? 'bg-brand-100 font-semibold text-brand-700' : 'bg-slate-100 text-slate-600'" (click)="filter.set('')">Tất cả · {{ users().length }}</button>
+            <button type="button" class="min-h-9 rounded-full px-3" [class]="filter() === '' ? 'bg-brand-100 font-semibold text-brand-700' : 'bg-slate-100 text-slate-600'" (click)="filter.set('')">Tất cả · {{ users().length }}</button>
             @for (st of statuses; track st.value) {
-              <button type="button" class="rounded-full px-3 py-1" [class]="filter() === st.value ? 'bg-brand-100 font-semibold text-brand-700' : 'bg-slate-100 text-slate-600'" (click)="filter.set(st.value)">{{ st.label }} · {{ countOf(st.value) }}</button>
+              <button type="button" class="min-h-9 rounded-full px-3" [class]="filter() === st.value ? 'bg-brand-100 font-semibold text-brand-700' : 'bg-slate-100 text-slate-600'" (click)="filter.set(st.value)">{{ st.label }} · {{ countOf(st.value) }}</button>
             }
           </div>
         </div>
@@ -78,12 +78,12 @@ type Tab = 'users' | 'reports';
               <thead class="bg-slate-50 text-xs text-slate-500">
                 <tr>
                   <th class="px-3 py-2">Người dùng</th>
-                  <th class="px-3 py-2">Đăng ký</th>
+                  <th class="px-3 py-2 max-md:hidden">Đăng ký</th>
                   <th class="px-3 py-2">Tìm đối tượng</th>
-                  <th class="px-3 py-2 text-right">Đã thích</th>
-                  <th class="px-3 py-2 text-right">Được thích</th>
+                  <th class="px-3 py-2 text-right max-md:hidden">Đã thích</th>
+                  <th class="px-3 py-2 text-right max-md:hidden">Được thích</th>
                   <th class="px-3 py-2 text-right">Match</th>
-                  <th class="px-3 py-2 text-right">Bị báo cáo</th>
+                  <th class="px-3 py-2 text-right max-md:hidden">Bị báo cáo</th>
                   <th class="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -101,19 +101,19 @@ type Tab = 'users' | 'reports';
                           <span class="block truncate font-medium text-brand-700 hover:underline">
                             {{ u.user.displayName }}
                             @if (u.role === 'ADMIN') {
-                              <span class="ml-1 rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-medium text-brand-700">Admin</span>
+                              <span class="ml-1 rounded bg-brand-100 px-1.5 py-0.5 text-xs font-medium text-brand-700">Admin</span>
                             }
                           </span>
                           <span class="block truncate text-xs text-slate-400">{{ u.username || u.user.email }}{{ u.city ? ' · ' + u.city : '' }}</span>
                         </span>
                       </a>
                     </td>
-                    <td class="whitespace-nowrap px-3 py-2 text-xs text-slate-500">{{ u.createdAt | date: 'dd/MM/yyyy' }}</td>
+                    <td class="whitespace-nowrap px-3 py-2 text-xs text-slate-500 max-md:hidden">{{ u.createdAt | date: 'dd/MM/yyyy' }}</td>
                     <td class="px-3 py-2"><span class="whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium" [class]="statusOf(u.status).tone">{{ statusOf(u.status).label }}</span></td>
-                    <td class="px-3 py-2 text-right">{{ u.likesGiven }}</td>
-                    <td class="px-3 py-2 text-right">{{ u.likesReceived }}</td>
+                    <td class="px-3 py-2 text-right max-md:hidden">{{ u.likesGiven }}</td>
+                    <td class="px-3 py-2 text-right max-md:hidden">{{ u.likesReceived }}</td>
                     <td class="px-3 py-2 text-right">{{ u.matches }}</td>
-                    <td class="px-3 py-2 text-right" [class.text-rose-600]="u.reportsAgainst > 0">{{ u.reportsAgainst }}</td>
+                    <td class="px-3 py-2 text-right max-md:hidden" [class.text-rose-600]="u.reportsAgainst > 0">{{ u.reportsAgainst }}</td>
                     <td class="px-3 py-2 text-right text-slate-400"><app-icon name="arrowRight" [size]="14" /></td>
                   </tr>
                 }
@@ -123,8 +123,8 @@ type Tab = 'users' | 'reports';
         }
       } @else {
         <div class="mb-3 flex gap-2 text-xs">
-          <button type="button" class="rounded-full px-3 py-1" [class]="reportStatus() === 'OPEN' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'" (click)="loadReports('OPEN')">Chưa xử lý</button>
-          <button type="button" class="rounded-full px-3 py-1" [class]="reportStatus() === 'RESOLVED' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'" (click)="loadReports('RESOLVED')">Đã xử lý</button>
+          <button type="button" class="min-h-9 rounded-full px-3" [class]="reportStatus() === 'OPEN' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'" (click)="loadReports('OPEN')">Chưa xử lý</button>
+          <button type="button" class="min-h-9 rounded-full px-3" [class]="reportStatus() === 'RESOLVED' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'" (click)="loadReports('RESOLVED')">Đã xử lý</button>
         </div>
         @if (reports().length === 0) {
           <p class="text-sm text-slate-500">Không có báo cáo nào.</p>
@@ -146,7 +146,7 @@ type Tab = 'users' | 'reports';
                 }
                 <div class="mt-3 flex flex-wrap gap-2 text-xs">
                   @if (r.status === 'OPEN') {
-                    <button type="button" class="rounded-lg border border-slate-200 px-3 py-1.5 hover:bg-slate-50" (click)="resolve(r, 'RESOLVED')"><app-icon name="check" [size]="14" class="mr-1.5 align-middle" />Đánh dấu đã xử lý</button>
+                    <button type="button" class="min-h-9 rounded-lg border border-slate-200 px-3 hover:bg-slate-50" (click)="resolve(r, 'RESOLVED')"><app-icon name="check" [size]="14" class="mr-1.5 align-middle" />Đánh dấu đã xử lý</button>
                   } @else {
                     <button type="button" class="rounded-lg border border-slate-200 px-3 py-1.5 hover:bg-slate-50" (click)="resolve(r, 'OPEN')"><app-icon name="refresh" [size]="14" class="mr-1.5 align-middle" />Mở lại</button>
                   }

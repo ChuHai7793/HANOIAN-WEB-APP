@@ -50,7 +50,7 @@ import { ReviewsComponent } from '../../shared/ui/reviews.component';
 import { DetailModalComponent } from '../../shared/ui/detail-modal.component';
 import { FeaturedCard, FeaturedSectionComponent } from '../../shared/ui/featured-section.component';
 import { FeaturedEditorComponent } from '../../shared/ui/featured-editor.component';
-import { DEFAULT_BANNER, DEFAULT_BANNER_CREDIT, editableBanner, PageBannerComponent } from '../../shared/ui/page-banner.component';
+import { DEFAULT_BANNER, DEFAULT_BANNER_CREDIT, DEFAULT_BANNER_SRCSET, editableBanner, PageBannerComponent } from '../../shared/ui/page-banner.component';
 
 const CONFIGS: Record<PlaceType, PlaceTypeConfig> = {
   cafe: CAFE_CONFIG,
@@ -84,9 +84,10 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
         kicker="Hà Nội, những điểm hẹn"
         heading="Khám phá quán."
         tagline="Một góc thật xinh. Một câu chuyện mới. Một cuộc hẹn đáng nhớ."
-        [image]="banner.ready() ? (banner.custom() ?? defaultBanner) : null"
+        [image]="banner.custom() ?? defaultBanner"
+        [imageSrcset]="banner.custom() ? null : defaultSrcset"
         [imagePosition]="banner.custom() ? 'center' : '70% 28%'"
-        [credit]="banner.ready() && !banner.custom() ? defaultCredit : null"
+        [credit]="banner.custom() ? null : defaultCredit"
         [editable]="canEdit()"
         [custom]="!!banner.custom()"
         [busy]="banner.busy()"
@@ -104,7 +105,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
         <button
           bannerRight
           type="button"
-          class="flex h-8 items-center gap-1 rounded-full bg-white px-2 text-[12px] font-semibold text-brand-700 shadow-md shadow-brand-900/20 transition hover:bg-brand-50 sm:px-3"
+          class="flex h-9 items-center gap-1 rounded-full bg-white px-2 text-[12px] font-semibold text-brand-700 shadow-md shadow-brand-900/20 transition hover:bg-brand-50 sm:px-3"
           aria-label="Autoplan buổi hẹn"
           (click)="autoplanOpen.set(true)"
         >
@@ -114,7 +115,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
           <div bannerRight class="relative">
             <button
               type="button"
-              class="flex h-8 items-center gap-1 rounded-full bg-brand-600 px-2 text-[12px] font-semibold text-white shadow-md shadow-brand-900/30 transition hover:bg-brand-700 sm:px-3" aria-label="Thêm quán"
+              class="flex h-9 items-center gap-1 rounded-full bg-brand-600 px-2 text-[12px] font-semibold text-white shadow-md shadow-brand-900/30 transition hover:bg-brand-700 sm:px-3" aria-label="Thêm quán"
               (click)="typeMenuOpen.set(!typeMenuOpen())"
             >
               <app-icon name="plus" [size]="14" [stroke]="2.4" />
@@ -148,22 +149,23 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
               placeholder="Tìm theo tên, địa chỉ…"
             />
           </label>
-          <label class="flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm text-slate-700 shadow-lg shadow-brand-900/20">
-            <span class="text-brand-600"><app-icon name="pin" [size]="18" /></span>
-            <span class="sr-only">Khu vực</span>
-            <select
-              [value]="district()"
-              (change)="district.set($any($event.target).value); reload()"
-              class="cursor-pointer bg-transparent text-sm text-slate-900 outline-none"
-            >
-              <option value="">Mọi khu vực</option>
-              @for (d of districts(); track d.code) {
-                <option [value]="d.code">{{ d.label }}</option>
-              }
-            </select>
-          </label>
-          <app-filter-button [count]="filterCount()" (open)="filterOpen.set(true)" />
-          <div role="group" aria-label="Loại quán" class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:flex-wrap">
+          <!-- Điện thoại: khu vực, Bộ lọc và loại quán gom thành một hàng vuốt ngang (sm:contents: màn rộng xếp vào hàng trên) -->
+          <div role="group" aria-label="Khu vực và loại quán" class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:contents">
+            <label class="flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm text-slate-700 shadow-lg shadow-brand-900/20">
+              <span class="text-brand-600"><app-icon name="pin" [size]="18" /></span>
+              <span class="sr-only">Khu vực</span>
+              <select
+                [value]="district()"
+                (change)="district.set($any($event.target).value); reload()"
+                class="cursor-pointer bg-transparent text-sm text-slate-900 outline-none"
+              >
+                <option value="">Mọi khu vực</option>
+                @for (d of districts(); track d.code) {
+                  <option [value]="d.code">{{ d.label }}</option>
+                }
+              </select>
+            </label>
+            <app-filter-button [count]="filterCount()" (open)="filterOpen.set(true)" />
             @for (t of typeFilters; track t.value) {
               <button
                 type="button"
@@ -226,7 +228,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
             >
               <div class="relative flex min-h-0 flex-[0_1_75%] items-center justify-center bg-[#EFEAFC] text-brand-500">
                 @if (item.imageUrl) {
-                  <app-photo-carousel class="h-full w-full" [photos]="photosOf(item)" [alt]="item.name" />
+                  <app-photo-carousel class="h-full w-full" [photos]="photosOf(item)" [alt]="item.name" [variants]="true" />
                 } @else {
                   <app-icon [name]="typeIcons[item.type]" [size]="40" [stroke]="1.5" />
                 }
@@ -259,20 +261,20 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
                 </div>
                 <!-- Một nút chính (Lưu); Chỉ đường / Vào plan là icon, rê chuột thì hiện chữ -->
                 <div class="flex items-center gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
-                  <a [href]="directions(item)" target="_blank" rel="noopener" class="group/act flex h-9 items-center rounded-[10px] border border-brand-200 px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-brand-50 focus-visible:bg-brand-50" aria-label="Chỉ đường" title="Chỉ đường">
-                    <app-icon name="navigate" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[80px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[80px] group-focus-visible/act:opacity-100">Chỉ đường</span>
+                  <a [href]="directions(item)" target="_blank" rel="noopener" class="group/act flex h-9 touch:h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-brand-50 focus-visible:bg-brand-50" aria-label="Chỉ đường" title="Chỉ đường">
+                    <app-icon name="navigate" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[80px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[80px] group-focus-visible/act:opacity-100 touch:ml-1 touch:max-w-none touch:opacity-100">Chỉ đường</span>
                   </a>
-                  <button type="button" class="group/act flex h-9 items-center rounded-[10px] border border-brand-200 px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-brand-50 focus-visible:bg-brand-50" aria-label="Vào plan" title="Vào plan" (click)="addToPlan({ kind: 'place', refId: item.id, name: item.name, district: item.district })">
-                    <app-icon name="route" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[80px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[80px] group-focus-visible/act:opacity-100">Vào plan</span>
+                  <button type="button" class="group/act flex h-9 touch:h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-brand-50 focus-visible:bg-brand-50" aria-label="Vào plan" title="Vào plan" (click)="addToPlan({ kind: 'place', refId: item.id, name: item.name, district: item.district })">
+                    <app-icon name="route" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[80px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[80px] group-focus-visible/act:opacity-100 touch:ml-1 touch:max-w-none touch:opacity-100">Vào plan</span>
                   </button>
                   @if (item.inMyPlace) {
-                    <span class="flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-100 px-2 text-xs font-semibold text-brand-800">
+                    <span class="flex min-h-9 touch:min-h-10 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-100 px-2 text-xs font-semibold text-brand-800">
                       <app-icon name="heart" [size]="14" [filled]="true" />Đã lưu
                     </span>
                   } @else {
                     <button
                       type="button"
-                      class="flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-600 px-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                      class="flex min-h-9 touch:min-h-10 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-600 px-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
                       [disabled]="adding() === item.id"
                       (click)="addToMyPlace(item)"
                     >
@@ -475,6 +477,7 @@ export class ExplorePage implements OnInit {
   /** Ảnh nền banner (admin đổi được); chưa có thì dùng Hồ Gươm đêm */
   protected readonly banner = editableBanner('explore');
   protected readonly defaultBanner = DEFAULT_BANNER;
+  protected readonly defaultSrcset = DEFAULT_BANNER_SRCSET;
   protected readonly defaultCredit = DEFAULT_BANNER_CREDIT;
 
   protected cityHint(): void {

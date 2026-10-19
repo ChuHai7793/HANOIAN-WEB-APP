@@ -1,6 +1,7 @@
 import { Component, input, output, signal } from '@angular/core';
 import { REPORT_REASONS, ReportReason } from '../../core/models/dating.model';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { useOverlay } from '../../shared/ui/overlay';
 
 export interface ReportInput {
   reason: ReportReason;
@@ -13,8 +14,8 @@ export interface ReportInput {
   selector: 'app-report-dialog',
   imports: [IconComponent],
   template: `
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" (click)="cancel.emit()">
-      <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl" (click)="$event.stopPropagation()">
+    <div class="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 sm:items-center sm:p-4" (click)="cancel.emit()">
+      <div class="max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-t-2xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl sm:rounded-2xl" (click)="$event.stopPropagation()">
         <h2 class="flex items-center gap-2 text-lg font-bold text-slate-900"><span class="text-rose-600"><app-icon name="flag" [size]="20" /></span>Báo cáo {{ name() }}</h2>
         <p class="mt-1 text-xs text-slate-500">Báo cáo được gửi tới quản trị viên. Người kia không biết ai báo cáo.</p>
         <label class="mb-1 mt-4 block text-sm font-medium text-slate-700">Lý do</label>
@@ -57,6 +58,10 @@ export class ReportDialogComponent {
   readonly name = input.required<string>();
   readonly send = output<ReportInput>();
   readonly cancel = output<void>();
+
+  constructor() {
+    useOverlay(() => this.cancel.emit());
+  }
 
   protected readonly reasons = REPORT_REASONS;
   protected readonly reason = signal<ReportReason>('fake_profile');

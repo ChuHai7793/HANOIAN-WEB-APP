@@ -1,6 +1,6 @@
 import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { photosOf } from '../../core/models/place.model';
+import { photosOf, thumbOf } from '../../core/models/place.model';
 import { Vibe, vibeMeta } from '../../core/models/vibe.model';
 import { AuthService } from '../../core/auth/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -131,7 +131,7 @@ interface Pick {
                 <a [routerLink]="p.link" class="flex items-center gap-3 rounded-xl border border-brand-100 bg-white p-3 hover:border-brand-300">
                   <div class="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-brand-50">
                     @if (p.image) {
-                      <img [src]="p.image" alt="" class="h-full w-full object-cover" loading="lazy" />
+                      <img [src]="thumbOf(p.image)" (error)="$any($event.target).src = p.image" alt="" class="h-full w-full object-cover" loading="lazy" />
                     } @else {
                       <div class="flex h-full items-center justify-center text-brand-400"><app-icon [name]="meta(r).icon" [size]="20" /></div>
                     }
@@ -190,6 +190,7 @@ interface Pick {
   `,
 })
 export class QuizPage implements OnInit {
+  protected readonly thumbOf = thumbOf;
   private readonly dateVibe = inject(DateVibeService);
   private readonly catalog = inject(CatalogService);
   private readonly spots = inject(SpotService);

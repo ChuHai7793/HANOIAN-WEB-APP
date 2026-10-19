@@ -86,10 +86,15 @@ public class UploadService {
     return storageKey.replaceFirst("\\.webp$", "-320.webp");
   }
 
-  /** Mọi file công khai của một upload (ảnh + thumbnail), dùng khi xoá. Chưa xử lý xong thì rỗng. */
+  /** Bản 800px cho thẻ: {@code .../abc.webp} → {@code .../abc-800.webp} (frontend tự suy ra từ URL, không lưu DB). */
+  static String cardKeyOf(String storageKey) {
+    return storageKey.replaceFirst("\\.webp$", "-800.webp");
+  }
+
+  /** Mọi file công khai của một upload (ảnh + hai bản nhỏ), dùng khi xoá. Chưa xử lý xong thì rỗng. */
   static List<String> filesOf(Upload upload) {
     if (upload.getStorageKey() == null) return List.of();
-    return List.of(upload.getStorageKey(), thumbKeyOf(upload.getStorageKey()));
+    return List.of(upload.getStorageKey(), thumbKeyOf(upload.getStorageKey()), cardKeyOf(upload.getStorageKey()));
   }
 
   /** Tên file trên storage công khai theo loại ảnh và tên gợi ý của upload (xem {@link ImageKeys}). */

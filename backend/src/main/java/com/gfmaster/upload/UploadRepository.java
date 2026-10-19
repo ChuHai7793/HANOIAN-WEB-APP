@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -37,6 +38,10 @@ public interface UploadRepository extends JpaRepository<Upload, UUID> {
           """,
       nativeQuery = true)
   List<Upload> findOrphans(Instant before, int limit);
+
+  /** Upload đã có ảnh công khai, cũ trước; dùng để sinh bù bản 800px cho ảnh tải lên trước khi có bản này. */
+  @Query("select u from Upload u where u.storageKey is not null and u.status = com.gfmaster.upload.UploadStatus.READY order by u.createdAt")
+  List<Upload> findReady(Pageable page);
 
   /** Upload thẳng bỏ dở: chưa gửi ảnh, kẹt khi xử lý, hoặc ảnh hỏng. Chưa có file công khai nào. */
   @Query(

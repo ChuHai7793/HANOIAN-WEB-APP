@@ -68,7 +68,7 @@ function slugify(value: string): string {
           <label class="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
             Mô tả ngắn <span class="font-normal text-slate-400">(hiện dưới tiêu đề trên Google, ~150 ký tự)</span>
             <textarea class="rounded-lg border border-slate-300 px-3 py-2 text-sm" rows="2" maxlength="300" [value]="excerpt()" (input)="excerpt.set($any($event.target).value)"></textarea>
-            <span class="text-right text-[11px] text-slate-400">{{ excerpt().length }}/300</span>
+            <span class="text-right text-xs text-slate-400">{{ excerpt().length }}/300</span>
           </label>
           <app-image-picker label="Ảnh bìa" [value]="coverUrl()" (valueChange)="coverUrl.set($event)" [maxSize]="1600" purpose="article" [nameHint]="title()" />
 

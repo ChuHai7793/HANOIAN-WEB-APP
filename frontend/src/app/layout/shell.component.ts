@@ -1,5 +1,6 @@
-import { Component, computed, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { isPlatformBrowser } from '@angular/common';
+import { Component, computed, DOCUMENT, effect, ElementRef, HostListener, inject, PLATFORM_ID, signal, viewChild } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { PlaceService } from '../core/services/place.service';
 import { GirlfriendService } from '../core/services/girlfriend.service';
 import { MatchInboxService } from '../core/services/match-inbox.service';
@@ -10,6 +11,7 @@ import { ConfirmDialogComponent } from '../shared/ui/confirm-dialog.component';
 import { IconComponent, IconName } from '../shared/ui/icon.component';
 import { SavedSpotService } from '../core/services/saved-spot.service';
 import { DateVibeService } from '../core/services/date-vibe.service';
+import { OverlayHandle } from '../shared/ui/overlay';
 
 interface NavSection {
   /** Rỗng: không có tiêu đề nhóm */
@@ -23,6 +25,16 @@ interface NavItem {
   icon: IconName;
   badge?: () => number;
   /** Số cần chú ý (tin chưa đọc): nền đỏ, ẩn khi bằng 0 */
+  alert?: () => number;
+}
+
+/** Thanh tab dưới của điện thoại: 4 mục hay dùng nhất, mục cuối mở menu đầy đủ */
+interface TabItem {
+  path: string;
+  label: string;
+  icon: IconName;
+  /** Icon tô đặc khi đang ở trang đó */
+  fillable?: boolean;
   alert?: () => number;
 }
 
@@ -41,10 +53,10 @@ function readCollapsed(): boolean {
   imports: [RouterOutlet, RouterLink, RouterLinkActive, LegacyImportDialogComponent, IconComponent, ConfirmDialogComponent],
   template: `
     <!-- data-collapsed: thanh bên thu gọn (chỉ logo + icon), chỉ áp dụng màn rộng (lg:); điện thoại vẫn là menu trượt -->
-    <div class="group/shell flex min-h-screen" [attr.data-collapsed]="collapsed() ? '' : null">
+    <div class="group/shell flex min-h-dvh" [attr.data-collapsed]="collapsed() ? '' : null">
       <!-- Sidebar -->
       <aside
-        class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-[width,transform] duration-200 lg:translate-x-0 lg:group-data-collapsed/shell:w-[72px]"
+        class="fixed inset-y-0 left-0 z-40 flex w-64 max-w-[85vw] flex-col border-r border-slate-200 bg-white transition-[width,transform] duration-200 lg:translate-x-0 lg:group-data-collapsed/shell:w-[72px]"
         [class.-translate-x-full]="!menuOpen()"
       >
         <!-- Nút tròn nằm đè lên mép phải thanh bên, ngang logo: thu gọn / mở rộng (chỉ màn rộng) -->
@@ -64,13 +76,22 @@ function readCollapsed(): boolean {
             <span class="text-xl font-extrabold leading-none tracking-wide text-slate-900">HANOI<span class="text-brand-600">VIBE</span></span>
             <span class="text-xs text-slate-500">Hẹn ở đâu cũng đẹp</span>
           </div>
+          <!-- Điện thoại: nút đóng menu trượt -->
+          <button
+            type="button"
+            class="-mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 lg:hidden"
+            aria-label="Đóng menu"
+            (click)="menuOpen.set(false)"
+          >
+            <app-icon name="close" [size]="22" />
+          </button>
         </div>
 
         <!-- Menu dài hơn màn hình thì cuộn trong phần này, không chui xuống dưới khối tài khoản -->
-        <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-4 py-4 lg:group-data-collapsed/shell:px-3" aria-label="Điều hướng chính">
+        <nav class="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-4 lg:group-data-collapsed/shell:px-3" aria-label="Điều hướng chính">
           @for (section of sections(); track section.title) {
             @if (section.title) {
-              <p class="px-3 pb-1.5 pt-5 text-[11px] font-bold uppercase tracking-wider text-slate-500 lg:group-data-collapsed/shell:hidden">
+              <p class="px-3 pb-1.5 pt-5 text-xs font-bold uppercase tracking-wider text-slate-500 lg:group-data-collapsed/shell:hidden">
                 {{ section.title }}
               </p>
               <!-- Thu gọn: thay tiêu đề nhóm bằng một vạch ngăn -->
@@ -88,7 +109,7 @@ function readCollapsed(): boolean {
                 <app-icon [name]="item.icon" />
                 <span class="flex-1 truncate lg:group-data-collapsed/shell:hidden">{{ item.label }}</span>
                 @if (item.alert && item.alert() > 0) {
-                  <span class="rounded-full bg-[#C2335F] px-2 py-0.5 text-[11px] font-bold text-white lg:group-data-collapsed/shell:hidden">{{ item.alert() }} mới</span>
+                  <span class="rounded-full bg-[#C2335F] px-2 py-0.5 text-xs font-bold text-white lg:group-data-collapsed/shell:hidden">{{ item.alert() }} mới</span>
                   <!-- Thu gọn: chấm đỏ ở góc icon -->
                   <span class="absolute right-2.5 top-2 hidden h-2.5 w-2.5 rounded-full bg-[#C2335F] ring-2 ring-white lg:group-data-collapsed/shell:block"></span>
                 }
@@ -102,12 +123,15 @@ function readCollapsed(): boolean {
           }
         </nav>
 
-        <div #account class="relative mx-4 shrink-0 border-t border-slate-200 bg-white px-1 py-3 lg:group-data-collapsed/shell:mx-3 lg:group-data-collapsed/shell:px-0">
+        <div
+          #account
+          class="relative mx-4 shrink-0 border-t border-slate-200 bg-white px-1 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:group-data-collapsed/shell:mx-3 lg:group-data-collapsed/shell:px-0"
+        >
           @if (auth.user(); as user) {
             <!-- Một dòng tài khoản; bấm mở menu (Hồ sơ, Đăng xuất, Đăng xuất mọi thiết bị) -->
             <button
               type="button"
-              class="flex w-full items-center gap-3 rounded-xl p-1.5 text-left transition hover:bg-slate-50 lg:group-data-collapsed/shell:justify-center"
+              class="flex min-h-12 w-full items-center gap-3 rounded-xl p-1.5 text-left transition hover:bg-slate-50 lg:group-data-collapsed/shell:justify-center"
               [class.bg-slate-50]="accountOpen()"
               [attr.aria-expanded]="accountOpen()"
               aria-haspopup="menu"
@@ -125,9 +149,9 @@ function readCollapsed(): boolean {
                 <span class="flex items-center gap-1.5">
                   <span class="truncate text-sm font-semibold text-slate-900">{{ user.displayName }}</span>
                   @if (user.role === 'ADMIN') {
-                    <span class="shrink-0 rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700">Admin</span>
+                    <span class="shrink-0 rounded bg-brand-100 px-1.5 py-0.5 text-xs font-semibold text-brand-700">Admin</span>
                   } @else {
-                    <span class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">Chỉ xem</span>
+                    <span class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-500">Chỉ xem</span>
                   }
                 </span>
                 <span class="block truncate text-xs text-slate-500">{{ user.username ? '@' + user.username : user.email }}</span>
@@ -145,7 +169,7 @@ function readCollapsed(): boolean {
                 <a
                   routerLink="/profile"
                   role="menuitem"
-                  class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                  class="flex min-h-11 items-center gap-3 px-4 text-sm text-slate-700 transition hover:bg-slate-50"
                   (click)="accountOpen.set(false); menuOpen.set(false)"
                 >
                   <app-icon name="user" [size]="18" />Hồ sơ của tôi
@@ -153,7 +177,7 @@ function readCollapsed(): boolean {
                 <button
                   type="button"
                   role="menuitem"
-                  class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                  class="flex min-h-11 w-full items-center gap-3 px-4 text-left text-sm text-slate-700 transition hover:bg-slate-50"
                   (click)="accountOpen.set(false); auth.logout()"
                 >
                   <app-icon name="logout" [size]="18" />Đăng xuất
@@ -162,7 +186,7 @@ function readCollapsed(): boolean {
                 <button
                   type="button"
                   role="menuitem"
-                  class="flex w-full items-center gap-3 px-4 py-2 text-left text-[13px] text-rose-600 transition hover:bg-rose-50"
+                  class="flex min-h-11 w-full items-center gap-3 px-4 text-left text-[13px] text-rose-600 transition hover:bg-rose-50"
                   (click)="accountOpen.set(false); confirmLogoutAll.set(true)"
                 >
                   <app-icon name="logout" [size]="16" />Đăng xuất mọi thiết bị
@@ -184,14 +208,14 @@ function readCollapsed(): boolean {
             <div class="flex gap-2 lg:group-data-collapsed/shell:hidden">
               <a
                 routerLink="/register"
-                class="flex min-h-10 flex-1 items-center justify-center rounded-[10px] bg-brand-600 px-3 text-[13px] font-semibold text-white transition hover:bg-brand-700"
+                class="flex min-h-11 flex-1 items-center justify-center rounded-[10px] bg-brand-600 px-3 text-[13px] font-semibold text-white transition hover:bg-brand-700"
                 (click)="menuOpen.set(false)"
               >
                 Đăng ký
               </a>
               <a
                 routerLink="/login"
-                class="flex min-h-10 flex-1 items-center justify-center rounded-[10px] border border-brand-200 bg-white px-3 text-[13px] font-semibold text-slate-700 transition hover:bg-brand-50"
+                class="flex min-h-11 flex-1 items-center justify-center rounded-[10px] border border-brand-200 bg-white px-3 text-[13px] font-semibold text-slate-700 transition hover:bg-brand-50"
                 (click)="menuOpen.set(false)"
               >
                 Đăng nhập
@@ -218,21 +242,24 @@ function readCollapsed(): boolean {
         ></div>
       }
 
-      <!-- Nội dung: sidebar đã fixed nên chừa lề trái bằng đúng bề rộng của nó -->
-      <div class="flex min-w-0 flex-1 flex-col transition-[margin] duration-200 lg:ml-64 lg:group-data-collapsed/shell:ml-[72px]">
+      <!-- Nội dung: sidebar đã fixed nên chừa lề trái bằng đúng bề rộng của nó; điện thoại chừa chỗ cho thanh tab dưới -->
+      <div class="flex min-w-0 flex-1 flex-col pb-[var(--app-tabbar-h)] transition-[margin] duration-200 lg:ml-64 lg:group-data-collapsed/shell:ml-[72px]">
         <header
-          class="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white px-4 lg:hidden"
+          class="sticky top-0 z-30 flex h-[var(--app-header-h)] items-center gap-2 border-b border-slate-200 bg-white/95 pl-1.5 pr-4 backdrop-blur lg:hidden"
         >
           <button
             type="button"
-            class="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+            class="flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
             (click)="menuOpen.set(!menuOpen())"
             aria-label="Mở menu"
+            [attr.aria-expanded]="menuOpen()"
           >
             <app-icon name="menu" [size]="24" />
           </button>
-          <img src="logo.png" alt="" class="h-8 w-auto" />
-          <span class="font-extrabold tracking-wide text-slate-900">HANOI<span class="text-brand-600">VIBE</span></span>
+          <a routerLink="/" class="flex items-center gap-2" aria-label="Trang chủ HANOIVIBE">
+            <img src="logo.png" alt="" class="h-7 w-auto" />
+            <span class="font-extrabold tracking-wide text-slate-900">HANOI<span class="text-brand-600">VIBE</span></span>
+          </a>
         </header>
 
         <!-- Không đặt padding ở đây: từng trang tự lo, để vùng sticky bám sát mép trên -->
@@ -247,7 +274,7 @@ function readCollapsed(): boolean {
               </p>
               <button
                 type="button"
-                class="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-700"
+                class="min-h-10 rounded-lg bg-amber-600 px-3 text-xs font-semibold text-white transition hover:bg-amber-700"
                 (click)="bootstrap.loadAll()"
               >
                 Thử lại
@@ -261,6 +288,47 @@ function readCollapsed(): boolean {
         <!-- Hỏi đưa dữ liệu localStorage của bản cũ lên tài khoản (chỉ hiện khi có) -->
         <app-legacy-import-dialog />
       </div>
+
+      <!-- Thanh tab dưới (điện thoại, máy tính bảng dọc): 4 mục chính trong tầm ngón cái + "Thêm" mở menu đầy đủ -->
+      <nav
+        class="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        aria-label="Điều hướng nhanh"
+      >
+        <ul class="flex h-14 items-stretch">
+          @for (t of tabs; track t.path) {
+            <li class="min-w-0 flex-1">
+              <a
+                [routerLink]="t.path"
+                routerLinkActive="text-brand-700"
+                #rla="routerLinkActive"
+                class="relative flex h-full flex-col items-center justify-center gap-0.5 text-xs font-medium text-slate-500"
+                (click)="menuOpen.set(false)"
+              >
+                <span class="relative">
+                  <app-icon [name]="t.icon" [size]="22" [stroke]="rla.isActive ? 2.4 : 2" [filled]="!!t.fillable && rla.isActive" />
+                  @if (t.alert && t.alert() > 0) {
+                    <span class="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#C2335F] px-1 text-xs font-bold leading-none text-white">{{ t.alert() }}</span>
+                  }
+                </span>
+                <span class="truncate" [class.font-semibold]="rla.isActive">{{ t.label }}</span>
+              </a>
+            </li>
+          }
+          <li class="min-w-0 flex-1">
+            <button
+              type="button"
+              class="flex h-full w-full flex-col items-center justify-center gap-0.5 text-xs font-medium text-slate-500"
+              [class.text-brand-700]="menuOpen()"
+              aria-label="Mở menu đầy đủ"
+              [attr.aria-expanded]="menuOpen()"
+              (click)="menuOpen.set(!menuOpen())"
+            >
+              <app-icon name="menu" [size]="22" />
+              <span>Thêm</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
     </div>
   `,
 })
@@ -279,6 +347,18 @@ export class ShellComponent {
   protected readonly accountOpen = signal(false);
   protected readonly confirmLogoutAll = signal(false);
   private readonly account = viewChild<ElementRef<HTMLElement>>('account');
+
+  /** Menu trượt trên điện thoại: khoá cuộn trang phía sau, nút Back đóng menu */
+  private readonly drawer = isPlatformBrowser(inject(PLATFORM_ID))
+    ? new OverlayHandle(inject(DOCUMENT), () => this.menuOpen.set(false), inject(Router))
+    : null;
+
+  constructor() {
+    effect(() => {
+      if (this.menuOpen()) this.drawer?.open();
+      else this.drawer?.close();
+    });
+  }
 
   /** Bấm ra ngoài khối tài khoản hoặc nhấn Esc thì đóng menu tài khoản */
   @HostListener('document:click', ['$event'])
@@ -307,6 +387,14 @@ export class ShellComponent {
   protected initial(name: string): string {
     return name.trim().charAt(0).toUpperCase() || '?';
   }
+
+  /** Thanh tab dưới của điện thoại */
+  protected readonly tabs: TabItem[] = [
+    { path: '/explore', label: 'Khám phá', icon: 'compass' },
+    { path: '/spots', label: 'Chỗ chơi', icon: 'gate' },
+    { path: '/places', label: 'My place', icon: 'bookmark', fillable: true },
+    { path: '/dating', label: 'Hẹn hò', icon: 'heart', fillable: true, alert: () => this.inbox.unread() },
+  ];
 
   /**
    * Menu: Khám phá quán, Tìm chỗ chơi (danh mục chung) và My place (quán đã lưu của chính người

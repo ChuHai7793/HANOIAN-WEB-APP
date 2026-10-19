@@ -18,6 +18,7 @@ import {
   stopIcon,
   StopWarning,
 } from '../../core/models/plan.model';
+import { thumbOf } from '../../core/models/place.model';
 import { Vibe, vibeMeta, VIBES } from '../../core/models/vibe.model';
 import { CatalogService } from '../../core/services/catalog.service';
 import { DataBootstrapService } from '../../core/services/data-bootstrap.service';
@@ -55,7 +56,7 @@ const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240];
         @if (!p.mine) {
           <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-brand-50 px-4 py-3 text-sm text-brand-800">
             <span class="flex items-center gap-2"><app-icon name="heart" [size]="16" />{{ p.ownerName }} rủ bạn đi theo plan này.</span>
-            <button type="button" class="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700" (click)="copy()">Lưu về plan của tôi</button>
+            <button type="button" class="min-h-9 rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-700" (click)="copy()">Lưu về plan của tôi</button>
           </div>
         }
 
@@ -142,13 +143,13 @@ const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240];
                 <div class="flex w-[70px] shrink-0 flex-col items-center pt-3 text-center">
                   <span class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">{{ i + 1 }}</span>
                   <span class="mt-1 text-sm font-semibold text-slate-900">{{ s.arrival }}</span>
-                  <span class="text-[11px] text-slate-400">đến {{ s.departure }}</span>
+                  <span class="text-xs text-slate-400">đến {{ s.departure }}</span>
                 </div>
                 <div class="min-w-0 flex-1 rounded-2xl border border-brand-100 bg-white p-3 sm:p-4">
                   <div class="flex gap-3">
                     <div class="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-brand-50 sm:h-20 sm:w-20">
                       @if (s.imageUrl) {
-                        <img [src]="s.imageUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
+                        <img [src]="thumbOf(s.imageUrl)" (error)="$any($event.target).src = s.imageUrl" alt="" class="h-full w-full object-cover" loading="lazy" />
                       } @else {
                         <div class="flex h-full items-center justify-center text-brand-400"><app-icon [name]="icon(s.category)" [size]="24" /></div>
                       }
@@ -160,7 +161,7 @@ const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240];
                       @if (s.warnings.length) {
                         <div class="mt-1.5 flex flex-wrap gap-1.5">
                           @for (w of s.warnings; track w) {
-                            <span class="flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium" [class]="warningClass(w)">
+                            <span class="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium" [class]="warningClass(w)">
                               <app-icon [name]="warningMeta(w).tone === 'info' ? 'info' : 'alert'" [size]="12" />{{ warningMeta(w).label }}
                             </span>
                           }
@@ -187,16 +188,16 @@ const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240];
                         (change)="setNote(s, $any($event.target).value)"
                       />
                       <div class="ml-auto flex items-center gap-1">
-                        <button type="button" class="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 disabled:opacity-30" [disabled]="i === 0" (click)="move(i, -1)" aria-label="Lên trước">
+                        <button type="button" class="flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-30" [disabled]="i === 0" (click)="move(i, -1)" aria-label="Lên trước">
                           <span class="-rotate-90"><app-icon name="arrowRight" [size]="15" /></span>
                         </button>
-                        <button type="button" class="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 disabled:opacity-30" [disabled]="last" (click)="move(i, 1)" aria-label="Xuống sau">
+                        <button type="button" class="flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 disabled:opacity-30" [disabled]="last" (click)="move(i, 1)" aria-label="Xuống sau">
                           <span class="rotate-90"><app-icon name="arrowRight" [size]="15" /></span>
                         </button>
-                        <button type="button" class="flex items-center gap-1 rounded-md px-2 py-1.5 font-medium text-brand-700 hover:bg-brand-50" (click)="swap(s)" title="Đổi sang chỗ khác cùng loại">
+                        <button type="button" class="flex min-h-9 items-center gap-1 rounded-md px-2 font-medium text-brand-700 hover:bg-brand-50" (click)="swap(s)" title="Đổi sang chỗ khác cùng loại">
                           <app-icon name="refresh" [size]="14" />Đổi
                         </button>
-                        <button type="button" class="rounded-md p-1.5 text-rose-500 hover:bg-rose-50" (click)="removeStop(s)" aria-label="Bỏ điểm này">
+                        <button type="button" class="flex h-9 w-9 items-center justify-center rounded-md text-rose-500 hover:bg-rose-50" (click)="removeStop(s)" aria-label="Bỏ điểm này">
                           <app-icon name="close" [size]="15" />
                         </button>
                       </div>
@@ -210,7 +211,7 @@ const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240];
                       <div class="flex items-center gap-1">
                         <span class="mr-1 text-xs font-medium text-slate-600">Chấm điểm</span>
                         @for (n of [1, 2, 3, 4, 5]; track n) {
-                          <button type="button" class="text-[#E29A2D]" (click)="rate(s, n)" [attr.aria-label]="n + ' sao'">
+                          <button type="button" class="flex h-9 w-8 items-center justify-center text-[#E29A2D]" (click)="rate(s, n)" [attr.aria-label]="n + ' sao'">
                             <app-icon name="star" [size]="18" [filled]="(s.rating ?? 0) >= n" />
                           </button>
                         }
@@ -248,7 +249,7 @@ const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240];
                     <option [value]="g.id">{{ g.name }}</option>
                   }
                 </select>
-                <button type="button" class="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50" [disabled]="!girlfriendId() || busy()" (click)="saveToGirlfriend()">Lưu</button>
+                <button type="button" class="min-h-9 rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50" [disabled]="!girlfriendId() || busy()" (click)="saveToGirlfriend()">Lưu</button>
               </div>
             }
           </section>
@@ -280,13 +281,13 @@ const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240];
                   <span class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-500"><app-icon name="user" [size]="18" /></span>
                 }
                 <span class="flex-1 text-sm font-semibold text-slate-900">{{ m.user.displayName }}, {{ m.user.age }}</span>
-                <button type="button" class="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50" [disabled]="busy()" (click)="share(m.id, m.user.displayName)">Gửi</button>
+                <button type="button" class="min-h-9 rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50" [disabled]="busy()" (click)="share(m.id, m.user.displayName)">Gửi</button>
               </li>
             }
           </ul>
         }
         <div modalFooter>
-          <button type="button" class="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600" (click)="shareOpen.set(false)">Đóng</button>
+          <button type="button" class="min-h-10 rounded-lg border border-slate-200 px-4 text-sm text-slate-600" (click)="shareOpen.set(false)">Đóng</button>
         </div>
       </app-modal>
     }
@@ -385,6 +386,7 @@ const DURATIONS = [30, 45, 60, 75, 90, 120, 150, 180, 240];
   `,
 })
 export class PlanDetailPage implements OnInit {
+  protected readonly thumbOf = thumbOf;
   protected readonly linkOpen = signal(false);
   private readonly api = inject(PlanService);
   private readonly catalog = inject(CatalogService);

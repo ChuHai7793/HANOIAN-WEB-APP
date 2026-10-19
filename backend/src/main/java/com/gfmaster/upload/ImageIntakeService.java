@@ -56,9 +56,11 @@ public class ImageIntakeService {
 
     ProcessedImage image;
     ProcessedImage thumb;
+    ProcessedImage card;
     try {
       image = processor.process(raw);
       thumb = processor.thumbnail(image.bytes());
+      card = processor.card(image.bytes());
     } catch (ApiException e) {
       // Không phải ảnh JPEG/PNG/WebP thật: không retry, báo FAILED cho trình duyệt
       log.info("Upload {} rejected: {}", uploadId, e.getMessage());
@@ -74,6 +76,9 @@ public class ImageIntakeService {
     uploadService.deletePublicIfRolledBack(key);
     upload.setThumbUrl(storage.put(thumbKey, thumb.bytes(), UploadService.WEBP));
     uploadService.deletePublicIfRolledBack(thumbKey);
+    String cardKey = UploadService.cardKeyOf(key);
+    storage.put(cardKey, card.bytes(), UploadService.WEBP);
+    uploadService.deletePublicIfRolledBack(cardKey);
 
     upload.setStorageKey(key);
     upload.setMimeType(UploadService.WEBP);

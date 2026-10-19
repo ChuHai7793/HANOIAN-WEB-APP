@@ -129,7 +129,7 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
           <div class="sm:col-span-2">
             <label class="mb-1.5 block text-sm font-medium text-slate-700">Ghi chú giờ, giá</label>
             <textarea formControlName="hoursNote" rows="2" maxlength="1000" [class]="input" placeholder="VD: Phố đi bộ chỉ mở tối thứ 6 đến chủ nhật; vé người lớn 50k, trẻ em 25k"></textarea>
-            <p class="mt-1 text-right text-[11px] text-slate-400">{{ form.controls.hoursNote.value.length }}/1000</p>
+            <p class="mt-1 text-right text-xs text-slate-400">{{ form.controls.hoursNote.value.length }}/1000</p>
           </div>
 
           <div>

@@ -30,7 +30,8 @@ type Tab = 'swipe' | 'matches';
   selector: 'app-dating-page',
   imports: [DatePipe, RouterLink, SwipeCardComponent, ReportDialogComponent, ConfirmDialogComponent, IconComponent],
   template: `
-    <div class="relative flex flex-col gap-4 px-4 pt-4 sm:px-6 lg:px-8 lg:pt-5" [class]="fitScreen() ? 'h-[calc(100dvh-4rem)] pb-2.5 lg:h-dvh' : 'pb-8'">
+    <!-- Quẹt thẻ: chiếm trọn phần màn hình còn lại (trừ header và thanh tab dưới trên điện thoại) -->
+    <div class="relative flex flex-col gap-4 px-4 pt-4 sm:px-6 lg:px-8 lg:pt-5" [class]="fitScreen() ? 'h-[calc(100dvh-var(--app-header-h)-var(--app-tabbar-h))] pb-2.5' : 'pb-8'">
       <header class="flex shrink-0 flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-1.5">
           <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">Tìm đối tượng</h1>
@@ -178,7 +179,7 @@ type Tab = 'swipe' | 'matches';
                   <path d="M12 2l3 6.3 6.9.9-5 4.8 1.2 6.8L12 17.6 5.9 20.8l1.2-6.8-5-4.8 6.9-.9z" />
                 </svg>
                 @if (superLeft() > 0) {
-                  <span class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#2F80D9] px-1 text-[11px] font-bold text-white">
+                  <span class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#2F80D9] px-1 text-xs font-bold text-white">
                     {{ superLeft() }}
                   </span>
                 }
@@ -197,7 +198,7 @@ type Tab = 'swipe' | 'matches';
             @if (deck()[0]; as top) {
               <button
                 type="button"
-                class="flex min-h-8 shrink-0 items-center gap-1.5 self-center px-3 text-xs text-slate-500 hover:text-rose-600"
+                class="flex min-h-9 shrink-0 items-center gap-1.5 self-center px-3 text-xs text-slate-500 hover:text-rose-600"
                 (click)="reporting.set({ userId: top.userId, name: top.displayName })"
               >
                 <app-icon name="flag" [size]="14" />
@@ -207,8 +208,8 @@ type Tab = 'swipe' | 'matches';
             </div>
           </div>
 
-          <!-- Panel bên -->
-          <aside class="flex w-full max-w-[320px] shrink-0 flex-col gap-4 lg:-mr-[22px] lg:w-[320px] lg:self-start">
+          <!-- Panel bên: chỉ màn rộng (điện thoại xem match ở tab Match, gợi ý điểm hẹn trong thẻ "Cùng lưu") -->
+          <aside class="hidden w-full max-w-[320px] shrink-0 flex-col gap-4 lg:-mr-[22px] lg:flex lg:w-[320px] lg:self-start">
             <section class="flex flex-col gap-3 rounded-[20px] border border-slate-200 bg-white p-4">
               <div class="flex items-center justify-between">
                 <h3 class="text-base font-bold text-slate-900">Match gần đây</h3>
@@ -322,10 +323,10 @@ type Tab = 'swipe' | 'matches';
                   >
                     <app-icon name="chat" [size]="15" />Nhắn tin
                   </a>
-                  <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                    <button type="button" class="text-slate-500 hover:text-slate-800" (click)="pending.set({ kind: 'unmatch', match: m })">Bỏ match</button>
-                    <button type="button" class="text-slate-500 hover:text-slate-800" (click)="pending.set({ kind: 'block', match: m })">Chặn</button>
-                    <button type="button" class="text-slate-500 hover:text-rose-600" (click)="reporting.set({ userId: m.user.userId, name: m.user.displayName })">Báo cáo</button>
+                  <div class="-mx-1 flex flex-wrap gap-x-2 text-xs">
+                    <button type="button" class="min-h-9 px-1 text-slate-500 hover:text-slate-800" (click)="pending.set({ kind: 'unmatch', match: m })">Bỏ match</button>
+                    <button type="button" class="min-h-9 px-1 text-slate-500 hover:text-slate-800" (click)="pending.set({ kind: 'block', match: m })">Chặn</button>
+                    <button type="button" class="min-h-9 px-1 text-slate-500 hover:text-rose-600" (click)="reporting.set({ userId: m.user.userId, name: m.user.displayName })">Báo cáo</button>
                   </div>
                 </div>
               </article>

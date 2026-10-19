@@ -1,11 +1,12 @@
 import { Component, HostListener, input, output } from '@angular/core';
 import { ActiveFilter, ChoiceOption } from '../../core/models/filters.model';
 import { IconComponent, IconName } from './icon.component';
+import { useOverlay } from './overlay';
 
 /**
  * Bảng "Bộ lọc" chi tiết (Khám phá quán, Tìm chỗ chơi, My place). Máy tính: trượt từ bên phải; điện thoại:
  * trượt từ dưới lên. Bộ lọc áp dụng ngay khi bấm (danh sách phía sau tự tải lại); nút cuối chỉ đóng bảng và
- * cho biết số kết quả hiện có.
+ * cho biết số kết quả hiện có. Khoá cuộn trang phía sau; nút Back của điện thoại và Esc đóng bảng.
  */
 @Component({
   selector: 'app-filter-sheet',
@@ -17,19 +18,19 @@ import { IconComponent, IconName } from './icon.component';
         role="dialog"
         aria-modal="true"
         [attr.aria-label]="title()"
-        class="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-2xl bg-white shadow-2xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[420px] sm:rounded-none sm:rounded-l-2xl"
+        class="absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col rounded-t-2xl bg-white shadow-2xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[420px] sm:rounded-none sm:rounded-l-2xl"
       >
-        <header class="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-4">
+        <header class="flex shrink-0 items-center justify-between border-b border-slate-100 py-2.5 pl-5 pr-2 sm:py-3">
           <h2 class="flex items-center gap-2 text-lg font-bold text-slate-900"><app-icon name="filter" [size]="18" />{{ title() }}</h2>
-          <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Đóng" (click)="closed.emit()">
+          <button type="button" class="flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Đóng" (click)="closed.emit()">
             <app-icon name="close" [size]="20" />
           </button>
         </header>
-        <div class="scroll-thin flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-5 py-5">
+        <div class="scroll-thin flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain px-5 py-5">
           <ng-content />
         </div>
-        <footer class="flex shrink-0 items-center gap-3 border-t border-slate-100 px-5 py-3">
-          <button type="button" class="text-sm font-medium text-slate-500 hover:text-slate-800 disabled:opacity-40" [disabled]="!activeCount()" (click)="cleared.emit()">
+        <footer class="flex shrink-0 items-center gap-3 border-t border-slate-100 px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <button type="button" class="min-h-11 rounded-xl px-2 text-sm font-medium text-slate-500 hover:text-slate-800 disabled:opacity-40" [disabled]="!activeCount()" (click)="cleared.emit()">
             Xoá hết{{ activeCount() ? ' (' + activeCount() + ')' : '' }}
           </button>
           <button type="button" class="ml-auto min-h-11 rounded-xl bg-brand-600 px-6 text-sm font-semibold text-white hover:bg-brand-700" (click)="closed.emit()">
@@ -47,6 +48,10 @@ export class FilterSheetComponent {
   readonly activeCount = input(0);
   readonly closed = output<void>();
   readonly cleared = output<void>();
+
+  constructor() {
+    useOverlay(() => this.closed.emit());
+  }
 
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
@@ -136,12 +141,12 @@ export class FilterSwitchComponent {
     @if (items().length) {
       <div class="flex flex-wrap items-center gap-2">
         @for (f of items(); track f.key) {
-          <button type="button" class="inline-flex min-h-8 items-center gap-1 rounded-full bg-brand-100 py-1 pl-3 pr-2 text-[13px] font-medium text-brand-800 hover:bg-brand-200" [attr.aria-label]="'Bỏ lọc ' + f.label" (click)="remove.emit(f.key)">
+          <button type="button" class="inline-flex min-h-9 items-center gap-1 rounded-full bg-brand-100 py-1 pl-3 pr-2 text-[13px] font-medium text-brand-800 hover:bg-brand-200" [attr.aria-label]="'Bỏ lọc ' + f.label" (click)="remove.emit(f.key)">
             {{ f.label }}<app-icon name="close" [size]="13" [stroke]="2.4" />
           </button>
         }
         @if (items().length > 1) {
-          <button type="button" class="text-[13px] font-medium text-slate-500 hover:text-slate-800 hover:underline" (click)="clear.emit()">Xoá hết</button>
+          <button type="button" class="min-h-9 px-1 text-[13px] font-medium text-slate-500 hover:text-slate-800 hover:underline" (click)="clear.emit()">Xoá hết</button>
         }
       </div>
     }

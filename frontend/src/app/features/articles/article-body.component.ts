@@ -2,7 +2,7 @@ import { Component, computed, inject, input, OnInit, signal, ViewEncapsulation }
 import { RouterLink } from '@angular/router';
 import { marked } from 'marked';
 import { ArticleBlock, splitArticle } from '../../core/models/article.model';
-import { PLACE_LABELS } from '../../core/models/place.model';
+import { PLACE_LABELS, thumbOf } from '../../core/models/place.model';
 import { ratingText } from '../../core/models/review.model';
 import { spotCategory } from '../../core/models/spot.model';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -26,7 +26,7 @@ interface EmbedCard {
     @if (card(); as c) {
       <a [routerLink]="c.path" class="not-prose my-5 flex gap-4 overflow-hidden rounded-2xl border border-brand-100 bg-white p-3 shadow-sm transition hover:border-brand-300 hover:shadow">
         @if (c.image) {
-          <img [src]="c.image" [alt]="c.name" class="h-28 w-36 shrink-0 rounded-xl object-cover sm:h-32 sm:w-44" loading="lazy" />
+          <img [src]="thumbOf(c.image)" (error)="$any($event.target).src = c.image" [alt]="c.name" class="h-28 w-36 shrink-0 rounded-xl object-cover sm:h-32 sm:w-44" loading="lazy" />
         }
         <span class="flex min-w-0 flex-col justify-center gap-1">
           <span class="text-[12px] font-semibold uppercase tracking-[0.12em] text-brand-600">{{ c.meta }}</span>
@@ -44,6 +44,7 @@ interface EmbedCard {
   `,
 })
 export class VenueEmbedComponent implements OnInit {
+  protected readonly thumbOf = thumbOf;
   private readonly catalog = inject(CatalogService);
   private readonly spots = inject(SpotService);
 

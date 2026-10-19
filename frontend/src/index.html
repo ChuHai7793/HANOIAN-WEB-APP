@@ -4,13 +4,27 @@
     <meta charset="utf-8" />
     <title>HANOIVIBE · Hẹn ở đâu cũng đẹp</title>
     <base href="/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/png" href="logo.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- viewport-fit=cover: dùng được vùng tai thỏ / thanh home (env(safe-area-inset-*)); interactive-widget: bàn phím ảo co trang thay vì che -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#6d4fd6" />
+    <meta name="application-name" content="HANOIVIBE" />
+    <meta name="apple-mobile-web-app-title" content="HANOIVIBE" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <!-- Font tự host (xem styles.scss): nạp trước bản thường và đậm, latin + tiếng Việt; các cỡ khác tải khi cần -->
+    <link rel="preload" href="fonts/bvp-400-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/bvp-400-vietnamese.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/bvp-700-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/bvp-700-vietnamese.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- Ảnh banner của các trang đầu (Khám phá quán, Tìm chỗ chơi, My place): tải ngay từ lúc đọc HTML, không chờ JS -->
     <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
+      rel="preload"
+      as="image"
+      imagesrcset="banner/ho-guom-dem-900.webp 900w, banner/ho-guom-dem.webp 1920w"
+      imagesizes="(min-width: 64rem) calc(100vw - 16rem), 100vw"
+      fetchpriority="high"
     />
   </head>
   <body>

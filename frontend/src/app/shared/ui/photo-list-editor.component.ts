@@ -34,7 +34,7 @@ const PARALLEL_UPLOADS = 3;
             <div class="group relative aspect-square overflow-hidden rounded-lg bg-slate-100" [class.ring-2]="first" [class.ring-brand-500]="first">
               <img [src]="url" alt="" class="h-full w-full object-cover" />
               @if (first) {
-                <span class="absolute left-1 top-1 rounded bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">Bìa</span>
+                <span class="absolute left-1 top-1 rounded bg-brand-600 px-1.5 py-0.5 text-xs font-semibold text-white">Bìa</span>
               }
               <button type="button" class="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white" (click)="remove(i)" aria-label="Bỏ ảnh">
                 <app-icon name="close" [size]="13" />

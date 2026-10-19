@@ -13,12 +13,15 @@ import org.springframework.stereotype.Component;
 /**
  * Chuẩn hoá ảnh upload: chỉ nhận JPEG/PNG/WebP (kiểm tra magic bytes, không tin Content-Type),
  * xoay theo EXIF, thu về cạnh dài tối đa 1200px, xuất WebP. Mã hoá lại nên metadata (GPS...) bị bỏ.
+ * Kèm hai bản nhỏ: 320px (avatar, ảnh trong plan) và 800px (thẻ trong danh sách trên điện thoại), frontend chọn
+ * bằng srcset.
  */
 @Component
 public class ImageProcessor {
 
   static final int MAX_EDGE = 1200;
   static final int THUMB_EDGE = 320;
+  static final int CARD_EDGE = 800;
   private static final WebpWriter WRITER = WebpWriter.DEFAULT.withQ(78);
 
   public record ProcessedImage(byte[] bytes, int width, int height) {}
@@ -40,14 +43,23 @@ public class ImageProcessor {
 
   /** Thumbnail cạnh dài tối đa 320px từ ảnh đã chuẩn hoá (WebP do {@link #process} sinh ra). */
   public ProcessedImage thumbnail(byte[] processed) {
+    return resized(processed, THUMB_EDGE);
+  }
+
+  /** Bản 800px cho thẻ trong danh sách (điện thoại màn hình 2x–3x). */
+  public ProcessedImage card(byte[] processed) {
+    return resized(processed, CARD_EDGE);
+  }
+
+  private ProcessedImage resized(byte[] processed, int edge) {
     try {
       ImmutableImage image = ImmutableImage.loader().fromBytes(processed);
-      if (image.width > THUMB_EDGE || image.height > THUMB_EDGE) {
-        image = image.bound(THUMB_EDGE, THUMB_EDGE);
+      if (image.width > edge || image.height > edge) {
+        image = image.bound(edge, edge);
       }
       return new ProcessedImage(image.bytes(WRITER), image.width, image.height);
     } catch (IOException e) {
-      throw new UncheckedIOException("Không đọc được ảnh để tạo thumbnail", e);
+      throw new UncheckedIOException("Không đọc được ảnh để tạo bản thu nhỏ", e);
     }
   }
 

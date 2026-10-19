@@ -44,7 +44,7 @@ import {
   FilterSwitchComponent,
 } from '../../shared/ui/filter-sheet.component';
 import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
-import { DEFAULT_BANNER, DEFAULT_BANNER_CREDIT, PageBannerComponent } from '../../shared/ui/page-banner.component';
+import { DEFAULT_BANNER, DEFAULT_BANNER_CREDIT, DEFAULT_BANNER_SRCSET, PageBannerComponent } from '../../shared/ui/page-banner.component';
 import { ratingText } from '../../core/models/review.model';
 
 type SortKey = 'rating' | 'name' | 'distance' | 'price';
@@ -91,6 +91,7 @@ interface PlaceRow {
         heading="My place."
         [tagline]="tagline()"
         [image]="bannerImage()"
+        [imageSrcset]="bannerImage() === defaultBanner ? defaultSrcset : null"
         [imagePosition]="bannerImage() === defaultBanner ? '70% 28%' : 'center 35%'"
         [credit]="bannerImage() === defaultBanner ? defaultCredit : null"
       >
@@ -120,7 +121,7 @@ interface PlaceRow {
         <button
           bannerRight
           type="button"
-          class="flex h-8 items-center gap-1 rounded-full bg-white px-2 text-[12px] font-semibold text-brand-700 shadow-md shadow-brand-900/20 transition hover:bg-brand-50 sm:px-3"
+          class="flex h-9 items-center gap-1 rounded-full bg-white px-2 text-[12px] font-semibold text-brand-700 shadow-md shadow-brand-900/20 transition hover:bg-brand-50 sm:px-3"
           aria-label="Autoplan buổi hẹn"
           (click)="autoplanOpen.set(true)"
         >
@@ -129,14 +130,13 @@ interface PlaceRow {
         <a
           bannerRight
           routerLink="/explore"
-          class="flex h-8 items-center gap-1 rounded-full bg-brand-600 px-2 text-[12px] font-semibold text-white shadow-md shadow-brand-900/30 transition hover:bg-brand-700 sm:px-3"
+          class="flex h-9 items-center gap-1 rounded-full bg-brand-600 px-2 text-[12px] font-semibold text-white shadow-md shadow-brand-900/30 transition hover:bg-brand-700 sm:px-3"
           aria-label="Khám phá thêm"
         >
           <app-icon name="compass" [size]="14" /><span class="max-sm:hidden">Khám phá thêm</span>
         </a>
 
-        <div class="flex flex-col gap-2">
-          <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <label class="flex h-11 min-w-0 flex-[1_1_100%] items-center gap-2.5 rounded-full bg-white px-4 text-slate-500 shadow-lg shadow-brand-900/20 sm:max-w-[420px] sm:flex-[1_1_280px]">
               <app-icon name="search" [size]="18" />
               <span class="sr-only">Tìm trong My place</span>
@@ -148,12 +148,9 @@ interface PlaceRow {
                 placeholder="Tìm theo tên, địa chỉ, ghi chú…"
               />
             </label>
-            <!-- Bộ lọc chi tiết + sắp xếp: bảng "Bộ lọc" -->
-            <div class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:flex-wrap">
+            <!-- Điện thoại: Bộ lọc và chip loại gom thành một hàng vuốt ngang (sm:contents: màn rộng xếp chung hàng trên) -->
+            <div role="group" aria-label="Loại" class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:contents">
               <app-filter-button [count]="filterCount()" (open)="filterOpen.set(true)" />
-            </div>
-          </div>
-          <div role="group" aria-label="Loại" class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:flex-wrap">
             @for (t of typeFilters; track t.value) {
               <button
                 type="button"
@@ -167,7 +164,7 @@ interface PlaceRow {
                 <app-icon [name]="t.icon" [size]="16" />{{ t.label }} · {{ counts()[t.value || 'all'] }}
               </button>
             }
-          </div>
+            </div>
         </div>
       </app-page-banner>
       @if (locationError()) {
@@ -219,7 +216,7 @@ interface PlaceRow {
               >
                 <div class="relative flex min-h-0 flex-[0_1_75%] items-center justify-center overflow-hidden bg-[#EFEAFC] text-brand-500">
                   @if (item.place.imageUrl) {
-                    <app-photo-carousel class="h-full w-full" [photos]="photosOf(item.place)" [alt]="item.place.name" />
+                    <app-photo-carousel class="h-full w-full" [photos]="photosOf(item.place)" [alt]="item.place.name" [variants]="true" />
                   } @else {
                     <app-icon [name]="typeIcons[item.place.type]" [size]="40" [stroke]="1.5" />
                   }
@@ -238,24 +235,24 @@ interface PlaceRow {
                     <div class="flex items-center gap-2">
                       <span class="shrink-0 text-[13px] font-semibold text-slate-700" [attr.aria-label]="'HANOIVIBE chấm ' + item.place.rating + ' trên 5'"><span class="text-[#E29A2D]">★</span> {{ item.place.rating }}</span>
                       <span class="min-w-0 flex-1 truncate text-[13px] text-slate-500">{{ item.place.address || 'Chưa có địa chỉ' }}</span>
-                      <span class="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium text-brand-700">{{ priceText(item.place) }}</span>
+                      <span class="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">{{ priceText(item.place) }}</span>
                     </div>
                   </div>
                   <!-- Một nút chính (Vào plan); Chỉ đường / Bỏ là icon, rê chuột thì hiện chữ -->
                   <div class="flex items-center gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
-                    <a [href]="directions(item.place)" target="_blank" rel="noopener" class="group/act flex h-9 items-center rounded-[10px] border border-brand-200 px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-brand-50 focus-visible:bg-brand-50" aria-label="Chỉ đường" title="Chỉ đường">
-                      <app-icon name="navigate" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[120px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[120px] group-focus-visible/act:opacity-100">Chỉ đường</span>
+                    <a [href]="directions(item.place)" target="_blank" rel="noopener" class="group/act flex h-9 touch:h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-brand-50 focus-visible:bg-brand-50" aria-label="Chỉ đường" title="Chỉ đường">
+                      <app-icon name="navigate" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[120px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[120px] group-focus-visible/act:opacity-100 touch:ml-1 touch:max-w-none touch:opacity-100">Chỉ đường</span>
                     </a>
-                    <button type="button" class="group/act flex h-9 items-center rounded-[10px] border border-rose-200 px-2.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 focus-visible:bg-rose-50" aria-label="Bỏ khỏi My place" title="Bỏ khỏi My place" (click)="pendingRemove.set(item.place)">
-                      <app-icon name="trash" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[120px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[120px] group-focus-visible/act:opacity-100">Bỏ khỏi My place</span>
+                    <button type="button" class="group/act flex h-9 touch:h-10 items-center rounded-[10px] border border-rose-200 px-2.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 focus-visible:bg-rose-50" aria-label="Bỏ khỏi My place" title="Bỏ khỏi My place" (click)="pendingRemove.set(item.place)">
+                      <app-icon name="trash" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[120px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[120px] group-focus-visible/act:opacity-100 touch:ml-1 touch:max-w-none touch:opacity-100">Bỏ lưu</span>
                     </button>
                     @if (item.place.catalogId; as catalogId) {
-                      <button type="button" class="flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-600 px-2 text-xs font-semibold text-white hover:bg-brand-700" (click)="planTarget.set({ kind: 'place', refId: catalogId, name: item.place.name, district: null })">
+                      <button type="button" class="flex min-h-9 touch:min-h-10 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-600 px-2 text-xs font-semibold text-white hover:bg-brand-700" (click)="planTarget.set({ kind: 'place', refId: catalogId, name: item.place.name, district: null })">
                         <app-icon name="route" [size]="14" [stroke]="2.2" />Vào plan
                       </button>
                     } @else {
                       <!-- Quán tự nhập cũ (không thuộc Khám phá quán): không thêm vào plan được, mở chi tiết -->
-                      <button type="button" class="flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-600 px-2 text-xs font-semibold text-white hover:bg-brand-700" (click)="detailing.set(item)">
+                      <button type="button" class="flex min-h-9 touch:min-h-10 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-600 px-2 text-xs font-semibold text-white hover:bg-brand-700" (click)="detailing.set(item)">
                         <app-icon name="eye" [size]="14" />Chi tiết
                       </button>
                     }
@@ -281,7 +278,7 @@ interface PlaceRow {
               >
                 <div class="relative flex min-h-0 flex-[0_1_75%] items-center justify-center overflow-hidden bg-[#EFEAFC] text-brand-500">
                   @if (row.spot.imageUrl) {
-                    <app-photo-carousel class="h-full w-full" [photos]="photosOf(row.spot)" [alt]="row.spot.name" />
+                    <app-photo-carousel class="h-full w-full" [photos]="photosOf(row.spot)" [alt]="row.spot.name" [variants]="true" />
                   } @else {
                     <app-icon [name]="spotIcon(row.spot)" [size]="40" [stroke]="1.5" />
                   }
@@ -302,13 +299,13 @@ interface PlaceRow {
                     </div>
                   </div>
                   <div class="flex items-center gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
-                    <a [href]="spotDirections(row.spot)" target="_blank" rel="noopener" class="group/act flex h-9 items-center rounded-[10px] border border-brand-200 px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-brand-50 focus-visible:bg-brand-50" aria-label="Chỉ đường" title="Chỉ đường">
-                      <app-icon name="navigate" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[120px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[120px] group-focus-visible/act:opacity-100">Chỉ đường</span>
+                    <a [href]="spotDirections(row.spot)" target="_blank" rel="noopener" class="group/act flex h-9 touch:h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-brand-50 focus-visible:bg-brand-50" aria-label="Chỉ đường" title="Chỉ đường">
+                      <app-icon name="navigate" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[120px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[120px] group-focus-visible/act:opacity-100 touch:ml-1 touch:max-w-none touch:opacity-100">Chỉ đường</span>
                     </a>
-                    <button type="button" class="group/act flex h-9 items-center rounded-[10px] border border-rose-200 px-2.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 focus-visible:bg-rose-50" aria-label="Bỏ khỏi My place" title="Bỏ khỏi My place" (click)="pendingRemoveSpot.set(row.spot)">
-                      <app-icon name="trash" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[120px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[120px] group-focus-visible/act:opacity-100">Bỏ khỏi My place</span>
+                    <button type="button" class="group/act flex h-9 touch:h-10 items-center rounded-[10px] border border-rose-200 px-2.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 focus-visible:bg-rose-50" aria-label="Bỏ khỏi My place" title="Bỏ khỏi My place" (click)="pendingRemoveSpot.set(row.spot)">
+                      <app-icon name="trash" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[120px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[120px] group-focus-visible/act:opacity-100 touch:ml-1 touch:max-w-none touch:opacity-100">Bỏ lưu</span>
                     </button>
-                    <button type="button" class="flex min-h-9 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-600 px-2 text-xs font-semibold text-white hover:bg-brand-700" (click)="planTarget.set({ kind: 'spot', refId: row.spot.id, name: row.spot.name, district: row.spot.district })">
+                    <button type="button" class="flex min-h-9 touch:min-h-10 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-600 px-2 text-xs font-semibold text-white hover:bg-brand-700" (click)="planTarget.set({ kind: 'spot', refId: row.spot.id, name: row.spot.name, district: row.spot.district })">
                       <app-icon name="route" [size]="14" [stroke]="2.2" />Vào plan
                     </button>
                   </div>
@@ -471,11 +468,12 @@ export class PlaceListComponent implements OnInit {
   protected readonly rating = ratingText;
   protected readonly spotPrice = spotPriceText;
 
-  /** Ảnh nền banner: ảnh nơi đầu tiên đã lưu; chưa lưu gì thì Hồ Gươm đêm. null khi đang tải (tránh nháy) */
+  /** Ảnh nền banner: ảnh nơi đầu tiên đã lưu; chưa lưu gì (hoặc đang tải) thì Hồ Gươm đêm */
   protected readonly defaultBanner = DEFAULT_BANNER;
   protected readonly defaultCredit = DEFAULT_BANNER_CREDIT;
+  protected readonly defaultSrcset = DEFAULT_BANNER_SRCSET;
   protected readonly bannerImage = computed(() => {
-    if (!this.placeService.loaded()) return null;
+    if (!this.placeService.loaded()) return DEFAULT_BANNER;
     return [...this.all(), ...this.savedSpots()].find((x) => x.imageUrl)?.imageUrl || DEFAULT_BANNER;
   });
   /** Tối đa 3 ảnh đã lưu (xen kẽ quán / chỗ chơi) xếp kiểu polaroid bên phải banner */

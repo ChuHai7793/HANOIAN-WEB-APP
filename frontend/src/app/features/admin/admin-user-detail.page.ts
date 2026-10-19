@@ -36,7 +36,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
           <div class="min-w-0 flex-1">
             <h1 class="flex flex-wrap items-center gap-2 text-xl font-bold text-slate-900">
               {{ u.user.displayName }}
-              <span class="rounded px-1.5 py-0.5 text-[11px] font-medium" [class]="u.role === 'ADMIN' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'">{{ u.role === 'ADMIN' ? 'Admin' : 'Người dùng' }}</span>
+              <span class="rounded px-1.5 py-0.5 text-xs font-medium" [class]="u.role === 'ADMIN' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'">{{ u.role === 'ADMIN' ? 'Admin' : 'Người dùng' }}</span>
               <span class="rounded px-2 py-0.5 text-xs font-medium" [class]="statusOf(u.status).tone">{{ statusOf(u.status).label }}</span>
             </h1>
             <p class="mt-1 text-sm text-slate-500">{{ u.user.email }}{{ u.username ? ' · @' + u.username : '' }} · Đăng ký {{ u.createdAt | date: 'dd/MM/yyyy HH:mm' }}</p>
@@ -126,7 +126,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
                   <div class="flex" [class.justify-end]="m.senderId === u.user.id">
                     <div class="max-w-[80%] whitespace-pre-wrap break-words rounded-xl px-3 py-1.5 text-xs" [class]="m.senderId === u.user.id ? 'bg-brand-100 text-brand-900' : 'bg-white text-slate-700'">
                       {{ m.body }}
-                      <span class="block text-right text-[10px] text-slate-400">{{ m.createdAt | date: 'dd/MM HH:mm' }}{{ m.readAt ? ' · đã xem' : '' }}</span>
+                      <span class="block text-right text-xs text-slate-400">{{ m.createdAt | date: 'dd/MM HH:mm' }}{{ m.readAt ? ' · đã xem' : '' }}</span>
                     </div>
                   </div>
                 }

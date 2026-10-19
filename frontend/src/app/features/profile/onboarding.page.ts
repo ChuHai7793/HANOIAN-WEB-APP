@@ -9,7 +9,7 @@ import { safeReturnUrl } from '../auth/login.page';
   selector: 'app-onboarding-page',
   imports: [ProfileFormComponent, IconComponent],
   template: `
-    <div class="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
+    <div class="flex min-h-dvh items-center justify-center bg-slate-50 px-4 py-10">
       <div class="w-full max-w-xl">
         <div class="mb-6 text-center">
           <p class="flex justify-center text-brand-600"><app-icon name="hand" [size]="40" [stroke]="1.6" /></p>

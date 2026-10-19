@@ -48,7 +48,7 @@ const PAGE_SIZE = 5;
             </div>
             <div class="flex min-w-0 flex-1 flex-col gap-1">
               @for (n of [5, 4, 3, 2, 1]; track n) {
-                <div class="flex items-center gap-2 text-[11px] text-slate-500">
+                <div class="flex items-center gap-2 text-xs text-slate-500">
                   <span class="w-5 text-right">{{ n }}★</span>
                   <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-white">
                     <div class="h-full rounded-full bg-[#E29A2D]" [style.width.%]="(100 * s.histogram[n - 1]) / s.count"></div>
@@ -66,7 +66,7 @@ const PAGE_SIZE = 5;
         <div class="flex flex-col gap-3 rounded-xl border border-brand-200 p-3">
           <div class="flex items-center gap-1" role="radiogroup" aria-label="Số sao">
             @for (n of [1, 2, 3, 4, 5]; track n) {
-              <button type="button" role="radio" [attr.aria-checked]="draftRating() === n" [attr.aria-label]="n + ' sao'" class="text-2xl leading-none transition" [class]="n <= draftRating() ? 'text-[#E29A2D]' : 'text-[#D9D3EA] hover:text-[#E29A2D]/60'" (click)="draftRating.set(n)">★</button>
+              <button type="button" role="radio" [attr.aria-checked]="draftRating() === n" [attr.aria-label]="n + ' sao'" class="flex h-10 w-8 items-center justify-center text-2xl leading-none transition" [class]="n <= draftRating() ? 'text-[#E29A2D]' : 'text-[#D9D3EA] hover:text-[#E29A2D]/60'" (click)="draftRating.set(n)">★</button>
             }
             <span class="ml-2 text-xs text-slate-500">{{ ratingWord(draftRating()) }}</span>
           </div>
@@ -87,10 +87,10 @@ const PAGE_SIZE = 5;
             <p class="text-xs text-rose-600">{{ formError() }}</p>
           }
           <div class="flex items-center justify-between gap-2">
-            <span class="text-[11px] text-slate-400">{{ draftBody().trim().length }}/1000</span>
+            <span class="text-xs text-slate-400">{{ draftBody().trim().length }}/1000</span>
             <div class="flex gap-2">
-              <button type="button" class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50" (click)="editing.set(false)">Huỷ</button>
-              <button type="button" class="rounded-lg bg-brand-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50" [disabled]="busy()" (click)="submit()">{{ mine() ? 'Lưu' : 'Đăng' }}</button>
+              <button type="button" class="min-h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-600 hover:bg-slate-50" (click)="editing.set(false)">Huỷ</button>
+              <button type="button" class="min-h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50" [disabled]="busy()" (click)="submit()">{{ mine() ? 'Lưu' : 'Đăng' }}</button>
             </div>
           </div>
         </div>
@@ -99,20 +99,20 @@ const PAGE_SIZE = 5;
           <div class="mb-1 flex items-center justify-between gap-2">
             <span class="text-xs font-semibold text-brand-700">Đánh giá của bạn</span>
             <div class="flex gap-1">
-              <button type="button" class="rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-white" (click)="startEdit()">Sửa</button>
-              <button type="button" class="rounded-md px-2 py-1 text-xs text-rose-600 hover:bg-white disabled:opacity-50" [class.font-semibold]="confirmDelete()" [disabled]="busy()" (click)="remove()">{{ confirmDelete() ? 'Xoá thật?' : 'Xoá' }}</button>
+              <button type="button" class="min-h-9 rounded-md px-2.5 text-xs text-slate-600 hover:bg-white" (click)="startEdit()">Sửa</button>
+              <button type="button" class="min-h-9 rounded-md px-2.5 text-xs text-rose-600 hover:bg-white disabled:opacity-50" [class.font-semibold]="confirmDelete()" [disabled]="busy()" (click)="remove()">{{ confirmDelete() ? 'Xoá thật?' : 'Xoá' }}</button>
             </div>
           </div>
           <p class="text-sm tracking-[1px] text-[#E29A2D]" aria-hidden="true">{{ starRow(m.rating) }}</p>
           <p class="mt-1 whitespace-pre-line text-sm text-slate-700">{{ m.body }}</p>
-          <p class="mt-1.5 text-[11px] text-slate-400">{{ ago(m.updatedAt) }}{{ m.companion ? ' · Đi cùng ' + companionLabel(m.companion) : '' }} · {{ m.helpfulCount }} người thấy hữu ích</p>
+          <p class="mt-1.5 text-xs text-slate-400">{{ ago(m.updatedAt) }}{{ m.companion ? ' · Đi cùng ' + companionLabel(m.companion) : '' }} · {{ m.helpfulCount }} người thấy hữu ích</p>
         </div>
       } @else {
         <div class="flex items-center justify-between gap-3 rounded-xl border border-dashed border-brand-200 px-3 py-2.5">
           <span class="text-sm text-slate-600">{{ summary()?.count ? 'Bạn đã đến đây chưa?' : 'Chưa có đánh giá. Hãy là người đầu tiên!' }}</span>
           <div class="flex shrink-0 items-center gap-0.5">
             @for (n of [1, 2, 3, 4, 5]; track n) {
-              <button type="button" class="text-2xl leading-none text-[#D9D3EA] transition hover:text-[#E29A2D]" [attr.aria-label]="'Chấm ' + n + ' sao'" (click)="startNew(n)">★</button>
+              <button type="button" class="flex h-10 w-8 items-center justify-center text-2xl leading-none text-[#D9D3EA] transition hover:text-[#E29A2D]" [attr.aria-label]="'Chấm ' + n + ' sao'" (click)="startNew(n)">★</button>
             }
           </div>
         </div>
@@ -121,7 +121,7 @@ const PAGE_SIZE = 5;
       @if (total() > 0) {
         <div class="flex flex-wrap gap-1.5" role="group" aria-label="Sắp xếp đánh giá">
           @for (o of sorts; track o.value) {
-            <button type="button" class="rounded-full px-3 py-1 text-xs transition" [class]="sort() === o.value ? 'bg-brand-100 font-semibold text-brand-800' : 'text-slate-500 hover:bg-slate-50'" (click)="changeSort(o.value)">{{ o.label }}</button>
+            <button type="button" class="min-h-9 rounded-full px-3 text-xs transition" [class]="sort() === o.value ? 'bg-brand-100 font-semibold text-brand-800' : 'text-slate-500 hover:bg-slate-50'" (click)="changeSort(o.value)">{{ o.label }}</button>
           }
         </div>
         <ul class="flex flex-col divide-y divide-slate-100">
@@ -137,11 +137,11 @@ const PAGE_SIZE = 5;
                   <span class="font-semibold text-slate-900">{{ r.author.displayName }}</span>
                   <span class="tracking-[1px] text-[#E29A2D]" [attr.aria-label]="r.rating + ' sao'">{{ starRow(r.rating) }}</span>
                 </p>
-                <p class="text-[11px] text-slate-400">{{ ago(r.createdAt) }}{{ r.companion ? ' · Đi cùng ' + companionLabel(r.companion) : '' }}</p>
+                <p class="text-xs text-slate-400">{{ ago(r.createdAt) }}{{ r.companion ? ' · Đi cùng ' + companionLabel(r.companion) : '' }}</p>
                 <p class="mt-1 whitespace-pre-line text-sm text-slate-700">{{ r.body }}</p>
                 <button
                   type="button"
-                  class="mt-1.5 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition"
+                  class="mt-1.5 flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs transition"
                   [class]="r.helpedByMe ? 'border-brand-300 bg-brand-50 font-semibold text-brand-700' : 'border-slate-200 text-slate-500 hover:border-brand-200 hover:text-brand-700'"
                   [attr.aria-pressed]="r.helpedByMe"
                   (click)="toggleHelpful(r)"
@@ -153,7 +153,7 @@ const PAGE_SIZE = 5;
           }
         </ul>
         @if (items().length < total()) {
-          <button type="button" class="self-center rounded-lg px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50" [disabled]="loading()" (click)="loadMore()">
+          <button type="button" class="min-h-10 self-center rounded-lg px-3 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-50" [disabled]="loading()" (click)="loadMore()">
             Xem thêm đánh giá ({{ total() - items().length }})
           </button>
         }

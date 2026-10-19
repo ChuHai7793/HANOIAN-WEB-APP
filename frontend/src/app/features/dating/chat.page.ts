@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, DestroyRef, ElementRef, HostListener, inject, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
+import { afterNextRender, Component, computed, DestroyRef, ElementRef, HostListener, inject, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { errorCode } from '../../core/api/api';
@@ -32,9 +32,15 @@ export function mergeMessages(list: ChatMessage[], incoming: ChatMessage[]): Cha
   selector: 'app-chat-page',
   imports: [DatePipe, RouterLink, IconComponent],
   template: `
-    <div class="mx-auto flex h-[calc(100dvh-4rem)] max-w-2xl flex-col p-4 sm:p-6 lg:h-dvh">
-      <div class="mb-3 flex items-center gap-3 border-b border-slate-200 pb-3">
-        <a routerLink="/dating" [queryParams]="{ tab: 'matches' }" class="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Quay lại">←</a>
+    <!-- Chiếm trọn phần màn hình còn lại; bàn phím ảo mở (iOS) thì co theo visualViewport để ô nhập luôn thấy -->
+    <div
+      class="mx-auto flex h-[calc(100dvh-var(--app-header-h)-var(--app-tabbar-h))] max-w-2xl flex-col p-4 sm:p-6"
+      [style.height.px]="keyboardHeight()"
+    >
+      <div class="mb-3 flex items-center gap-2 border-b border-slate-200 pb-3">
+        <a routerLink="/dating" [queryParams]="{ tab: 'matches' }" class="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100" aria-label="Quay lại">
+          <span class="rotate-180"><app-icon name="arrowRight" [size]="20" /></span>
+        </a>
         @if (match(); as m) {
           @if (m.user.avatarUrl) {
             <img [src]="m.user.avatarUrl" alt="" class="h-10 w-10 rounded-full object-cover" />
@@ -55,10 +61,10 @@ export function mergeMessages(list: ChatMessage[], incoming: ChatMessage[]): Cha
           <a routerLink="/dating" [queryParams]="{ tab: 'matches' }" class="mt-3 font-semibold text-brand-700 hover:underline">Về danh sách match</a>
         </div>
       } @else {
-        <div #scroller class="flex-1 space-y-2 overflow-y-auto pr-1">
+        <div #scroller class="flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1">
           @if (hasOlder()) {
             <div class="text-center">
-              <button type="button" class="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600 hover:bg-slate-200" (click)="loadOlder()">Xem tin cũ hơn</button>
+              <button type="button" class="min-h-9 rounded-full bg-slate-100 px-3 text-xs text-slate-600 hover:bg-slate-200" (click)="loadOlder()">Xem tin cũ hơn</button>
             </div>
           }
           @if (loaded() && messages().length === 0) {
@@ -66,7 +72,7 @@ export function mergeMessages(list: ChatMessage[], incoming: ChatMessage[]): Cha
           }
           @for (msg of messages(); track msg.id; let i = $index) {
             @if (newDay(i)) {
-              <p class="py-2 text-center text-[11px] text-slate-400">{{ msg.createdAt | date: 'EEEE, dd/MM/yyyy' }}</p>
+              <p class="py-2 text-center text-xs text-slate-400">{{ msg.createdAt | date: 'EEEE, dd/MM/yyyy' }}</p>
             }
             <div class="flex" [class.justify-end]="msg.mine">
               <div
@@ -81,17 +87,17 @@ export function mergeMessages(list: ChatMessage[], incoming: ChatMessage[]): Cha
                     <span class="text-xs text-slate-500">{{ plan.stopCount }} điểm@if (plan.date) { · {{ plan.date | date: 'dd/MM' }}} · Xem lịch trình</span>
                   </a>
                   @if (!msg.mine) {
-                    <button type="button" class="mt-2 flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700" (click)="agree(plan.title)">
+                    <button type="button" class="mt-2 flex min-h-9 items-center gap-1 rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white hover:bg-brand-700" (click)="agree(plan.title)">
                       <app-icon name="check" [size]="14" />Đồng ý
                     </button>
                   }
                 }
-                <span class="mt-0.5 block text-right text-[10px]" [class]="msg.mine ? 'text-white/70' : 'text-slate-400'">{{ msg.createdAt | date: 'HH:mm' }}</span>
+                <span class="mt-0.5 block text-right text-xs" [class]="msg.mine ? 'text-white/70' : 'text-slate-400'">{{ msg.createdAt | date: 'HH:mm' }}</span>
               </div>
             </div>
           }
           @if (seen()) {
-            <p class="text-right text-[11px] text-slate-400">Đã xem</p>
+            <p class="text-right text-xs text-slate-400">Đã xem</p>
           }
         </div>
 
@@ -107,7 +113,7 @@ export function mergeMessages(list: ChatMessage[], incoming: ChatMessage[]): Cha
           ></textarea>
           <button
             type="submit"
-            class="rounded-full bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+            class="min-h-11 rounded-full bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
             [disabled]="!draft().trim() || sending()"
           >
             Gửi
@@ -138,6 +144,31 @@ export class ChatPage implements OnInit, OnDestroy {
   protected readonly gone = signal(false);
   protected readonly draft = signal('');
   protected readonly sending = signal(false);
+  /**
+   * Chiều cao khung chat khi bàn phím ảo đang mở (px); null = dùng chiều cao CSS. iOS không co trang theo bàn
+   * phím mà chỉ thu visualViewport, nên tự đo để ô nhập không bị bàn phím che.
+   */
+  protected readonly keyboardHeight = signal<number | null>(null);
+
+  constructor() {
+    afterNextRender(() => {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      const onResize = () => {
+        const keyboardOpen = window.innerHeight - vv.height > 120;
+        if (!keyboardOpen) {
+          this.keyboardHeight.set(null);
+          return;
+        }
+        const header = document.querySelector<HTMLElement>('app-shell header');
+        this.keyboardHeight.set(Math.max(240, vv.height - (header?.offsetHeight ?? 0)));
+        window.scrollTo(0, 0);
+        this.scrollToBottom();
+      };
+      vv.addEventListener('resize', onResize);
+      this.destroyRef.onDestroy(() => vv.removeEventListener('resize', onResize));
+    });
+  }
 
   /** Tin cuối là của mình và người kia đã xem */
   protected readonly seen = computed(() => {

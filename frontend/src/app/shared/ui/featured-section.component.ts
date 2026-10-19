@@ -1,4 +1,5 @@
 import { afterNextRender, afterRenderEffect, Component, computed, DestroyRef, ElementRef, inject, input, OnInit, output, signal, viewChild } from '@angular/core';
+import { imageVariant } from '../../core/models/place.model';
 import { IconComponent } from './icon.component';
 
 /** Một thẻ nổi bật (quán hoặc chỗ chơi), trang cha dựng từ dữ liệu của mình */
@@ -47,13 +48,13 @@ interface Slide {
   imports: [IconComponent],
   template: `
     @if (cards().length || canEdit()) {
-      <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] font-medium">
+      <div class="mt-2 flex flex-wrap items-center gap-x-3 text-[13px] font-medium">
         <h2 class="mr-auto text-lg font-bold tracking-tight text-slate-900">{{ heading() }}</h2>
         @if (canEdit()) {
-          <button type="button" class="text-brand-700 hover:underline" (click)="edit.emit()">Chọn gợi ý nổi bật</button>
+          <button type="button" class="min-h-9 px-1 text-brand-700 hover:underline" (click)="edit.emit()">Chọn gợi ý nổi bật</button>
         }
         @if (cards().length) {
-          <button type="button" class="flex items-center gap-1 text-slate-500 hover:text-slate-800" (click)="toggle()">
+          <button type="button" class="flex min-h-9 items-center gap-1 px-1 text-slate-500 hover:text-slate-800" (click)="toggle()">
             {{ hidden() ? 'Hiện gợi ý nổi bật' : 'Ẩn gợi ý nổi bật' }}
             <span class="transition" [class.rotate-180]="!hidden()"><app-icon name="chevronDown" [size]="14" /></span>
           </button>
@@ -78,13 +79,13 @@ interface Slide {
             type="button"
             [attr.aria-hidden]="s.clone ? 'true' : null"
             [attr.tabindex]="s.clone ? -1 : null"
-            class="group relative block h-[230px] w-[82%] shrink-0 snap-start overflow-hidden rounded-2xl text-left sm:w-[calc((100%-1rem)/2)] md:h-[290px] xl:w-[calc((100%-2rem)/3)]"
+            class="group relative block h-[180px] w-[82%] shrink-0 snap-start overflow-hidden rounded-2xl text-left sm:h-[230px] sm:w-[calc((100%-1rem)/2)] md:h-[290px] xl:w-[calc((100%-2rem)/3)]"
             [attr.aria-label]="'Xem ' + f.name"
             (click)="onCardClick($event, f.id)"
             (dragstart)="$event.preventDefault()"
           >
             @if (f.imageUrl) {
-              <img [src]="f.imageUrl" alt="" draggable="false" class="pointer-events-none absolute inset-0 h-full w-full select-none object-cover transition duration-500 group-hover:scale-105" />
+              <img [src]="f.imageUrl" [attr.srcset]="srcset(f.imageUrl)" [attr.sizes]="srcset(f.imageUrl) ? '(min-width: 80rem) 400px, (min-width: 40rem) 50vw, 82vw' : null" alt="" draggable="false" decoding="async" (error)="imageFailed(f.imageUrl)" class="pointer-events-none absolute inset-0 h-full w-full select-none object-cover transition duration-500 group-hover:scale-105" />
             } @else {
               <span class="absolute inset-0 bg-gradient-to-br from-brand-500 to-brand-800"></span>
             }
@@ -99,9 +100,9 @@ interface Slide {
                 {{ f.kicker }}
               </span>
             }
-            <span class="absolute inset-x-5 bottom-4 block pr-12 md:inset-x-6 md:bottom-5">
+            <span class="absolute inset-x-4 bottom-3.5 block pr-12 sm:inset-x-5 sm:bottom-4 md:inset-x-6 md:bottom-5">
               <span class="block text-[12px] font-semibold uppercase tracking-[0.14em] text-white/75 md:text-[13px]">{{ f.meta }}</span>
-              <span class="mt-1 block whitespace-pre-line text-[22px] font-bold leading-tight text-white md:text-[26px]">{{ f.headline }}</span>
+              <span class="mt-1 block whitespace-pre-line text-[19px] font-bold leading-tight text-white sm:text-[22px] md:text-[26px]">{{ f.headline }}</span>
               <span class="mt-2 block text-sm text-white/85">
                 {{ f.name }}
                 @if (f.rating) {
@@ -179,16 +180,42 @@ export class FeaturedSectionComponent implements OnInit {
   private dragScroll = 0;
   private moved = 0;
 
+  /** Hàng thẻ đang trong khung nhìn: chỉ tự trượt khi người dùng thấy nó (đỡ tốn pin, không giật trang khi đã cuộn qua) */
+  private inView = true;
+  /** Cảm ứng + người dùng tắt hiệu ứng chuyển động trong máy: không tự trượt */
+  private reducedMotion = false;
+  /** Ảnh mà bản thu nhỏ không tải được: dùng ảnh gốc */
+  private readonly failed = signal<ReadonlySet<string>>(new Set());
+
+  /** Bản thu nhỏ 800px (và 320px) cho thẻ; null nếu không phải ảnh của app hoặc đã lỗi */
+  protected srcset(url: string): string | null {
+    if (this.failed().has(url)) return null;
+    const small = imageVariant(url, 320);
+    const medium = imageVariant(url, 800);
+    return small && medium ? `${small} 320w, ${medium} 800w, ${url} 1200w` : null;
+  }
+
+  protected imageFailed(url: string): void {
+    if (this.srcset(url)) this.failed.update((s) => new Set(s).add(url));
+  }
+
   constructor() {
     const destroyRef = inject(DestroyRef);
     // Chỉ trên trình duyệt: đo xem hàng có tràn ngang không, theo dõi khi đổi cỡ; tự trượt
     afterNextRender(() => {
       this.updateArrows();
+      const el = this.track().nativeElement;
       const observer = new ResizeObserver(() => requestAnimationFrame(() => this.updateArrows()));
-      observer.observe(this.track().nativeElement);
+      observer.observe(el);
+      const visibility = new IntersectionObserver(([entry]) => (this.inView = !!entry?.isIntersecting), { threshold: 0.3 });
+      visibility.observe(el);
+      // Máy tính: vẫn trượt dù hệ điều hành tắt hiệu ứng (nhiều máy Windows tắt "Animation effects" mà người dùng
+      // không biết). Điện thoại: tôn trọng cài đặt giảm chuyển động của người dùng.
+      this.reducedMotion = window.matchMedia?.('(hover: none) and (prefers-reduced-motion: reduce)').matches ?? false;
       const timer = setInterval(() => this.autoplay(), AUTOPLAY_MS);
       destroyRef.onDestroy(() => {
         observer.disconnect();
+        visibility.disconnect();
         clearInterval(timer);
         clearTimeout(this.settleTimer);
       });
@@ -281,9 +308,8 @@ export class FeaturedSectionComponent implements OnInit {
   }
 
   private autoplay(): void {
-    // Không xét prefers-reduced-motion: nhiều máy Windows tắt "Animation effects" mà người dùng không biết,
-    // khối nổi bật đứng yên là lỗi với họ (chủ sản phẩm muốn luôn trượt)
     if (!this.loop() || this.hidden() || this.hovering || this.dragging() || document.hidden) return;
+    if (!this.inView || this.reducedMotion) return;
     if (Date.now() < this.pausedUntil) return;
     this.slide(this.cardStep());
   }

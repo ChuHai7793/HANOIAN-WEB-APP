@@ -1,10 +1,26 @@
-import { afterNextRender, Component, effect, ElementRef, input, OnDestroy, viewChild } from '@angular/core';
+import { afterNextRender, Component, DOCUMENT, effect, ElementRef, inject, input, OnDestroy, viewChild } from '@angular/core';
 import type { LayerGroup, Map as LeafletMap } from 'leaflet';
 import { PlanStop } from '../../core/models/plan.model';
 
+/** CSS của Leaflet được copy sang dist (angular.json → assets); chỉ nạp khi trang có bản đồ */
+const LEAFLET_CSS = 'vendor/leaflet/leaflet.css';
+
+function ensureLeafletCss(doc: Document): Promise<void> {
+  const existing = doc.head.querySelector<HTMLLinkElement>(`link[href="${LEAFLET_CSS}"]`);
+  if (existing) return existing.sheet ? Promise.resolve() : new Promise((resolve) => existing.addEventListener('load', () => resolve(), { once: true }));
+  return new Promise((resolve) => {
+    const link = doc.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = LEAFLET_CSS;
+    link.onload = () => resolve();
+    link.onerror = () => resolve();
+    doc.head.appendChild(link);
+  });
+}
+
 /**
  * Bản đồ các điểm của plan (Leaflet + bản đồ OpenStreetMap): marker đánh số theo thứ tự, nối bằng đường thẳng.
- * Leaflet chỉ được tải khi trang có bản đồ. Điểm thiếu toạ độ không hiện trên bản đồ.
+ * Leaflet (JS lẫn CSS) chỉ được tải khi trang có bản đồ. Điểm thiếu toạ độ không hiện trên bản đồ.
  */
 @Component({
   selector: 'app-plan-map',
@@ -14,13 +30,14 @@ export class PlanMapComponent implements OnDestroy {
   readonly stops = input.required<PlanStop[]>();
 
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
+  private readonly doc = inject(DOCUMENT);
   private map: LeafletMap | null = null;
   private layer: LayerGroup | null = null;
   private leaflet: typeof import('leaflet') | null = null;
 
   constructor() {
     afterNextRender(async () => {
-      const L = await import('leaflet');
+      const [L] = await Promise.all([import('leaflet'), ensureLeafletCss(this.doc)]);
       this.leaflet = L;
       this.map = L.map(this.host().nativeElement, { scrollWheelZoom: false }).setView([21.0285, 105.8542], 13);
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {

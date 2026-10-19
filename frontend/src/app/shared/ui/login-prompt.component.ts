@@ -1,6 +1,8 @@
-import { Component, effect, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Component, DOCUMENT, effect, ElementRef, HostListener, inject, PLATFORM_ID, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { OverlayHandle } from './overlay';
 import { errorMessage } from '../../core/api/api';
 import { AuthService } from '../../core/auth/auth.service';
 import { LoginGate } from '../../core/auth/login-gate.service';
@@ -14,13 +16,13 @@ import { LoginGate } from '../../core/auth/login-gate.service';
   imports: [ReactiveFormsModule],
   template: `
     @if (gate.prompt(); as p) {
-      <div class="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4 sm:items-center">
+      <div class="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4">
         <div class="fixed inset-0 bg-slate-900/45 backdrop-blur-[3px]" (click)="close()"></div>
 
-        <div role="dialog" aria-modal="true" aria-labelledby="login-prompt-title" class="relative z-10 mt-10 w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl sm:mt-0">
+        <div role="dialog" aria-modal="true" aria-labelledby="login-prompt-title" class="relative z-10 max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-t-2xl bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl">
           <button
             type="button"
-            class="absolute right-3 top-3 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+            class="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
             (click)="close()"
             aria-label="Đóng"
           >
@@ -93,10 +95,19 @@ export class LoginPromptComponent {
     password: ['', Validators.required],
   });
 
+  /** Khoá cuộn trang phía sau, nút Back của điện thoại đóng popup */
+  private readonly overlay = isPlatformBrowser(inject(PLATFORM_ID))
+    ? new OverlayHandle(inject(DOCUMENT), () => this.close(), this.router)
+    : null;
+
   constructor() {
     // Mỗi lần mở: form trống, con trỏ ở ô đầu tiên
     effect(() => {
-      if (!this.gate.prompt()) return;
+      if (!this.gate.prompt()) {
+        this.overlay?.close();
+        return;
+      }
+      this.overlay?.open();
       this.form.reset();
       this.error.set('');
       queueMicrotask(() => this.first()?.nativeElement.focus());

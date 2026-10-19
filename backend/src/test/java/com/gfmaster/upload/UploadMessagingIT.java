@@ -53,6 +53,13 @@ class UploadMessagingIT extends ApiTestSupport {
     ImmutableImage image = ImmutableImage.loader().fromBytes(thumb);
     assertThat(image.width).isEqualTo(320);
     assertThat(image.height).isEqualTo(160);
+
+    // Bản 800px cho thẻ trên điện thoại nằm cạnh ảnh gốc, frontend tự suy ra từ URL
+    String cardUrl = res.get("url").asString().replace(".webp", "-800.webp");
+    byte[] card = mvc.perform(get(cardUrl)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+    ImmutableImage cardImage = ImmutableImage.loader().fromBytes(card);
+    assertThat(cardImage.width).isEqualTo(800);
+    assertThat(cardImage.height).isEqualTo(400);
   }
 
   @Test
@@ -73,6 +80,7 @@ class UploadMessagingIT extends ApiTestSupport {
             () -> {
               mvc.perform(get(url)).andExpect(status().isNotFound());
               mvc.perform(get(thumbUrl)).andExpect(status().isNotFound());
+              mvc.perform(get(url.replace(".webp", "-800.webp"))).andExpect(status().isNotFound());
             });
   }
 

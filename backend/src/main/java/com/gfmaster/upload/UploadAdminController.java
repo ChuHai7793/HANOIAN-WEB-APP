@@ -1,5 +1,6 @@
 package com.gfmaster.upload;
 
+import com.gfmaster.upload.CardVariantBackfill.BackfillReport;
 import com.gfmaster.upload.LegacyImageRenamer.Report;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,9 +13,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class UploadAdminController {
 
   private final LegacyImageRenamer renamer;
+  private final CardVariantBackfill backfill;
 
-  public UploadAdminController(LegacyImageRenamer renamer) {
+  public UploadAdminController(LegacyImageRenamer renamer, CardVariantBackfill backfill) {
     this.renamer = renamer;
+    this.backfill = backfill;
+  }
+
+  /**
+   * Sinh bù bản 800px ({@code -800.webp}) cho ảnh tải lên trước khi có bản này (thẻ trên điện thoại dùng qua
+   * srcset; thiếu thì trình duyệt tự quay về ảnh gốc). Mỗi lần tối đa {@code limit} ảnh; chạy lại tới khi
+   * {@code generated} = 0.
+   */
+  @PostMapping("/card-variants")
+  public BackfillReport cardVariants(@RequestParam(defaultValue = "100") int limit) {
+    return backfill.run(limit);
   }
 
   /**

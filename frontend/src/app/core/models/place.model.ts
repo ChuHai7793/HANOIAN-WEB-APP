@@ -114,3 +114,16 @@ export function priceLabel(value: PriceRange): string {
 export function photosOf(item: { photos?: string[] | null; imageUrl: string }): string[] {
   return item.photos?.length ? item.photos : item.imageUrl ? [item.imageUrl] : [];
 }
+
+/** Ảnh do app tải lên (ImageKeys ở backend): `<thư mục>/<yyyy>/<MM>/<tên>-<8 ký tự>.webp` */
+const OWN_UPLOAD = /\/\d{4}\/\d{2}\/[a-z0-9-]+-[a-z0-9]{8}\.webp$/i;
+
+/** Bản thu nhỏ backend sinh cạnh ảnh gốc: `.../abc.webp` → `.../abc-320.webp` (null nếu không phải ảnh của app) */
+export function imageVariant(url: string, edge: 320 | 800): string | null {
+  return OWN_UPLOAD.test(url) ? url.replace(/\.webp$/i, `-${edge}.webp`) : null;
+}
+
+/** Ảnh nhỏ (avatar, điểm trong plan, gợi ý): bản 320px nếu có, không thì ảnh gốc. Gắn (error) để quay về ảnh gốc. */
+export function thumbOf(url: string): string {
+  return imageVariant(url, 320) ?? url;
+}

@@ -80,17 +80,17 @@ interface LinkedPlace {
 
             <div class="mt-4 flex flex-wrap gap-6">
               <div>
-                <p class="text-[11px] uppercase tracking-wide text-slate-400">Bên nhau</p>
+                <p class="text-xs uppercase tracking-wide text-slate-400">Bên nhau</p>
                 <p class="text-lg font-semibold text-slate-800">{{ togetherDays() }} ngày</p>
               </div>
               <div>
-                <p class="text-[11px] uppercase tracking-wide text-slate-400">Sinh nhật tới</p>
+                <p class="text-xs uppercase tracking-wide text-slate-400">Sinh nhật tới</p>
                 <p class="text-lg font-semibold text-slate-800">
                   {{ daysToBirthday() === null ? '–' : 'còn ' + daysToBirthday() + ' ngày' }}
                 </p>
               </div>
               <div>
-                <p class="text-[11px] uppercase tracking-wide text-slate-400">Quán đã đi</p>
+                <p class="text-xs uppercase tracking-wide text-slate-400">Quán đã đi</p>
                 <p class="text-lg font-semibold text-slate-800">{{ totalPlaces() }}</p>
               </div>
             </div>
