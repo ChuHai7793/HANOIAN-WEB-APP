@@ -13,14 +13,12 @@ import {
   CUISINE_OPTIONS,
   EMPTY_PLACE_FILTERS,
   nowHHmm,
-  PLACE_BUDGETS,
   PLACE_SORTS,
   PlaceFilters,
   placeFilterChips,
   placeFilterCount,
   placeFiltersFromParams,
   placeFiltersToParams,
-  PRICE_OPTIONS,
   removePlaceFilter,
   STAR_OPTIONS,
   toggleIn,
@@ -33,6 +31,7 @@ import {
   FilterGroupComponent,
   FilterSheetComponent,
   FilterSwitchComponent,
+  PriceRangeInputComponent,
 } from '../../shared/ui/filter-sheet.component';
 import { IconComponent, IconName } from '../../shared/ui/icon.component';
 import { PlaceFormComponent } from '../places/place-form.component';
@@ -75,7 +74,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
 
 @Component({
   selector: 'app-explore-page',
-  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, FeaturedEditorComponent, FeaturedSectionComponent, DetailModalComponent, ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
+  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, PriceRangeInputComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, FeaturedEditorComponent, FeaturedSectionComponent, DetailModalComponent, ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <!-- Banner đầu trang: ảnh nền (admin đổi được, mặc định Hồ Gươm đêm) + lớp phủ tím, chữ giới thiệu và bộ lọc -->
@@ -240,7 +239,9 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
                     {{ item.fans }} người hợp gu đã lưu
                   </span>
                 }
-                <span class="absolute bottom-3 left-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">{{ cardPrice(item) }}</span>
+                @if (cardPrice(item); as price) {
+                  <span class="absolute bottom-3 left-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">{{ price }}</span>
+                }
                 @if (canEdit()) {
                   <div class="absolute bottom-3 right-3 flex gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
                     <button type="button" class="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm text-slate-600 hover:text-brand-700" title="Sửa" (click)="openEdit(item)"><app-icon name="edit" [size]="14" /></button>
@@ -303,11 +304,8 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
 
     @if (filterOpen()) {
       <app-filter-sheet [resultLabel]="'Xem ' + total() + ' quán'" [activeCount]="filterCount()" (closed)="filterOpen.set(false)" (cleared)="clearFilters()">
-        <app-filter-group title="Mức giá">
-          <app-choice-chips [options]="priceOptions" [selected]="filters().prices" (toggle)="setFilter({ prices: toggleIn(filters().prices, $any($event)) })" />
-        </app-filter-group>
-        <app-filter-group title="Ngân sách" hint="giá thấp nhất mỗi người">
-          <app-choice-chips [options]="budgetOptions" [selected]="[filters().budget]" (toggle)="setFilter({ budget: filters().budget === $event ? null : $any($event) })" />
+        <app-filter-group title="Giá mỗi người">
+          <app-price-range-input [min]="filters().priceMin" [max]="filters().priceMax" (changed)="setFilter($event)" />
         </app-filter-group>
         <app-filter-group title="Số sao" hint="HANOIVIBE chấm">
           <app-choice-chips [options]="starOptions" [selected]="[filters().stars]" (toggle)="setFilter({ stars: filters().stars === $event ? null : $any($event) })" />
@@ -550,8 +548,6 @@ export class ExplorePage implements OnInit {
   protected readonly filterOpen = signal(false);
   protected readonly filterChips = computed(() => placeFilterChips(this.filters()));
   protected readonly filterCount = computed(() => placeFilterCount(this.filters()));
-  protected readonly priceOptions = PRICE_OPTIONS;
-  protected readonly budgetOptions = PLACE_BUDGETS;
   protected readonly starOptions = STAR_OPTIONS;
   protected readonly cuisineOptions = CUISINE_OPTIONS;
   protected readonly vibeOptions = VIBE_OPTIONS;
@@ -589,8 +585,8 @@ export class ExplorePage implements OnInit {
   private filterQuery() {
     const f = this.filters();
     return {
-      price: f.prices,
-      budget: f.budget,
+      priceMin: f.priceMin,
+      priceMax: f.priceMax,
       stars: f.stars,
       cuisine: f.cuisines,
       vibe: f.vibes,
@@ -666,9 +662,9 @@ export class ExplorePage implements OnInit {
     return placePriceDetail(item);
   }
 
-  /** Huy hiệu trên thẻ: "80k–150k" hoặc tên nhóm giá */
+  /** Huy hiệu trên thẻ: "80k–150k/người" như chỗ chơi; chưa nhập giá thì rỗng (không hiện) */
   protected cardPrice(item: CatalogItem): string {
-    return placePriceText(item, false);
+    return placePriceText(item);
   }
 
   protected mapUrl(item: CatalogItem): string {

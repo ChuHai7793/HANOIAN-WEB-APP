@@ -7,7 +7,6 @@ import com.gfmaster.dating.DatingDtos.PlanRef;
 import com.gfmaster.dating.DatingDtos.SharedPlace;
 import com.gfmaster.catalog.CatalogDistrict;
 import com.gfmaster.place.PlaceType;
-import com.gfmaster.place.PriceRange;
 import com.gfmaster.profile.Gender;
 import com.gfmaster.upload.storage.ImageUrls;
 import java.sql.ResultSet;
@@ -161,7 +160,7 @@ public class DatingRepository {
     Map<UUID, List<SharedPlace>> shared = new HashMap<>();
     jdbc.query(
         """
-        SELECT o.user_id, c.id, c.name, c.type, c.district, c.price_range
+        SELECT o.user_id, c.id, c.name, c.type, c.district, c.price_from, c.price_to
         FROM places m
         JOIN places o        ON o.catalog_id = m.catalog_id AND o.user_id IN (:ids)
         JOIN place_catalog c ON c.id = m.catalog_id
@@ -178,7 +177,8 @@ public class DatingRepository {
                       rs.getString("name"),
                       PlaceType.valueOf(rs.getString("type")),
                       CatalogDistrict.valueOf(rs.getString("district")).label(),
-                      PriceRange.valueOf(rs.getString("price_range"))));
+                      rs.getObject("price_from", Integer.class),
+                      rs.getObject("price_to", Integer.class)));
         });
 
     Set<UUID> superLikedViewer =

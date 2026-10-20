@@ -16,7 +16,6 @@ import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalTime;
 import com.gfmaster.vibe.Vibe;
-import com.gfmaster.place.PriceRange;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -50,8 +49,8 @@ public class CatalogController {
       @RequestParam(required = false) String q,
       @RequestParam(required = false) PlaceType type,
       @RequestParam(required = false) CatalogDistrict district,
-      @RequestParam(required = false) List<PriceRange> price,
-      @RequestParam(required = false) Integer budget,
+      @RequestParam(required = false) Integer priceMin,
+      @RequestParam(required = false) Integer priceMax,
       @RequestParam(required = false) Integer stars,
       @RequestParam(required = false) List<String> cuisine,
       @RequestParam(required = false) List<Vibe> vibe,
@@ -62,7 +61,7 @@ public class CatalogController {
       @RequestParam(defaultValue = "false") boolean mine,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "30") int size) {
-    CatalogFilter f = CatalogFilter.of(q, type, district, price, budget, stars, cuisine, vibe, openAt, wifi, parking);
+    CatalogFilter f = CatalogFilter.of(q, type, district, priceMin, priceMax, stars, cuisine, vibe, openAt, wifi, parking);
     return catalog.search(userId, f, sort, mine, page, size);
   }
 
@@ -100,15 +99,15 @@ public class CatalogController {
   public Map<String, Long> counts(
       @RequestParam(required = false) String q,
       @RequestParam(required = false) CatalogDistrict district,
-      @RequestParam(required = false) List<PriceRange> price,
-      @RequestParam(required = false) Integer budget,
+      @RequestParam(required = false) Integer priceMin,
+      @RequestParam(required = false) Integer priceMax,
       @RequestParam(required = false) Integer stars,
       @RequestParam(required = false) List<String> cuisine,
       @RequestParam(required = false) List<Vibe> vibe,
       @RequestParam(required = false) @DateTimeFormat(pattern = "HH:mm") LocalTime openAt,
       @RequestParam(required = false) Boolean wifi,
       @RequestParam(required = false) Boolean parking) {
-    return catalog.counts(CatalogFilter.of(q, null, district, price, budget, stars, cuisine, vibe, openAt, wifi, parking));
+    return catalog.counts(CatalogFilter.of(q, null, district, priceMin, priceMax, stars, cuisine, vibe, openAt, wifi, parking));
   }
 
   @GetMapping("/api/v1/catalog/districts")

@@ -204,10 +204,11 @@ class CatalogIT extends ApiTestSupport {
          "rating": 4, "openTime": "18:00", "closeTime": "02:00", "vibes": ["romantic", "active"]}
         """);
 
-    getAs(guest, "/api/v1/catalog?price=cheap,medium").andExpect(jsonPath("$.total").value(2));
-    // Ngân sách: giá thấp nhất ≤ 50k (B sushi chưa có giá, tính 50k theo nhóm tầm trung)
-    getAs(guest, "/api/v1/catalog?budget=50000").andExpect(jsonPath("$.total").value(2));
-    getAs(guest, "/api/v1/catalog?budget=40000").andExpect(jsonPath("$.items[0].name").value("A cafe")).andExpect(jsonPath("$.total").value(1));
+    // Lọc theo tiền: khoảng giá của quán giao với khoảng chọn; B sushi chưa nhập giá nên bị loại
+    getAs(guest, "/api/v1/catalog?priceMax=50000").andExpect(jsonPath("$.items[0].name").value("A cafe")).andExpect(jsonPath("$.total").value(1));
+    getAs(guest, "/api/v1/catalog?priceMin=40000").andExpect(jsonPath("$.total").value(2));
+    getAs(guest, "/api/v1/catalog?priceMin=46000").andExpect(jsonPath("$.items[0].name").value("C bar")).andExpect(jsonPath("$.total").value(1));
+    getAs(guest, "/api/v1/catalog?priceMin=100000&priceMax=400000").andExpect(jsonPath("$.total").value(0));
     getAs(guest, "/api/v1/catalog?stars=4").andExpect(jsonPath("$.total").value(2));
     getAs(guest, "/api/v1/catalog?cuisine=Món Nhật,Món Việt").andExpect(jsonPath("$.items[0].name").value("B sushi")).andExpect(jsonPath("$.total").value(1));
     getAs(guest, "/api/v1/catalog?vibe=romantic").andExpect(jsonPath("$.total").value(2));
@@ -217,7 +218,7 @@ class CatalogIT extends ApiTestSupport {
     getAs(guest, "/api/v1/catalog?openAt=23:30").andExpect(jsonPath("$.items[0].name").value("C bar")).andExpect(jsonPath("$.total").value(1));
     getAs(guest, "/api/v1/catalog?openAt=12:00").andExpect(jsonPath("$.total").value(2));
     // Kết hợp nhiều bộ lọc
-    getAs(guest, "/api/v1/catalog?vibe=romantic&stars=5&budget=100000").andExpect(jsonPath("$.total").value(1));
+    getAs(guest, "/api/v1/catalog?vibe=romantic&stars=4&priceMin=400000").andExpect(jsonPath("$.items[0].name").value("C bar")).andExpect(jsonPath("$.total").value(1));
 
     // Sắp xếp
     getAs(guest, "/api/v1/catalog?sort=rating").andExpect(jsonPath("$.items[0].name").value("B sushi"));

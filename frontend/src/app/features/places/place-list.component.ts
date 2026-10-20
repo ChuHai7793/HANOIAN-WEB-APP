@@ -3,7 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PlaceService } from '../../core/services/place.service';
 import { PlaceLinkService } from '../../core/services/place-link.service';
 import { ToastService } from '../../core/services/toast.service';
-import { Place, placePriceText, PlaceType, PriceRange } from '../../core/models/place.model';
+import { Place, placePriceText, PlaceType } from '../../core/models/place.model';
 import { PlaceDetailComponent } from './place-detail.component';
 import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
 import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component';
@@ -25,12 +25,11 @@ import {
   EMPTY_PLACE_FILTERS,
   isOpenAt,
   nowHHmm,
-  PLACE_BUDGETS,
   PlaceFilters,
   placeFilterChips,
   placeFilterCount,
   placeMatches,
-  PRICE_OPTIONS,
+  priceInRange,
   removePlaceFilter,
   STAR_OPTIONS,
   toggleIn,
@@ -42,6 +41,7 @@ import {
   FilterGroupComponent,
   FilterSheetComponent,
   FilterSwitchComponent,
+  PriceRangeInputComponent,
 } from '../../shared/ui/filter-sheet.component';
 import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
 import { DEFAULT_BANNER, DEFAULT_BANNER_CREDIT, DEFAULT_BANNER_SRCSET, PageBannerComponent } from '../../shared/ui/page-banner.component';
@@ -58,14 +58,6 @@ const TYPE_FILTERS: { value: MyPlaceFilter; label: string; icon: IconName }[] = 
   { value: 'restaurant', label: 'Quán ăn', icon: 'utensils' },
   { value: 'spot', label: 'Chỗ chơi', icon: 'gate' },
 ];
-/** Khoảng giá của quán ↔ giá vé chỗ chơi (VNĐ / người), cho lọc và sắp xếp chung */
-const PRICE_LIMITS: Record<PriceRange, [number, number]> = {
-  cheap: [0, 50_000],
-  medium: [50_000, 150_000],
-  high: [150_000, 400_000],
-  luxury: [400_000, Infinity],
-};
-const PRICE_ESTIMATE: Record<PriceRange, number> = { cheap: 40_000, medium: 100_000, high: 275_000, luxury: 500_000 };
 
 interface SpotRow {
   spot: SpotItem;
@@ -82,7 +74,7 @@ interface PlaceRow {
 
 @Component({
   selector: 'app-place-list',
-  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, AutoplanDialogComponent, VibeTagsComponent, AddToPlanDialogComponent, SpotDetailDialogComponent, PhotoCarouselComponent, FitRowDirective, RouterLink, PlaceDetailComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent],
+  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, PriceRangeInputComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, AutoplanDialogComponent, VibeTagsComponent, AddToPlanDialogComponent, SpotDetailDialogComponent, PhotoCarouselComponent, FitRowDirective, RouterLink, PlaceDetailComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <!-- Banner như Khám phá quán: nền là ảnh một nơi đã lưu, bên phải vài ảnh đã lưu xếp kiểu polaroid -->
@@ -235,7 +227,9 @@ interface PlaceRow {
                     <div class="flex items-center gap-2">
                       <span class="shrink-0 text-[13px] font-semibold text-slate-700" [attr.aria-label]="'HANOIVIBE chấm ' + item.place.rating + ' trên 5'"><span class="text-[#E29A2D]">★</span> {{ item.place.rating }}</span>
                       <span class="min-w-0 flex-1 truncate text-[13px] text-slate-500">{{ item.place.address || 'Chưa có địa chỉ' }}</span>
-                      <span class="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">{{ priceText(item.place) }}</span>
+                      @if (priceText(item.place); as price) {
+                        <span class="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">{{ price }}</span>
+                      }
                     </div>
                   </div>
                   <!-- Một nút chính (Vào plan); Chỉ đường / Bỏ là icon, rê chuột thì hiện chữ -->
@@ -319,11 +313,8 @@ interface PlaceRow {
 
     @if (filterOpen()) {
       <app-filter-sheet [resultLabel]="'Xem ' + (visible().length + visibleSpots().length) + ' mục'" [activeCount]="filterCount()" (closed)="filterOpen.set(false)" (cleared)="clearFilters()">
-        <app-filter-group title="Mức giá">
-          <app-choice-chips [options]="priceOptions" [selected]="filters().prices" (toggle)="setFilter({ prices: toggleIn(filters().prices, $any($event)) })" />
-        </app-filter-group>
-        <app-filter-group title="Ngân sách" hint="giá thấp nhất mỗi người">
-          <app-choice-chips [options]="budgetOptions" [selected]="[filters().budget]" (toggle)="setFilter({ budget: filters().budget === $event ? null : $any($event) })" />
+        <app-filter-group title="Giá mỗi người" hint="quán và chỗ chơi">
+          <app-price-range-input [min]="filters().priceMin" [max]="filters().priceMax" (changed)="setFilter($event)" />
         </app-filter-group>
         <app-filter-group title="Số sao" hint="HANOIVIBE chấm, chỉ áp dụng cho quán">
           <app-choice-chips [options]="starOptions" [selected]="[filters().stars]" (toggle)="setFilter({ stars: filters().stars === $event ? null : $any($event) })" />
@@ -420,8 +411,6 @@ export class PlaceListComponent implements OnInit {
   protected readonly filterOpen = signal(false);
   protected readonly filterChips = computed(() => placeFilterChips(this.filters()));
   protected readonly filterCount = computed(() => placeFilterCount(this.filters()));
-  protected readonly priceOptions = PRICE_OPTIONS;
-  protected readonly budgetOptions = PLACE_BUDGETS;
   protected readonly starOptions = STAR_OPTIONS;
   protected readonly cuisineOptions = CUISINE_OPTIONS;
   protected readonly toggleIn = toggleIn;
@@ -515,9 +504,8 @@ export class PlaceListComponent implements OnInit {
     const f = this.filters();
     const now = nowHHmm();
     return this.savedSpots().filter((s) => {
-      // Mức giá: theo giá vé; số sao không áp dụng cho chỗ chơi; chọn loại món thì chỉ còn quán ăn
-      if (f.prices.length && !f.prices.some((r) => s.priceFrom >= PRICE_LIMITS[r][0] && s.priceFrom < PRICE_LIMITS[r][1])) return false;
-      if (f.budget !== null && s.priceFrom > f.budget) return false;
+      // Giá: theo giá vé; số sao không áp dụng cho chỗ chơi; chọn loại món thì chỉ còn quán ăn
+      if (!priceInRange(s.priceFrom, s.priceTo, f.priceMin, f.priceMax)) return false;
       if (f.cuisines.length || f.wifi || f.parking) return false;
       if (f.openNow && !isOpenAt(s.openTime, s.closeTime, now)) return false;
       if (!keyword) return true;
@@ -568,15 +556,13 @@ export class PlaceListComponent implements OnInit {
             : null,
       }));
 
-    const priceOrder: PriceRange[] = ['cheap', 'medium', 'high', 'luxury'];
     return rows.sort((a, b) => {
       switch (this.sortKey()) {
         case 'name':
           return a.place.name.localeCompare(b.place.name, 'vi');
         case 'price':
-          return (
-            priceOrder.indexOf(a.place.priceRange) - priceOrder.indexOf(b.place.priceRange)
-          );
+          // Giá thấp → cao; quán chưa nhập giá xuống cuối
+          return (a.place.priceFrom ?? Infinity) - (b.place.priceFrom ?? Infinity);
         case 'distance':
           return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
         default:

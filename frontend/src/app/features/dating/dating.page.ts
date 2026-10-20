@@ -16,7 +16,7 @@ import { ToastService } from '../../core/services/toast.service';
 import { SwipeCardComponent } from './swipe-card.component';
 import { ReportDialogComponent, ReportInput } from './report-dialog.component';
 import { ConfirmDialogComponent } from '../../shared/ui/confirm-dialog.component';
-import { PlaceType, priceLabel } from '../../core/models/place.model';
+import { placePriceText, PlaceType } from '../../core/models/place.model';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { AuthService } from '../../core/auth/auth.service';
 
@@ -251,7 +251,7 @@ type Tab = 'swipe' | 'matches';
                     </span>
                     <span class="flex min-w-0 flex-col gap-0.5">
                       <span class="truncate text-sm font-semibold">{{ sp.name }}</span>
-                      <span class="text-xs text-slate-500">{{ typeLabel[sp.type] }} · {{ sp.district }} · {{ price(sp.priceRange) }}</span>
+                      <span class="text-xs text-slate-500">{{ typeLabel[sp.type] }} · {{ sp.district }}{{ price(sp) ? ' · ' + price(sp) : '' }}</span>
                     </span>
                   </a>
                 }
@@ -486,7 +486,7 @@ export class DatingPage implements OnInit {
   protected readonly likedToday = signal(0);
   protected readonly superLeft = signal(0);
   protected readonly typeLabel: Record<PlaceType, string> = { cafe: 'Cafe', bar: 'Bar', restaurant: 'Quán ăn' };
-  protected readonly price = priceLabel;
+  protected readonly price = placePriceText;
   protected readonly justMatched = signal<Match | null>(null);
   protected readonly loading = signal(false);
   protected readonly busy = signal(false);

@@ -13,9 +13,9 @@ const LAN: Candidate = {
   photos: ['/uploads/b.webp', '/uploads/a.webp'],
   interests: ['cafe'],
   sharedPlaces: [
-    { catalogId: 'c1', name: 'Cafe Cuối Ngõ', type: 'cafe', district: 'Cầu Giấy', priceRange: 'cheap' },
-    { catalogId: 'c2', name: 'Echoes Café', type: 'cafe', district: 'Ba Đình', priceRange: 'medium' },
-    { catalogId: 'c3', name: 'Phát Ký', type: 'restaurant', district: 'Hoàn Kiếm', priceRange: 'medium' },
+    { catalogId: 'c1', name: 'Cafe Cuối Ngõ', type: 'cafe', district: 'Cầu Giấy', priceFrom: 30_000, priceTo: null },
+    { catalogId: 'c2', name: 'Echoes Café', type: 'cafe', district: 'Ba Đình', priceFrom: 50_000, priceTo: 90_000 },
+    { catalogId: 'c3', name: 'Phát Ký', type: 'restaurant', district: 'Hoàn Kiếm', priceFrom: null, priceTo: null },
   ],
   fit: 75,
   superLikedMe: false,

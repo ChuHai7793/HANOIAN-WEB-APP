@@ -1,4 +1,4 @@
-import { PlaceType, PriceRange } from './place.model';
+import { PlaceType } from './place.model';
 import { Gender } from './profile.model';
 
 export type DatingInterest = 'male' | 'female' | 'all';
@@ -17,13 +17,14 @@ export interface DatingSettings {
 
 export type DatingSettingsRequest = Omit<DatingSettings, 'missing' | 'banned'>;
 
-/** Quán cả hai cùng lưu trong My place. `district`: tên quận để hiển thị. */
+/** Quán cả hai cùng lưu trong My place. `district`: tên quận để hiển thị; giá mỗi người (VNĐ), null = chưa nhập. */
 export interface SharedPlace {
   catalogId: string;
   name: string;
   type: PlaceType;
   district: string;
-  priceRange: PriceRange;
+  priceFrom: number | null;
+  priceTo: number | null;
 }
 
 /**

@@ -60,12 +60,8 @@ export interface Place {
   updatedAt: string;
 }
 
-export const PRICE_RANGES: { value: PriceRange; label: string; hint: string }[] = [
-  { value: 'cheap', label: 'Bình dân', hint: '< 50k' },
-  { value: 'medium', label: 'Tầm trung', hint: '50k – 150k' },
-  { value: 'high', label: 'Hơi sang', hint: '150k – 400k' },
-  { value: 'luxury', label: 'Sang chảnh', hint: '> 400k' },
-];
+/** Nhóm giá nội bộ, xem priceRangeFor; không còn hiện hay chọn trong giao diện */
+export const PRICE_RANGES: PriceRange[] = ['cheap', 'medium', 'high', 'luxury'];
 
 export const CUISINES: string[] = [
   'Món Việt',
@@ -82,32 +78,30 @@ export const CUISINES: string[] = [
 ];
 
 /**
- * Giá để hiện: có giá cụ thể thì "80k–150k/người" / "Từ 80k/người", chưa có thì tên nhóm giá ("Tầm trung").
- * {@code unit} false: bỏ "/người" (huy hiệu nhỏ trên thẻ).
+ * Giá để hiện trên thẻ, cùng kiểu với chỗ chơi: "80k–150k/người" / "Từ 80k/người"; chưa nhập giá thì rỗng (ẩn huy hiệu).
+ * {@code unit} false: bỏ "/người".
  */
-export function placePriceText(p: Pick<Place, 'priceRange' | 'priceFrom' | 'priceTo'>, unit = true): string {
-  if (p.priceFrom === null || p.priceFrom === undefined) return priceLabel(p.priceRange);
+export function placePriceText(p: Pick<Place, 'priceFrom' | 'priceTo'>, unit = true): string {
+  if (p.priceFrom === null || p.priceFrom === undefined) return '';
   const range = p.priceTo ? `${shortVnd(p.priceFrom)}–${shortVnd(p.priceTo)}` : `Từ ${shortVnd(p.priceFrom)}`;
   return unit ? `${range}/người` : range;
 }
 
-/** Ô "Mức giá" ở popup / trang quán: "80k–150k/người · Tầm trung", chưa có giá cụ thể thì "Tầm trung" */
-export function placePriceDetail(p: Pick<Place, 'priceRange' | 'priceFrom' | 'priceTo'>): string {
-  const label = priceLabel(p.priceRange);
-  return p.priceFrom === null || p.priceFrom === undefined ? label : `${placePriceText(p)} · ${label}`;
+/** Ô "Mức giá" ở popup / trang quán: "80k–150k/người", chưa nhập giá thì "Chưa có giá" */
+export function placePriceDetail(p: Pick<Place, 'priceFrom' | 'priceTo'>): string {
+  return placePriceText(p) || 'Chưa có giá';
 }
 
-/** Nhóm giá theo giá cụ thể (lấy giữa khoảng), cùng mốc với PRICE_RANGES: <50k, 50–150k, 150–400k, >400k */
+/**
+ * Nhóm giá nội bộ (backend dùng cho Autoplan, gán kiểu hẹn mặc định, độ hợp gu) suy ra từ giá cụ thể (lấy giữa
+ * khoảng): <50k, 50–150k, 150–400k, >400k. Không hiện cho người dùng, admin không chọn tay.
+ */
 export function priceRangeFor(from: number, to: number | null): PriceRange {
   const mid = to ? (from + to) / 2 : from;
   if (mid < 50_000) return 'cheap';
   if (mid < 150_000) return 'medium';
   if (mid < 400_000) return 'high';
   return 'luxury';
-}
-
-export function priceLabel(value: PriceRange): string {
-  return PRICE_RANGES.find((p) => p.value === value)?.label ?? value;
 }
 
 /** Ảnh để xem: danh sách ảnh nếu có, không thì ảnh bìa. */

@@ -2,16 +2,16 @@ import { placePriceDetail, placePriceText, priceRangeFor } from './place.model';
 
 describe('place.model: giá', () => {
   it('chưa có giá cụ thể thì hiện nhóm giá', () => {
-    expect(placePriceText({ priceRange: 'medium', priceFrom: null, priceTo: null })).toBe('Tầm trung');
-    expect(placePriceText({ priceRange: 'cheap' })).toBe('Bình dân');
-    expect(placePriceDetail({ priceRange: 'high' })).toBe('Hơi sang');
+    expect(placePriceText({ priceFrom: null, priceTo: null })).toBe('');
+    expect(placePriceText({})).toBe('');
+    expect(placePriceDetail({})).toBe('Chưa có giá');
   });
 
   it('có giá cụ thể: khoảng, hoặc "Từ" khi chỉ có giá bắt đầu', () => {
-    expect(placePriceText({ priceRange: 'medium', priceFrom: 80_000, priceTo: 150_000 })).toBe('80k–150k/người');
-    expect(placePriceText({ priceRange: 'medium', priceFrom: 80_000, priceTo: 150_000 }, false)).toBe('80k–150k');
-    expect(placePriceText({ priceRange: 'luxury', priceFrom: 1_200_000, priceTo: null })).toBe('Từ 1,2tr/người');
-    expect(placePriceDetail({ priceRange: 'medium', priceFrom: 80_000, priceTo: 150_000 })).toBe('80k–150k/người · Tầm trung');
+    expect(placePriceText({ priceFrom: 80_000, priceTo: 150_000 })).toBe('80k–150k/người');
+    expect(placePriceText({ priceFrom: 80_000, priceTo: 150_000 }, false)).toBe('80k–150k');
+    expect(placePriceText({ priceFrom: 1_200_000, priceTo: null })).toBe('Từ 1,2tr/người');
+    expect(placePriceDetail({ priceFrom: 80_000, priceTo: 150_000 })).toBe('80k–150k/người');
   });
 
   it('tự chọn nhóm giá theo giữa khoảng', () => {

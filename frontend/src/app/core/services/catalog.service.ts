@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { API_BASE } from '../api/api';
 import { SILENT_CODES } from '../api/http-context';
 import { CatalogItem, CatalogPage, DistrictOption, FeaturedItem, FeaturedRequest, TypeCounts } from '../models/catalog.model';
-import { Place, PlaceType, PriceRange } from '../models/place.model';
+import { Place, PlaceType } from '../models/place.model';
 import { toQueryParams } from '../api/query-params';
 import { Vibe } from '../models/vibe.model';
 
@@ -14,9 +14,9 @@ export interface CatalogQuery {
   district?: string;
   /** Chỉ quán đã có trong My place của mình */
   mine?: boolean;
-  /** Bộ lọc chi tiết (xem CatalogFilter ở backend) */
-  price?: PriceRange[];
-  budget?: number | null;
+  /** Bộ lọc chi tiết (xem CatalogFilter ở backend); priceMin / priceMax: VNĐ mỗi người */
+  priceMin?: number | null;
+  priceMax?: number | null;
   stars?: number | null;
   cuisine?: string[];
   vibe?: Vibe[];

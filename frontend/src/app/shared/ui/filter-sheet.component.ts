@@ -1,4 +1,4 @@
-import { Component, HostListener, input, output } from '@angular/core';
+import { Component, HostListener, input, output, signal } from '@angular/core';
 import { ActiveFilter, ChoiceOption } from '../../core/models/filters.model';
 import { IconComponent, IconName } from './icon.component';
 import { useOverlay } from './overlay';
@@ -131,6 +131,80 @@ export class FilterSwitchComponent {
   readonly icon = input.required<IconName>();
   readonly on = input(false);
   readonly toggle = output<void>();
+}
+
+/**
+ * Khoảng giá mỗi người: hai ô nhập số "Từ" và "Đến", đơn vị nghìn đồng (gõ 100 = 100k). Áp dụng khi rời ô / Enter;
+ * "Đến" nhỏ hơn "Từ" thì báo và không áp dụng. Để trống = không giới hạn phía đó.
+ */
+@Component({
+  selector: 'app-price-range-input',
+  template: `
+    <div class="flex items-center gap-2">
+      <label class="flex min-h-11 flex-1 items-center gap-1.5 rounded-xl border border-slate-200 px-3 text-sm focus-within:border-brand-500">
+        <span class="shrink-0 text-slate-500">Từ</span>
+        <input
+          type="number"
+          inputmode="numeric"
+          min="0"
+          step="10"
+          placeholder="50"
+          class="w-full min-w-0 bg-transparent text-right text-slate-900 outline-none"
+          [value]="thousands(min())"
+          (change)="onChange($any($event.target).value, maxInput.value)"
+          #minInput
+        />
+        <span class="shrink-0 text-slate-400">k</span>
+      </label>
+      <span class="text-slate-400">–</span>
+      <label class="flex min-h-11 flex-1 items-center gap-1.5 rounded-xl border border-slate-200 px-3 text-sm focus-within:border-brand-500">
+        <span class="shrink-0 text-slate-500">Đến</span>
+        <input
+          type="number"
+          inputmode="numeric"
+          min="0"
+          step="10"
+          placeholder="400"
+          class="w-full min-w-0 bg-transparent text-right text-slate-900 outline-none"
+          [value]="thousands(max())"
+          (change)="onChange(minInput.value, $any($event.target).value)"
+          #maxInput
+        />
+        <span class="shrink-0 text-slate-400">k</span>
+      </label>
+    </div>
+    @if (error()) {
+      <p class="mt-1.5 text-xs text-rose-600">{{ error() }}</p>
+    } @else {
+      <p class="mt-1.5 text-xs text-slate-400">Nghìn đồng mỗi người. Quán chưa có giá sẽ không hiện khi lọc theo tiền.</p>
+    }
+  `,
+})
+export class PriceRangeInputComponent {
+  /** VNĐ; null = không giới hạn */
+  readonly min = input<number | null>(null);
+  readonly max = input<number | null>(null);
+  readonly changed = output<{ priceMin: number | null; priceMax: number | null }>();
+  protected readonly error = signal('');
+
+  protected thousands(vnd: number | null): string {
+    return vnd === null ? '' : String(Math.round(vnd / 1000));
+  }
+
+  protected onChange(minText: string, maxText: string): void {
+    const parse = (t: string): number | null => {
+      const n = Number(t.trim());
+      return t.trim() === '' || !Number.isFinite(n) || n < 0 ? null : Math.round(n) * 1000;
+    };
+    const priceMin = parse(minText);
+    const priceMax = parse(maxText);
+    if (priceMin !== null && priceMax !== null && priceMax < priceMin) {
+      this.error.set('"Đến" phải từ "Từ" trở lên.');
+      return;
+    }
+    this.error.set('');
+    this.changed.emit({ priceMin, priceMax });
+  }
 }
 
 /** Bộ lọc đang bật: chip có dấu ✕ ngay trên danh sách, bấm để bỏ từng cái */

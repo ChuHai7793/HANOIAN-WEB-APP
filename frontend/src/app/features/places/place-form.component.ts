@@ -9,7 +9,7 @@ import { ModalComponent } from '../../shared/ui/modal.component';
 import { DistrictOption } from '../../core/models/catalog.model';
 import { RatingStarsComponent } from '../../shared/ui/rating-stars.component';
 import { ImagePickerComponent } from '../../shared/ui/image-picker.component';
-import { CUISINES, photosOf, Place, placePriceText, PlaceType, PRICE_RANGES, PriceRange, priceRangeFor } from '../../core/models/place.model';
+import { CUISINES, photosOf, Place, placePriceText, PlaceType, PriceRange, priceRangeFor } from '../../core/models/place.model';
 import { BAR_CONFIG, CAFE_CONFIG, PlaceTypeConfig, RESTAURANT_CONFIG } from './place.config';
 import { embedMapUrl, isShortMapsLink, parseGmapUrl, viewOnMapUrl } from '../../core/utils/gmap-url';
 import { nowIso } from '../../core/utils/id';
@@ -142,20 +142,10 @@ const TYPE_OPTIONS = [
             @if (priceError()) {
               <p class="mt-1 text-xs text-rose-600">{{ priceError() }}</p>
             } @else if (pricePreview()) {
-              <p class="mt-1 text-xs text-slate-500">Hiện là <b class="text-slate-700">{{ pricePreview() }}</b>; khoảng giá bên dưới tự chọn theo, vẫn sửa tay được.</p>
+              <p class="mt-1 text-xs text-slate-500">Trên thẻ hiện <b class="text-slate-700">{{ pricePreview() }}</b>.</p>
+            } @else {
+              <p class="mt-1 text-xs text-slate-500">Chưa nhập thì thẻ không hiện giá và quán không hiện khi người dùng lọc theo tiền.</p>
             }
-          </div>
-
-          <div>
-            <label class="mb-1.5 block text-sm font-medium text-slate-700">Khoảng giá</label>
-            <select
-              formControlName="priceRange"
-              class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-            >
-              @for (p of priceRanges; track p.value) {
-                <option [value]="p.value">{{ p.label }} ({{ p.hint }})</option>
-              }
-            </select>
           </div>
 
           <div>
@@ -349,7 +339,6 @@ export class PlaceFormComponent {
   readonly save = output<Place & Partial<{ vibes: Vibe[]; vibesAuto: boolean }>>();
   readonly cancel = output<void>();
 
-  protected readonly priceRanges = PRICE_RANGES;
   protected readonly cuisines = CUISINES;
   protected readonly typeOptions = TYPE_OPTIONS;
 
@@ -410,7 +399,7 @@ export class PlaceFormComponent {
   protected readonly pricePreview = computed(() => {
     const from = this.priceFromValue();
     if (from === null || from === undefined) return '';
-    return placePriceText({ priceRange: 'medium', priceFrom: from, priceTo: this.priceToValue() ?? null });
+    return placePriceText({ priceFrom: from, priceTo: this.priceToValue() ?? null });
   });
   protected readonly priceError = computed(() => {
     const from = this.priceFromValue();
@@ -419,7 +408,7 @@ export class PlaceFormComponent {
     if (from !== null && from !== undefined && to !== null && to !== undefined && to < from) return '"Đến" phải từ "Từ" trở lên.';
     return '';
   });
-  /** Đang nạp quán để sửa: không tự đổi khoảng giá admin đã chọn */
+  /** Đang nạp quán để sửa: chưa tính lại nhóm giá nội bộ */
   private patching = false;
   private readonly destroyRef = inject(DestroyRef);
 
@@ -442,7 +431,7 @@ export class PlaceFormComponent {
     }
     const source = this.vibesSource();
     if (source && source !== 'default') this.vibeChoice.set({ vibes: this.vibes() ?? [], auto: false });
-    // Nhập giá cụ thể: tự chọn khoảng giá theo (admin vẫn sửa tay được sau đó)
+    // Nhóm giá nội bộ (backend dùng cho Autoplan, kiểu hẹn mặc định) suy ra từ giá cụ thể; không có giá thì giữ mặc định
     merge(this.form.controls.priceFrom.valueChanges, this.form.controls.priceTo.valueChanges)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {

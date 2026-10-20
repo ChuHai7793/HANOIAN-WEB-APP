@@ -238,7 +238,7 @@ interface LinkedPlace {
                     <div class="min-w-0 flex-1">
                       <h3 class="font-semibold text-slate-900">{{ row.place.name }}</h3>
                       <p class="mt-0.5 text-sm text-slate-500">
-                        {{ row.place.address }} · {{ priceText(row.place) }}
+                        {{ row.place.address }}{{ priceText(row.place) ? ' · ' + priceText(row.place) : '' }}
                       </p>
 
                       <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">

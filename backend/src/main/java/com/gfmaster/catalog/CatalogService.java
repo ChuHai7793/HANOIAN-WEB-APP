@@ -357,8 +357,11 @@ public class CatalogService {
     String q = f.q();
     if (f.type() != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("type"), f.type()));
     if (f.district() != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("district"), f.district()));
-    if (!f.prices().isEmpty()) spec = spec.and((root, query, cb) -> root.get("priceRange").in(f.prices()));
-    if (f.budget() != null) spec = spec.and((root, query, cb) -> cb.le(minPrice(root, cb), f.budget()));
+    // Lọc theo tiền: chỉ quán đã nhập giá cụ thể; khoảng giá của quán [from, to ?? from] giao với [min, max]
+    if (f.priceMin() != null) {
+      spec = spec.and((root, query, cb) -> cb.ge(cb.coalesce(root.<Integer>get("priceTo"), root.<Integer>get("priceFrom")), f.priceMin()));
+    }
+    if (f.priceMax() != null) spec = spec.and((root, query, cb) -> cb.le(root.<Integer>get("priceFrom"), f.priceMax()));
     if (f.minStars() != null) spec = spec.and((root, query, cb) -> cb.ge(root.get("rating"), f.minStars()));
     // Chỉ quán ăn có loại món, nên chọn loại món là chỉ còn quán ăn
     if (!f.cuisines().isEmpty()) spec = spec.and((root, query, cb) -> root.get("cuisine").in(f.cuisines()));

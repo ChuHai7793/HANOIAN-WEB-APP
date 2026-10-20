@@ -2,7 +2,6 @@ package com.gfmaster.dating;
 
 import com.gfmaster.profile.DatingInterest;
 import com.gfmaster.place.PlaceType;
-import com.gfmaster.place.PriceRange;
 import com.gfmaster.profile.Gender;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -60,7 +59,8 @@ public final class DatingDtos {
       boolean superLikedMe) {}
 
   /** Quán cùng lưu: {@code district} là tên quận để hiển thị. */
-  public record SharedPlace(UUID catalogId, String name, PlaceType type, String district, PriceRange priceRange) {}
+  /** {@code priceFrom}/{@code priceTo}: giá mỗi người (VNĐ), null = quán chưa nhập giá */
+  public record SharedPlace(UUID catalogId, String name, PlaceType type, String district, Integer priceFrom, Integer priceTo) {}
 
   /** {@code superLike}: siêu thích (giới hạn lượt mỗi ngày), chỉ đi cùng {@code liked = true}. */
   public record SwipeRequest(@NotNull UUID targetId, boolean liked, Boolean superLike) {}
