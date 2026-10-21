@@ -148,8 +148,8 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
               placeholder="Tìm theo tên, địa chỉ…"
             />
           </label>
-          <!-- Điện thoại: khu vực, Bộ lọc và loại quán gom thành một hàng vuốt ngang (sm:contents: màn rộng xếp vào hàng trên) -->
-          <div role="group" aria-label="Khu vực và loại quán" class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:contents">
+          <!-- Điện thoại: khu vực và Bộ lọc gom thành một hàng vuốt ngang (sm:contents: màn rộng xếp vào hàng trên); loại quán nằm trong Bộ lọc -->
+          <div role="group" aria-label="Khu vực và bộ lọc" class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:contents">
             <label class="flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm text-slate-700 shadow-lg shadow-brand-900/20">
               <span class="text-brand-600"><app-icon name="pin" [size]="18" /></span>
               <span class="sr-only">Khu vực</span>
@@ -165,20 +165,6 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
               </select>
             </label>
             <app-filter-button [count]="filterCount()" (open)="filterOpen.set(true)" />
-            @for (t of typeFilters; track t.value) {
-              <button
-                type="button"
-                [attr.aria-pressed]="type() === t.value"
-                class="inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-[13px] shadow-lg shadow-brand-900/20 transition"
-                [class]="type() === t.value
-                  ? 'bg-brand-600 font-semibold text-white'
-                  : 'bg-white font-medium text-slate-700 hover:bg-brand-50'"
-                (click)="type.set(t.value); reload(false)"
-              >
-                <app-icon [name]="t.icon" [size]="16" />
-                {{ t.label }} · {{ counts()?.[t.value || 'all'] ?? '–' }}
-              </button>
-            }
           </div>
         </div>
       </app-page-banner>
@@ -305,6 +291,9 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
 
     @if (filterOpen()) {
       <app-filter-sheet [resultLabel]="'Xem ' + total() + ' quán'" [activeCount]="filterCount()" (closed)="filterOpen.set(false)" (cleared)="clearFilters()">
+        <app-filter-group title="Loại quán">
+          <app-choice-chips [options]="typeOptions()" [selected]="[type()]" (toggle)="setType($any($event))" />
+        </app-filter-group>
         <app-filter-group title="Giá mỗi người">
           <app-price-range-input [min]="filters().priceMin" [max]="filters().priceMax" (changed)="setFilter($event)" />
         </app-filter-group>
@@ -548,8 +537,16 @@ export class ExplorePage implements OnInit {
   /** Bộ lọc chi tiết (bảng "Bộ lọc"): áp dụng ngay, ghi lên đường dẫn */
   protected readonly filters = signal<PlaceFilters>(EMPTY_PLACE_FILTERS);
   protected readonly filterOpen = signal(false);
-  protected readonly filterChips = computed(() => placeFilterChips(this.filters()));
-  protected readonly filterCount = computed(() => placeFilterCount(this.filters()));
+  /** Chip loại quán trong bảng lọc, kèm số quán theo từ khoá + khu vực + bộ lọc khác */
+  protected readonly typeOptions = computed(() =>
+    this.typeFilters.map((t) => ({ value: t.value, label: `${t.label} · ${this.counts()?.[t.value || 'all'] ?? '–'}`, icon: t.icon })),
+  );
+  /** Loại quán đứng đầu hàng chip đang lọc (bỏ chip = về Tất cả) */
+  protected readonly filterChips = computed(() => [
+    ...(this.type() ? [{ key: 'type', label: this.typeFilters.find((t) => t.value === this.type())?.label ?? '' }] : []),
+    ...placeFilterChips(this.filters()),
+  ]);
+  protected readonly filterCount = computed(() => placeFilterCount(this.filters()) + (this.type() ? 1 : 0));
   protected readonly starOptions = STAR_OPTIONS;
   protected readonly cuisineOptions = CUISINE_OPTIONS;
   protected readonly vibeOptions = VIBE_OPTIONS;
@@ -562,17 +559,31 @@ export class ExplorePage implements OnInit {
   }
 
   protected removeFilter(key: string): void {
+    if (key === 'type') return this.setType('');
     this.applyFilters(removePlaceFilter(this.filters(), key));
   }
 
   protected clearFilters(): void {
+    if (this.type()) this.setType('');
     this.applyFilters(EMPTY_PLACE_FILTERS);
+  }
+
+  /** Chọn loại quán (chip "Tất cả" = ''); bấm lại loại đang chọn thì về Tất cả. Ghi ?loai= lên đường dẫn. */
+  protected setType(value: PlaceType | ''): void {
+    const next = value && value === this.type() ? '' : value;
+    if (next === this.type()) return;
+    this.type.set(next);
+    void this.router.navigate([], { queryParams: { loai: next || null }, queryParamsHandling: 'merge', replaceUrl: true });
+    void this.reload(false);
   }
 
   /** Chọn loại món ở "Tất cả": chuyển sang Quán ăn (chỉ quán ăn có loại món) */
   protected pickCuisine(cuisine: string): void {
     const cuisines = toggleIn(this.filters().cuisines, cuisine);
-    if (cuisines.length && this.type() !== 'restaurant') this.type.set('restaurant');
+    if (cuisines.length && this.type() !== 'restaurant') {
+      this.type.set('restaurant');
+      void this.router.navigate([], { queryParams: { loai: 'restaurant' }, queryParamsHandling: 'merge', replaceUrl: true });
+    }
     this.setFilter({ cuisines });
   }
 
@@ -605,6 +616,8 @@ export class ExplorePage implements OnInit {
     // Mở từ "Gợi ý điểm hẹn" của Tìm đối tượng: /explore?q=<tên quán>
     const params = this.route.snapshot.queryParamMap;
     this.q.set(params.get('q') ?? '');
+    const loai = params.get('loai');
+    this.type.set(this.typeFilters.some((t) => t.value && t.value === loai) ? (loai as PlaceType) : '');
     this.filters.set(placeFiltersFromParams(Object.fromEntries(params.keys.map((k) => [k, params.get(k)]))));
     await this.reload();
   }
