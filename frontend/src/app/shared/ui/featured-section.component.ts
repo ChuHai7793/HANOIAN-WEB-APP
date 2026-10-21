@@ -17,7 +17,7 @@ export interface FeaturedCard {
   /** Tên quán / chỗ chơi: dòng chính của thẻ */
   name: string;
   address: string;
-  /** Điểm đánh giá đã định dạng ("4,6"), null = chưa có (thẻ ghi "Chưa có đánh giá") */
+  /** Điểm đánh giá đã định dạng ("4,6"), null = chưa có (ẩn dòng sao) */
   rating: string | null;
   /** Thông tin thêm sau điểm sao, vd. giá "40k–120k/người" */
   note: string | null;
@@ -108,16 +108,19 @@ interface Slide {
             <span class="absolute inset-x-4 bottom-3.5 block pr-12 sm:inset-x-5 sm:bottom-4 md:inset-x-6 md:bottom-5">
               <span class="block text-[13px] font-semibold uppercase tracking-[0.14em] text-white/80 md:text-sm">{{ f.meta }}</span>
               <span class="mt-1 block truncate text-[22px] font-extrabold leading-tight text-white sm:text-[24px] md:text-[28px]">{{ f.name }}</span>
-              <span class="mt-1.5 block text-[15px] font-medium text-white md:text-base">
-                @if (f.rating) {
-                  <span class="text-amber-300">★</span> {{ f.rating }}
-                } @else {
-                  Chưa có đánh giá
-                }
-                @if (f.note) {
-                  · {{ f.note }}
-                }
-              </span>
+              @if (f.rating || f.note) {
+                <span class="mt-1.5 block text-[15px] font-medium text-white md:text-base">
+                  @if (f.rating) {
+                    <span class="text-amber-300">★</span> {{ f.rating }}
+                  }
+                  @if (f.rating && f.note) {
+                    ·
+                  }
+                  @if (f.note) {
+                    {{ f.note }}
+                  }
+                </span>
+              }
               @if (f.address) {
                 <span class="mt-0.5 block truncate text-sm text-white/85 md:text-[15px]">{{ f.address }}</span>
               }
