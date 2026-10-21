@@ -166,11 +166,11 @@ interface PlaceRow {
       <!-- Cầu nối: đã có chỗ ưng ý thì lên plan -->
       <a
         routerLink="/plans"
-        class="flex items-center gap-2.5 rounded-xl border border-brand-200 bg-brand-100 px-3.5 py-2 text-[13px] text-slate-700 transition hover:bg-brand-50"
+        class="flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-100 py-2.5 pl-3 pr-2.5 text-sm text-slate-700 transition hover:bg-brand-50 sm:text-[15px]"
       >
-        <span class="text-brand-600"><app-icon name="route" [size]="16" /></span>
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-brand-600 shadow-sm"><app-icon name="route" [size]="20" /></span>
         <span class="min-w-0 flex-1 truncate"><b class="text-slate-900">Đã chọn được chỗ?</b><span class="max-sm:hidden"> Ghép quán và chỗ chơi thành lịch trình cho buổi hẹn tới.</span></span>
-        <span class="flex shrink-0 items-center gap-1 font-semibold text-brand-800">Lên plan<app-icon name="arrowRight" [size]="14" [stroke]="2.4" /></span>
+        <span class="flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-sm font-semibold text-white">Lên plan<app-icon name="arrowRight" [size]="15" [stroke]="2.4" /></span>
       </a>
 
       <app-active-filters [items]="filterChips()" (remove)="removeFilter($event)" (clear)="clearFilters()" />

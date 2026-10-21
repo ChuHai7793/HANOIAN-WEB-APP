@@ -50,15 +50,17 @@ interface Slide {
   imports: [IconComponent],
   template: `
     @if (cards().length || canEdit()) {
-      <div class="mt-2 flex flex-wrap items-center gap-x-3 text-[13px] font-medium">
-        <h2 class="mr-auto text-lg font-bold tracking-tight text-slate-900">{{ heading() }}</h2>
+      <div class="mt-3 flex flex-wrap items-center gap-2 text-sm font-medium">
+        <h2 class="mr-auto text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">{{ heading() }}</h2>
         @if (canEdit()) {
-          <button type="button" class="min-h-9 px-1 text-brand-700 hover:underline" (click)="edit.emit()">Chọn gợi ý nổi bật</button>
+          <button type="button" class="flex min-h-10 items-center gap-1.5 rounded-full border border-brand-200 bg-white px-3.5 text-brand-700 transition hover:bg-brand-50" (click)="edit.emit()">
+            <app-icon name="edit" [size]="15" />Chọn gợi ý nổi bật
+          </button>
         }
         @if (cards().length) {
-          <button type="button" class="flex min-h-9 items-center gap-1 px-1 text-slate-500 hover:text-slate-800" (click)="toggle()">
-            {{ hidden() ? 'Hiện gợi ý nổi bật' : 'Ẩn gợi ý nổi bật' }}
-            <span class="transition" [class.rotate-180]="!hidden()"><app-icon name="chevronDown" [size]="14" /></span>
+          <button type="button" class="flex min-h-10 items-center gap-1.5 rounded-full bg-slate-100 px-3.5 text-slate-600 transition hover:bg-slate-200 hover:text-slate-900" [attr.aria-expanded]="!hidden()" (click)="toggle()">
+            {{ hidden() ? 'Hiện gợi ý' : 'Ẩn gợi ý' }}
+            <span class="transition" [class.rotate-180]="!hidden()"><app-icon name="chevronDown" [size]="15" /></span>
           </button>
         }
       </div>
@@ -91,7 +93,7 @@ interface Slide {
             } @else {
               <span class="absolute inset-0 bg-gradient-to-br from-brand-500 to-brand-800"></span>
             }
-            <span class="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10"></span>
+            <span class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10"></span>
             <!-- Mép trên tối nhẹ: dòng chữ nhỏ vẫn đọc được trên ảnh sáng -->
             <span class="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/55 to-transparent"></span>
             @if (f.kicker) {
@@ -104,9 +106,9 @@ interface Slide {
             }
             <!-- Tên là chính, rồi sao, địa chỉ; câu dẫn admin viết (nếu có) chỉ là phụ chú nhỏ -->
             <span class="absolute inset-x-4 bottom-3.5 block pr-12 sm:inset-x-5 sm:bottom-4 md:inset-x-6 md:bottom-5">
-              <span class="block text-[12px] font-semibold uppercase tracking-[0.14em] text-white/75 md:text-[13px]">{{ f.meta }}</span>
-              <span class="mt-1 block truncate text-[20px] font-bold leading-tight text-white sm:text-[22px] md:text-[24px]">{{ f.name }}</span>
-              <span class="mt-1 block text-sm text-white/90">
+              <span class="block text-[13px] font-semibold uppercase tracking-[0.14em] text-white/80 md:text-sm">{{ f.meta }}</span>
+              <span class="mt-1 block truncate text-[22px] font-extrabold leading-tight text-white sm:text-[24px] md:text-[28px]">{{ f.name }}</span>
+              <span class="mt-1.5 block text-[15px] font-medium text-white md:text-base">
                 @if (f.rating) {
                   <span class="text-amber-300">★</span> {{ f.rating }}
                 } @else {
@@ -117,7 +119,7 @@ interface Slide {
                 }
               </span>
               @if (f.address) {
-                <span class="mt-0.5 block truncate text-sm text-white/80">{{ f.address }}</span>
+                <span class="mt-0.5 block truncate text-sm text-white/85 md:text-[15px]">{{ f.address }}</span>
               }
               @if (f.headline) {
                 <span class="mt-1.5 line-clamp-2 whitespace-pre-line text-[13px] italic leading-snug text-white/75">{{ f.headline }}</span>

@@ -196,11 +196,11 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
       <!-- Cầu nối: có quán ưng ý thì đi tìm người hẹn -->
       <a
         routerLink="/dating"
-        class="flex items-center gap-2.5 rounded-xl border border-brand-200 bg-brand-100 px-3.5 py-2 text-[13px] text-slate-700 transition hover:bg-brand-50"
+        class="flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-100 py-2.5 pl-3 pr-2.5 text-sm text-slate-700 transition hover:bg-brand-50 sm:text-[15px]"
       >
-        <span class="text-brand-600"><app-icon name="heart" [size]="16" /></span>
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-brand-600 shadow-sm"><app-icon name="heart" [size]="20" /></span>
         <span class="min-w-0 flex-1 truncate"><b class="text-slate-900">Đã có quán ưng ý?</b><span class="max-sm:hidden"> Bật Tìm đối tượng, quẹt và match rồi hẹn nhau ở quán bạn thích.</span></span>
-        <span class="flex shrink-0 items-center gap-1 font-semibold text-brand-800">Tìm người đi cùng<app-icon name="arrowRight" [size]="14" [stroke]="2.4" /></span>
+        <span class="flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-sm font-semibold text-white">Tìm người đi cùng<app-icon name="arrowRight" [size]="15" [stroke]="2.4" /></span>
       </a>
 
       <app-active-filters [items]="filterChips()" (remove)="removeFilter($event)" (clear)="clearFilters()" />
