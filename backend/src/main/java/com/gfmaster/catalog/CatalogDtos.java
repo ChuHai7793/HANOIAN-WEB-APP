@@ -112,7 +112,7 @@ public final class CatalogDtos {
   public record FeaturedRequest(
       @NotNull UUID catalogId,
       @Size(max = 60) String kicker,
-      @NotBlank @Size(max = 120) String headline) {}
+      @Size(max = 120) String headline) {}
 
   /** Ảnh nền banner Khám phá quán; null = frontend dùng ảnh mặc định */
   public record BannerSetting(

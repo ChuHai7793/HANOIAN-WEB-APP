@@ -173,7 +173,7 @@ public class CatalogService {
               "pos", i + 1,
               "id", f.catalogId(),
               "kicker", f.kicker() == null ? "" : f.kicker().strip(),
-              "headline", f.headline().strip()));
+              "headline", f.headline() == null ? "" : f.headline().strip()));
     }
     return featured(null);
   }

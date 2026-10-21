@@ -109,5 +109,5 @@ public final class SpotDtos {
   public record FeaturedSpotRequest(
       @NotNull UUID spotId,
       @Size(max = 60) String kicker,
-      @NotBlank @Size(max = 120) String headline) {}
+      @Size(max = 120) String headline) {}
 }

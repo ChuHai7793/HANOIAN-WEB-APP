@@ -7,17 +7,19 @@ export interface FeaturedCard {
   /** id quán / chỗ chơi, trả lại qua (open) */
   id: string;
   position: number;
-  /** Dòng nhỏ phía trên, vd. "Một chút bình yên" */
+  /** Dòng nhỏ góc trên (admin viết, không bắt buộc), vd. "Một chút bình yên" */
   kicker: string;
-  /** Câu dẫn lớn, xuống dòng bằng \n */
+  /** Câu dẫn (admin viết, không bắt buộc): phụ chú nhỏ dưới địa chỉ, xuống dòng bằng \n */
   headline: string;
   imageUrl: string | null;
-  /** Dòng nhỏ trên câu dẫn, vd. "Cafe · Ba Đình" */
+  /** Dòng nhỏ trên tên, vd. "Cafe · Ba Đình" */
   meta: string;
+  /** Tên quán / chỗ chơi: dòng chính của thẻ */
   name: string;
-  /** Điểm đánh giá đã định dạng ("4,6"), null = chưa có */
+  address: string;
+  /** Điểm đánh giá đã định dạng ("4,6"), null = chưa có (thẻ ghi "Chưa có đánh giá") */
   rating: string | null;
-  /** Thông tin thêm sau tên, vd. giá "Từ 40k" */
+  /** Thông tin thêm sau điểm sao, vd. giá "40k–120k/người" */
   note: string | null;
 }
 
@@ -100,18 +102,26 @@ interface Slide {
                 {{ f.kicker }}
               </span>
             }
+            <!-- Tên là chính, rồi sao, địa chỉ; câu dẫn admin viết (nếu có) chỉ là phụ chú nhỏ -->
             <span class="absolute inset-x-4 bottom-3.5 block pr-12 sm:inset-x-5 sm:bottom-4 md:inset-x-6 md:bottom-5">
               <span class="block text-[12px] font-semibold uppercase tracking-[0.14em] text-white/75 md:text-[13px]">{{ f.meta }}</span>
-              <span class="mt-1 block whitespace-pre-line text-[19px] font-bold leading-tight text-white sm:text-[22px] md:text-[26px]">{{ f.headline }}</span>
-              <span class="mt-2 block text-sm text-white/85">
-                {{ f.name }}
+              <span class="mt-1 block truncate text-[20px] font-bold leading-tight text-white sm:text-[22px] md:text-[24px]">{{ f.name }}</span>
+              <span class="mt-1 block text-sm text-white/90">
                 @if (f.rating) {
-                  · <span class="text-amber-300">★</span> {{ f.rating }}
+                  <span class="text-amber-300">★</span> {{ f.rating }}
+                } @else {
+                  Chưa có đánh giá
                 }
                 @if (f.note) {
                   · {{ f.note }}
                 }
               </span>
+              @if (f.address) {
+                <span class="mt-0.5 block truncate text-sm text-white/80">{{ f.address }}</span>
+              }
+              @if (f.headline) {
+                <span class="mt-1.5 line-clamp-2 whitespace-pre-line text-[13px] italic leading-snug text-white/75">{{ f.headline }}</span>
+              }
             </span>
             <span class="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-800 transition group-hover:bg-white md:bottom-5 md:right-5 md:h-11 md:w-11">
               <span class="-rotate-45"><app-icon name="arrowRight" [size]="16" [stroke]="2.2" /></span>

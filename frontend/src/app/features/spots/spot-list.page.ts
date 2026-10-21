@@ -412,6 +412,7 @@ export class SpotListPage implements OnInit {
       imageUrl: f.spot.imageUrl || null,
       meta: `${shortCategory(f.spot.category)} · ${f.spot.districtLabel}`,
       name: f.spot.name,
+      address: f.spot.address,
       rating: f.spot.ratingCount && f.spot.ratingAvg !== null ? ratingText(f.spot.ratingAvg) : null,
       note: spotPriceText(f.spot),
     })),

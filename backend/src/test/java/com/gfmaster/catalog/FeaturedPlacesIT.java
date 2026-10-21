@@ -78,7 +78,9 @@ class FeaturedPlacesIT extends ApiTestSupport {
     String item = "{\"catalogId\": \"%s\", \"headline\": \"Câu dẫn\"}".formatted(a);
     setFeatured(newGuestOf(admin), "[" + item + "]").andExpect(status().isForbidden());
     setFeatured(admin, "[" + item + "," + item + "]").andExpect(status().isBadRequest());
-    setFeatured(admin, "[{\"catalogId\": \"%s\", \"headline\": \"\"}]".formatted(a)).andExpect(status().isBadRequest());
+    // Câu dẫn không bắt buộc (thẻ lấy tên + địa chỉ làm chính)
+    setFeatured(admin, "[{\"catalogId\": \"%s\", \"headline\": \"\"}]".formatted(a)).andExpect(status().isOk());
+    setFeatured(admin, "[{\"catalogId\": \"%s\"}]".formatted(a)).andExpect(status().isOk());
     // Tối đa 10
     String[] seven = new String[11];
     for (int i = 0; i < 11; i++) seven[i] = "{\"catalogId\": \"%s\", \"headline\": \"x\"}".formatted(place(admin, "P" + i + UUID.randomUUID()));

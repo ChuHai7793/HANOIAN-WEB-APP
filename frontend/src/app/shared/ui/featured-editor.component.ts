@@ -25,55 +25,29 @@ export interface FeaturedSlot {
 export const MAX_FEATURED = 10;
 
 /** Chữ mẫu điền sẵn khi admin chọn mà chưa viết chữ (lần lượt theo vị trí) */
-const SAMPLES: Record<'place' | 'spot', { kicker: string; headline: string }[]> = {
-  place: [
-    { kicker: 'Điểm hẹn nổi bật', headline: 'Hẹn nhau ở\nphía hoàng hôn.' },
-    { kicker: 'Một chút bình yên', headline: 'Chậm lại, bên\nmột tách cà phê.' },
-    { kicker: 'Góc nhỏ riêng tư', headline: 'Một góc nhỏ.\nHai người thôi.' },
-    { kicker: 'Hẹn tối nay', headline: 'Một bữa tối,\nhai câu chuyện.' },
-    { kicker: 'Dạo phố cùng nhau', headline: 'Đi chậm thôi,\nHà Nội còn dài.' },
-    { kicker: 'Cho ngày mưa', headline: 'Mưa ngoài kia,\nấm áp bên trong.' },
-    { kicker: 'Nhìn từ trên cao', headline: 'Cả thành phố\nlên đèn vì mình.' },
-    { kicker: 'Hẹn cuối tuần', headline: 'Sáng chủ nhật,\nchẳng cần vội.' },
-    { kicker: 'Ngọt một chút', headline: 'Chia đôi\nmột miếng bánh.' },
-    { kicker: 'Hẹn lần đầu', headline: 'Bắt đầu\nthật nhẹ nhàng.' },
-  ],
-  spot: [
-    { kicker: 'Chỗ chơi nổi bật', headline: 'Dạo một vòng hồ,\nnắm tay thật lâu.' },
-    { kicker: 'Cùng làm một thứ', headline: 'Nặn đôi cốc\ncho hai người.' },
-    { kicker: 'Một tối khác lạ', headline: 'Xem một vở diễn,\nnghe chuyện xưa.' },
-    { kicker: 'Ngày mưa vẫn vui', headline: 'Mưa ngoài kia,\nvui trong này.' },
-    { kicker: 'Chơi cho vui', headline: 'Ai thua\nthì bao trà sữa.' },
-    { kicker: 'Cuối tuần này', headline: 'Đi chậm thôi,\nHà Nội còn dài.' },
-    { kicker: 'Ra ngoài trời', headline: 'Nắng nhẹ,\ngió mát, có nhau.' },
-    { kicker: 'Học cùng nhau', headline: 'Thử một điều\nchưa từng làm.' },
-    { kicker: 'Lưu giữ kỷ niệm', headline: 'Chụp một tấm\nđể nhớ lâu.' },
-    { kicker: 'Cho đôi chân', headline: 'Đi thật xa,\nrồi về cùng nhau.' },
-  ],
-};
-
 const TEXT = {
   place: {
     title: 'Điểm hẹn nổi bật',
     page: 'Khám phá quán',
     noun: 'quán',
     saved: 'Đã lưu điểm hẹn nổi bật.',
-    kicker: 'Dòng nhỏ, vd. Một chút bình yên',
-    headline: 'Câu dẫn, vd. Chậm lại, bên một tách cà phê. (Enter để xuống dòng)',
+    kicker: 'Dòng nhỏ góc thẻ, không bắt buộc (vd. Một chút bình yên)',
+    headline: 'Phụ chú dưới địa chỉ, không bắt buộc (vd. Chậm lại, bên một tách cà phê. Enter để xuống dòng)',
   },
   spot: {
     title: 'Chỗ chơi nổi bật',
     page: 'Tìm chỗ chơi',
     noun: 'chỗ chơi',
     saved: 'Đã lưu chỗ chơi nổi bật.',
-    kicker: 'Dòng nhỏ, vd. Cùng làm một thứ',
-    headline: 'Câu dẫn, vd. Nặn đôi cốc cho hai người. (Enter để xuống dòng)',
+    kicker: 'Dòng nhỏ góc thẻ, không bắt buộc (vd. Cùng làm một thứ)',
+    headline: 'Phụ chú dưới địa chỉ, không bắt buộc (vd. Nặn đôi cốc cho hai người. Enter để xuống dòng)',
   },
 };
 
 /**
  * Admin chọn danh sách nổi bật (tối đa 10) của Khám phá quán (`kind` place) hoặc Tìm chỗ chơi (spot): mỗi dòng
- * một quán / chỗ chơi + dòng nhỏ + câu dẫn (xuống dòng bằng Enter). Thứ tự trong danh sách là thứ tự trên hàng.
+ * một quán / chỗ chơi; dòng nhỏ và câu dẫn không bắt buộc (thẻ lấy tên + sao + địa chỉ làm chính). Thứ tự trong
+ * danh sách là thứ tự trên hàng.
  */
 @Component({
   selector: 'app-featured-editor',
@@ -172,12 +146,7 @@ export class FeaturedEditorComponent implements OnInit {
   }
 
   protected choose(i: number, id: string): void {
-    const s = this.slots()[i];
-    // Chọn lần đầu: điền sẵn chữ mẫu để sửa lại
-    const samples = SAMPLES[this.kind()];
-    const sample = samples[i % samples.length];
-    const fill = id && !s.headline ? { kicker: s.kicker || sample.kicker, headline: sample.headline } : {};
-    this.patch(i, { id, ...fill });
+    this.patch(i, { id });
   }
 
   protected patch(i: number, change: Partial<Slot>): void {
@@ -188,7 +157,6 @@ export class FeaturedEditorComponent implements OnInit {
     const list = this.slots();
     const noun = this.text().noun;
     if (list.some((s) => !s.id)) return this.error.set(`Chọn ${noun} cho mọi dòng, hoặc bỏ dòng chưa chọn.`);
-    if (list.some((s) => !s.headline.trim())) return this.error.set(`Viết câu dẫn cho mọi ${noun}.`);
     if (new Set(list.map((s) => s.id)).size !== list.length) return this.error.set(`Mỗi ${noun} chỉ chọn một lần.`);
     this.busy.set(true);
     this.error.set('');

@@ -501,6 +501,7 @@ export class ExplorePage implements OnInit {
       imageUrl: f.place.imageUrl || null,
       meta: `${TYPE_LABELS[f.place.type]} · ${f.place.districtLabel}`,
       name: f.place.name,
+      address: f.place.address,
       rating: f.place.ratingCount && f.place.ratingAvg !== null ? ratingText(f.place.ratingAvg) : null,
       note: null,
     })),

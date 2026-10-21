@@ -81,8 +81,9 @@ class FeaturedSpotsIT extends ApiTestSupport {
     String item = "{\"spotId\": \"%s\", \"headline\": \"Câu dẫn\"}".formatted(a);
     putJson(newGuestOf(admin), "/api/v1/admin/spots/featured", "[" + item + "]").andExpect(status().isForbidden());
     putJson(admin, "/api/v1/admin/spots/featured", "[" + item + "," + item + "]").andExpect(status().isBadRequest());
-    putJson(admin, "/api/v1/admin/spots/featured", "[{\"spotId\": \"%s\", \"headline\": \"\"}]".formatted(a))
-        .andExpect(status().isBadRequest());
+    // Câu dẫn không bắt buộc (thẻ lấy tên + địa chỉ làm chính)
+    putJson(admin, "/api/v1/admin/spots/featured", "[{\"spotId\": \"%s\", \"headline\": \"\"}]".formatted(a)).andExpect(status().isOk());
+    putJson(admin, "/api/v1/admin/spots/featured", "[{\"spotId\": \"%s\"}]".formatted(a)).andExpect(status().isOk());
     String[] seven = new String[11];
     for (int i = 0; i < 11; i++) seven[i] = "{\"spotId\": \"%s\", \"headline\": \"x\"}".formatted(spot(admin, "P" + i + UUID.randomUUID()));
     putJson(admin, "/api/v1/admin/spots/featured", "[" + String.join(",", java.util.Arrays.copyOf(seven, 10)) + "]").andExpect(status().isOk());

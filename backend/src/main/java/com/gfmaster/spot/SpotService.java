@@ -190,7 +190,7 @@ public class SpotService {
               "pos", i + 1,
               "id", f.spotId(),
               "kicker", f.kicker() == null ? "" : f.kicker().strip(),
-              "headline", f.headline().strip()));
+              "headline", f.headline() == null ? "" : f.headline().strip()));
     }
     return featured(null);
   }
