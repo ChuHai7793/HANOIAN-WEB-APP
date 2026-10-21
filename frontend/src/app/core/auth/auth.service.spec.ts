@@ -61,4 +61,21 @@ describe('AuthService phân quyền', () => {
     expect(auth.user()?.role).toBe('GUEST');
     expect(auth.canEdit()).toBe(false);
   });
+
+  it('đăng nhập Google / Facebook: gửi credential, mở phiên, báo tài khoản mới hay cũ', async () => {
+    const google = auth.loginWithGoogle('id-token');
+    const g = http.expectOne('/api/v1/auth/google');
+    expect(g.request.body).toEqual({ credential: 'id-token' });
+    g.flush({ accessToken: 't1', expiresIn: 900, user: user('GUEST'), newUser: true });
+    expect(await google).toBe(true);
+    expect(auth.isLoggedIn()).toBe(true);
+    expect(auth.token()).toBe('t1');
+
+    const facebook = auth.loginWithFacebook('fb-token');
+    const fb = http.expectOne('/api/v1/auth/facebook');
+    expect(fb.request.body).toEqual({ accessToken: 'fb-token' });
+    fb.flush({ accessToken: 't2', expiresIn: 900, user: user('GUEST'), newUser: false });
+    expect(await facebook).toBe(false);
+    expect(auth.token()).toBe('t2');
+  });
 });

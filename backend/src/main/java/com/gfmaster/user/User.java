@@ -25,7 +25,8 @@ public class User extends BaseEntity {
   @Column(length = 50)
   private String username;
 
-  @Column(nullable = false, length = 100)
+  /** null: tài khoản tạo qua Google / Facebook, chỉ đăng nhập được bằng cách đó. */
+  @Column(length = 100)
   private String passwordHash;
 
   @Column(nullable = false, length = 80)

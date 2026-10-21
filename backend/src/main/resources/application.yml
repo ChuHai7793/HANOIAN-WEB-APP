@@ -112,3 +112,12 @@ gfm:
       cron: "0 0 3 * * *"           # 03:00 hằng ngày
       older-than: 7d                # chừa thời gian cho form đang mở dở
   mongo.enabled: false
+  # Đăng nhập Google / Facebook (docs/dang-nhap-google). Để trống = ẩn nút tương ứng trên trang đăng nhập
+  social:
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+      jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
+    facebook:
+      app-id: ${FACEBOOK_APP_ID:}
+      app-secret: ${FACEBOOK_APP_SECRET:}
+      graph-base-url: https://graph.facebook.com/v21.0

@@ -3,6 +3,7 @@ import { Component, DOCUMENT, effect, ElementRef, HostListener, inject, PLATFORM
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { OverlayHandle } from './overlay';
+import { SocialLoginComponent } from './social-login.component';
 import { errorMessage } from '../../core/api/api';
 import { AuthService } from '../../core/auth/auth.service';
 import { LoginGate } from '../../core/auth/login-gate.service';
@@ -13,7 +14,7 @@ import { LoginGate } from '../../core/auth/login-gate.service';
  */
 @Component({
   selector: 'app-login-prompt',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, SocialLoginComponent],
   template: `
     @if (gate.prompt(); as p) {
       <div class="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4">
@@ -72,6 +73,8 @@ import { LoginGate } from '../../core/auth/login-gate.service';
               {{ busy() ? 'Đang đăng nhập…' : 'Đăng nhập' }}
             </button>
 
+            <app-social-login (done)="onSocial()" />
+
             <p class="text-center text-sm text-slate-500">
               Chưa có tài khoản?
               <button type="button" class="font-medium text-brand-600 hover:text-brand-700" (click)="register()">Đăng ký miễn phí</button>
@@ -117,6 +120,13 @@ export class LoginPromptComponent {
   @HostListener('document:keydown.escape')
   protected close(): void {
     if (!this.busy()) this.gate.close();
+  }
+
+  /** Google / Facebook xong ngay trong popup: đóng và làm tiếp việc vừa bấm */
+  protected async onSocial(): Promise<void> {
+    const p = this.gate.prompt();
+    this.gate.close();
+    await p?.resume?.();
   }
 
   protected async register(): Promise<void> {

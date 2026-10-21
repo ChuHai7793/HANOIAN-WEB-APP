@@ -8,3 +8,17 @@ gfm:
     api-per-minute: 1000            # test gọi API dày đặc, không muốn dính giới hạn
   jwt:
     secret: test-secret-0123456789abcdef-0123456789abcdef
+  # Đăng nhập Google trong test: token do test tự ký bằng keys/google-test-private.pem, kiểm tra bằng khoá công khai này
+  social:
+    google:
+      client-id: test-google-client-id
+      public-key-pem: |
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAn6b8//9plcPkJisJN9cB
+        e5J9OJfcSJsDQRch8EjkNMDruqIaQydw9dZWoXVpTDiU7H0JGoZReSvbO5X3oiMg
+        lMcJlB9Ys6jAOPClGOcQSyygPSvmPPwSJa+i+MnrFuiQNAEyEtWFvAM4ScH5Gkpf
+        ZkW6lA6oefwb1jXPlv4RnUsi5VuSrh/mAza66geom9N49r1GC6j5tKEWU38YElQy
+        ndqUwOrRwajxvfJTor+kWkIvqZsB0zF9FJ/TCATbUrIcWFGuLFhaxsFIMrIo9p67
+        /DQxziNzm6dxhNX1MbuoUE4ftAIyLB5Rdv6oDeOEmXYDLSkYQ20Ix160hRKCko98
+        CwIDAQAB
+        -----END PUBLIC KEY-----

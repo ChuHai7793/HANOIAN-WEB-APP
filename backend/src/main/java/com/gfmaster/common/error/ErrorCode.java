@@ -24,6 +24,9 @@ public enum ErrorCode {
   NO_ALTERNATIVE(HttpStatus.CONFLICT, "Không còn địa điểm nào phù hợp để chọn."),
   SUPER_LIKE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "Bạn đã dùng hết lượt siêu thích hôm nay."),
   EMAIL_TAKEN(HttpStatus.CONFLICT, "Email đã được sử dụng."),
+  SOCIAL_LOGIN_DISABLED(HttpStatus.BAD_REQUEST, "Cách đăng nhập này chưa được bật."),
+  SOCIAL_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "Không xác minh được tài khoản, hãy thử lại."),
+  SOCIAL_EMAIL_MISSING(HttpStatus.UNAUTHORIZED, "Tài khoản này không có email đã xác minh."),
   DATA_CONFLICT(HttpStatus.CONFLICT, "Dữ liệu bị trùng hoặc vi phạm ràng buộc."),
   IDEMPOTENCY_IN_PROGRESS(HttpStatus.CONFLICT, "Yêu cầu đang được xử lý."),
   IDEMPOTENCY_KEY_REUSED(

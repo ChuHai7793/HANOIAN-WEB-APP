@@ -25,7 +25,8 @@ public record GfmProperties(
     @Valid @NotNull Messaging messaging,
     @Valid @NotNull Jobs jobs,
     @Valid @NotNull Importer importer,
-    @Valid @NotNull Mongo mongo) {
+    @Valid @NotNull Mongo mongo,
+    @Valid @NotNull Social social) {
 
   public record Jwt(
       @NotBlank @Size(min = 32, message = "JWT_SECRET phải dài ít nhất 32 byte") String secret,
@@ -79,4 +80,16 @@ public record GfmProperties(
   public record OrphanUploads(@NotBlank String cron, @NotNull Duration olderThan) {}
 
   public record Mongo(boolean enabled) {}
+
+  /** Đăng nhập Google / Facebook. Thiếu client id (hoặc app secret với Facebook) thì nút tương ứng ẩn đi. */
+  public record Social(@Valid @NotNull Google google, @Valid @NotNull Facebook facebook) {}
+
+  /**
+   * {@code clientId}: OAuth Client ID (công khai). {@code jwkSetUri}: khoá công khai của Google để kiểm tra chữ ký ID
+   * token. {@code publicKeyPem}: chỉ test, thay JWKS bằng khoá RSA của test.
+   */
+  public record Google(String clientId, @NotBlank String jwkSetUri, String publicKeyPem) {}
+
+  /** {@code appId} + {@code appSecret} từ Meta for Developers; {@code graphBaseUrl} đổi được để test. */
+  public record Facebook(String appId, String appSecret, @NotBlank String graphBaseUrl) {}
 }

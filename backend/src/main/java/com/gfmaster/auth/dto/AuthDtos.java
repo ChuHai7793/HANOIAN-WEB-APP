@@ -26,6 +26,18 @@ public final class AuthDtos {
   public record UserResponse(
       UUID id, String email, String username, String displayName, Role role, String avatarUrl) {}
 
-  /** Refresh token không nằm trong body mà trong cookie httpOnly {@code rt}. */
-  public record AuthResponse(String accessToken, long expiresIn, UserResponse user) {}
+  /**
+   * Refresh token không nằm trong body mà trong cookie httpOnly {@code rt}. {@code newUser}: tài khoản vừa được tạo
+   * trong request này (đăng ký, hoặc lần đầu đăng nhập Google / Facebook) để frontend mời nhập hồ sơ.
+   */
+  public record AuthResponse(String accessToken, long expiresIn, UserResponse user, boolean newUser) {}
+
+  /** ID token (credential) do Google Identity Services trả cho frontend */
+  public record GoogleLoginRequest(@NotBlank String credential) {}
+
+  /** Access token do Facebook JavaScript SDK trả cho frontend */
+  public record FacebookLoginRequest(@NotBlank String accessToken) {}
+
+  /** Cách đăng nhập ngoài đang bật; giá trị là id công khai để frontend nạp SDK, null = ẩn nút */
+  public record ProvidersResponse(String googleClientId, String facebookAppId) {}
 }

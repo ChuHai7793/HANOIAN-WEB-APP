@@ -25,7 +25,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 public class RateLimitFilter extends OncePerRequestFilter {
 
-  private static final Set<String> AUTH_PATHS = Set.of("/api/v1/auth/login", "/api/v1/auth/register");
+  private static final Set<String> AUTH_PATHS =
+      Set.of("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/google", "/api/v1/auth/facebook");
   /** Mỗi lần gọi có thể khiến server gọi ra Google: giới hạn chặt hơn API thường. */
   private static final String MAPS_PATH = "/api/v1/maps/resolve";
 

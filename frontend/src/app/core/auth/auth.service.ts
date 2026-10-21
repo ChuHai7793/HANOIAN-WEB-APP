@@ -23,6 +23,8 @@ interface AuthResponse {
   accessToken: string;
   expiresIn: number;
   user: AuthUser;
+  /** Tài khoản vừa được tạo trong request này (đăng ký, lần đầu đăng nhập Google / Facebook) */
+  newUser: boolean;
 }
 
 /** Request tới /auth/login|register|refresh|logout: không gắn Bearer, tự xử lý lỗi. */
@@ -73,6 +75,24 @@ export class AuthService {
       ),
     );
     await this.startSession(res);
+  }
+
+  /** Đăng nhập / đăng ký bằng Google (ID token từ Google Identity Services). Trả true nếu tài khoản vừa được tạo. */
+  async loginWithGoogle(credential: string): Promise<boolean> {
+    const res = await firstValueFrom(
+      this.http.post<AuthResponse>(`${API_BASE}/auth/google`, { credential }, { context: PUBLIC() }),
+    );
+    await this.startSession(res);
+    return res.newUser;
+  }
+
+  /** Đăng nhập / đăng ký bằng Facebook (access token từ Facebook SDK). Trả true nếu tài khoản vừa được tạo. */
+  async loginWithFacebook(accessToken: string): Promise<boolean> {
+    const res = await firstValueFrom(
+      this.http.post<AuthResponse>(`${API_BASE}/auth/facebook`, { accessToken }, { context: PUBLIC() }),
+    );
+    await this.startSession(res);
+    return res.newUser;
   }
 
   /** Lúc mở app: còn cookie refresh hợp lệ thì khôi phục phiên. */

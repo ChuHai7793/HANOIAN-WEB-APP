@@ -133,7 +133,7 @@ class S3StorageIT {
   private static GfmProperties props(GfmProperties.S3 s3) {
     GfmProperties.Storage storage =
         new GfmProperties.Storage("s3", "u", "i", "https://img.example.com", DataSize.ofMegabytes(12), s3);
-    return new GfmProperties(null, null, null, null, null, storage, null, null, null, null);
+    return new GfmProperties(null, null, null, null, null, storage, null, null, null, null, null);
   }
 
   private static HttpResponse<String> put(URI url, String contentType, byte[] body) throws Exception {

@@ -57,10 +57,15 @@ public class SecurityConfig {
                         HttpMethod.POST,
                         "/api/v1/auth/register",
                         "/api/v1/auth/login",
+                        "/api/v1/auth/google",
+                        "/api/v1/auth/facebook",
                         "/api/v1/auth/refresh",
                         "/api/v1/auth/logout")
                     .permitAll()
                     // Ảnh hiển thị qua <img> nên không kèm được Bearer; tên file là UUID khó đoán
+                    // Cách đăng nhập ngoài đang bật: trang đăng nhập hỏi trước khi có tài khoản
+                    .requestMatchers(HttpMethod.GET, "/api/v1/auth/providers")
+                    .permitAll()
                     .requestMatchers(HttpMethod.GET, "/uploads/**")
                     .permitAll()
                     // Khách chưa đăng nhập: xem danh mục quán / chỗ chơi, plan được chia sẻ công khai,

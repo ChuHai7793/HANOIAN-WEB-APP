@@ -10,6 +10,7 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { errorMessage } from '../../core/api/api';
 import { safeReturnUrl } from './login.page';
+import { SocialLoginComponent } from '../../shared/ui/social-login.component';
 
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   const { password, confirm } = group.value as { password: string; confirm: string };
@@ -18,7 +19,7 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'app-register-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, SocialLoginComponent],
   template: `
     <div class="flex min-h-dvh items-center justify-center bg-slate-50 px-4 py-10">
       <div class="w-full max-w-sm">
@@ -97,6 +98,8 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
             {{ busy() ? 'Đang tạo tài khoản…' : 'Đăng ký' }}
           </button>
 
+          <app-social-login divider="hoặc đăng ký nhanh bằng" (done)="onSocial($event)" />
+
           <p class="text-center text-sm text-slate-500">
             Đã có tài khoản?
             <a routerLink="/login" [queryParams]="{ returnUrl: returnUrl() }" class="font-medium text-brand-600 hover:text-brand-700">Đăng nhập</a>
@@ -128,6 +131,12 @@ export class RegisterPage {
   protected invalid(control: 'email' | 'password'): boolean {
     const c = this.form.controls[control];
     return c.invalid && (c.dirty || c.touched);
+  }
+
+  /** Google / Facebook xong: tài khoản mới thì mời nhập hồ sơ, tài khoản cũ thì về trang định vào */
+  protected async onSocial(newUser: boolean): Promise<void> {
+    const returnUrl = safeReturnUrl(this.returnUrl());
+    await (newUser ? this.router.navigate(['/onboarding'], { queryParams: { returnUrl } }) : this.router.navigateByUrl(returnUrl));
   }
 
   protected async submit(): Promise<void> {

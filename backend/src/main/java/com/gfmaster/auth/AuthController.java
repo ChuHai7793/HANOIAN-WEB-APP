@@ -1,9 +1,14 @@
 package com.gfmaster.auth;
 
 import com.gfmaster.auth.dto.AuthDtos.AuthResponse;
+import com.gfmaster.auth.dto.AuthDtos.FacebookLoginRequest;
+import com.gfmaster.auth.dto.AuthDtos.GoogleLoginRequest;
 import com.gfmaster.auth.dto.AuthDtos.LoginRequest;
+import com.gfmaster.auth.dto.AuthDtos.ProvidersResponse;
 import com.gfmaster.auth.dto.AuthDtos.RegisterRequest;
 import com.gfmaster.auth.dto.AuthDtos.UserResponse;
+import com.gfmaster.auth.social.FacebookTokenVerifier;
+import com.gfmaster.auth.social.GoogleTokenVerifier;
 import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
 import com.gfmaster.common.error.GlobalExceptionHandler;
@@ -32,11 +37,18 @@ public class AuthController {
   private final AuthService auth;
   private final RefreshCookie cookie;
   private final List<String> allowedOrigins;
+  private final GoogleTokenVerifier google;
+  private final FacebookTokenVerifier facebook;
+  private final GfmProperties.Social social;
 
-  public AuthController(AuthService auth, RefreshCookie cookie, GfmProperties props) {
+  public AuthController(
+      AuthService auth, RefreshCookie cookie, GfmProperties props, GoogleTokenVerifier google, FacebookTokenVerifier facebook) {
     this.auth = auth;
     this.cookie = cookie;
     this.allowedOrigins = props.corsOrigins();
+    this.google = google;
+    this.facebook = facebook;
+    this.social = props.social();
   }
 
   @PostMapping("/register")
@@ -51,6 +63,32 @@ public class AuthController {
       @Valid @RequestBody LoginRequest req,
       @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String ua) {
     return withCookie(HttpStatus.OK, auth.login(req, ua));
+  }
+
+  /** Cách đăng nhập ngoài đang bật (id công khai để frontend nạp SDK); không cần đăng nhập để hỏi. */
+  @GetMapping("/providers")
+  public ProvidersResponse providers() {
+    return new ProvidersResponse(
+        google.enabled() ? social.google().clientId().strip() : null,
+        facebook.enabled() ? social.facebook().appId().strip() : null);
+  }
+
+  /** Đăng nhập / đăng ký bằng Google: body là ID token do Google Identity Services trả cho trình duyệt. */
+  @PostMapping("/google")
+  public ResponseEntity<AuthResponse> google(
+      @Valid @RequestBody GoogleLoginRequest req,
+      @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String ua) {
+    AuthService.Session session = auth.loginWithSocial(google.verify(req.credential()), ua);
+    return withCookie(session.body().newUser() ? HttpStatus.CREATED : HttpStatus.OK, session);
+  }
+
+  /** Đăng nhập / đăng ký bằng Facebook: body là access token do Facebook JavaScript SDK trả cho trình duyệt. */
+  @PostMapping("/facebook")
+  public ResponseEntity<AuthResponse> facebook(
+      @Valid @RequestBody FacebookLoginRequest req,
+      @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String ua) {
+    AuthService.Session session = auth.loginWithSocial(facebook.verify(req.accessToken()), ua);
+    return withCookie(session.body().newUser() ? HttpStatus.CREATED : HttpStatus.OK, session);
   }
 
   /** Đổi cookie rt lấy access token mới; cookie được xoay vòng (token cũ hết giá trị). */

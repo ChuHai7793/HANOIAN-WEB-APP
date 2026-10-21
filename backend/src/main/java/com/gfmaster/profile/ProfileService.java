@@ -62,6 +62,24 @@ public class ProfileService {
     return toResponse(user, saved);
   }
 
+  /**
+   * Lần đầu đăng nhập Google / Facebook: lấy ảnh của họ làm ảnh đại diện nếu hồ sơ chưa có ảnh (người dùng đổi
+   * được sau trong Hồ sơ). Hồ sơ chưa tồn tại thì tạo bản trống (chưa "hoàn thiện": completedAt null).
+   */
+  @Transactional
+  public void setAvatarIfEmpty(UUID userId, String url) {
+    if (url == null || url.isBlank() || !url.startsWith("https://")) return;
+    UserProfile profile = profiles.findById(userId).orElse(null);
+    if (profile == null) {
+      profile = new UserProfile();
+      profile.setUserId(userId);
+    } else if (profile.getAvatarUrl() != null) {
+      return;
+    }
+    profile.setAvatarUrl(imageUrls.toStored(url));
+    profiles.saveAndFlush(profile);
+  }
+
   /** Ảnh đại diện (URL công khai) để hiện ở thanh menu; null nếu chưa có. */
   @Transactional(readOnly = true)
   public String avatarUrl(UUID userId) {
