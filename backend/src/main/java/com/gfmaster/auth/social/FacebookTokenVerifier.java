@@ -10,6 +10,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -38,7 +39,14 @@ public class FacebookTokenVerifier {
   private final String appSecret;
   private final RestClient http;
 
-  public FacebookTokenVerifier(GfmProperties props, RestClient.Builder builder) {
+  // Tự dựng RestClient: backend không có starter restclient nên không có bean RestClient.Builder
+  @Autowired
+  public FacebookTokenVerifier(GfmProperties props) {
+    this(props, RestClient.builder());
+  }
+
+  /** Test đơn vị: builder đã gắn MockRestServiceServer */
+  FacebookTokenVerifier(GfmProperties props, RestClient.Builder builder) {
     GfmProperties.Facebook f = props.social().facebook();
     this.appId = f.appId() == null ? "" : f.appId().strip();
     this.appSecret = f.appSecret() == null ? "" : f.appSecret().strip();
