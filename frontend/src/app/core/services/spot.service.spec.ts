@@ -46,10 +46,10 @@ describe('SpotService (Tìm chỗ chơi)', () => {
 describe('hiển thị giá và thời lượng chỗ chơi', () => {
   it('giá', () => {
     expect(spotPriceText({ priceFrom: 0, priceTo: null })).toBe('Miễn phí');
-    expect(spotPriceText({ priceFrom: 40000, priceTo: null })).toBe('40k/người');
+    expect(spotPriceText({ priceFrom: 40000, priceTo: null })).toBe('Từ 40k/người');
     expect(spotPriceText({ priceFrom: 150000, priceTo: 300000 })).toBe('150k–300k/người');
     expect(spotPriceText({ priceFrom: 0, priceTo: 50000 })).toBe('Đến 50k/người');
-    expect(spotPriceText({ priceFrom: 1200000, priceTo: null })).toBe('1,2tr/người');
+    expect(spotPriceText({ priceFrom: 1200000, priceTo: null })).toBe('Từ 1,2tr/người');
   });
 
   it('thời lượng', () => {

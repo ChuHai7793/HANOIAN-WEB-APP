@@ -137,14 +137,14 @@ const TYPE_OPTIONS = [
             <div class="flex items-center gap-2">
               <input type="number" min="0" step="1000" formControlName="priceFrom" placeholder="Từ, vd. 80000" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100" />
               <span class="text-slate-400">–</span>
-              <input type="number" min="0" step="1000" formControlName="priceTo" placeholder="Đến (nếu có)" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100" />
+              <input type="number" min="0" step="1000" formControlName="priceTo" placeholder="Đến, vd. 150000" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100" />
             </div>
             @if (priceError()) {
               <p class="mt-1 text-xs text-rose-600">{{ priceError() }}</p>
             } @else if (pricePreview()) {
               <p class="mt-1 text-xs text-slate-500">Trên thẻ hiện <b class="text-slate-700">{{ pricePreview() }}</b>.</p>
             } @else {
-              <p class="mt-1 text-xs text-slate-500">Chưa nhập thì thẻ không hiện giá và quán không hiện khi người dùng lọc theo tiền.</p>
+              <p class="mt-1 text-xs text-slate-500">Không bắt buộc. Chưa nhập thì thẻ không hiện giá và quán không hiện khi người dùng lọc theo tiền.</p>
             }
           </div>
 
@@ -405,6 +405,7 @@ export class PlaceFormComponent {
     const from = this.priceFromValue();
     const to = this.priceToValue();
     if (to !== null && to !== undefined && (from === null || from === undefined)) return 'Nhập "Từ" trước, hoặc xoá "Đến".';
+    if (from !== null && from !== undefined && (to === null || to === undefined)) return 'Nhập cả "Đến" để thẻ hiện một khoảng giá, vd. 120k–250k/người.';
     if (from !== null && from !== undefined && to !== null && to !== undefined && to < from) return '"Đến" phải từ "Từ" trở lên.';
     return '';
   });

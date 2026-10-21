@@ -14,12 +14,16 @@ import { IconComponent } from '../../shared/ui/icon.component';
 const INPUT =
   'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100';
 
-/** Giờ mở và giờ đóng: cùng trống hoặc cùng có. Giá đến (nếu có) không nhỏ hơn giá từ. */
+/**
+ * Giờ mở và giờ đóng: cùng trống hoặc cùng có. Giá: "Từ" lớn hơn 0 thì phải có "Đến" (huy hiệu luôn là một khoảng),
+ * và "Đến" không nhỏ hơn "Từ"; 0 và bỏ trống "Đến" = miễn phí.
+ */
 function spotFormRules(group: AbstractControl): ValidationErrors | null {
   const v = group.value as { openTime: string; closeTime: string; priceFrom: number | null; priceTo: number | null };
   const errors: ValidationErrors = {};
   if (!v.openTime !== !v.closeTime) errors['halfHours'] = true;
   if (v.priceTo !== null && v.priceFrom !== null && v.priceTo < v.priceFrom) errors['priceOrder'] = true;
+  else if (v.priceFrom !== null && v.priceFrom > 0 && v.priceTo === null) errors['priceTo'] = true;
   return Object.keys(errors).length ? errors : null;
 }
 
@@ -105,10 +109,14 @@ function spotFormRules(group: AbstractControl): ValidationErrors | null {
             <div class="flex items-center gap-2">
               <input type="number" min="0" step="1000" formControlName="priceFrom" [class]="input" placeholder="Từ" />
               <span class="text-slate-400">–</span>
-              <input type="number" min="0" step="1000" formControlName="priceTo" [class]="input" placeholder="Đến (nếu có)" />
+              <input type="number" min="0" step="1000" formControlName="priceTo" [class]="input" placeholder="Đến" />
             </div>
             @if (form.hasError('priceOrder')) {
               <p class="mt-1 text-xs text-rose-600">Giá đến phải lớn hơn hoặc bằng giá từ.</p>
+            } @else if (form.hasError('priceTo')) {
+              <p class="mt-1 text-xs text-rose-600">Nhập cả "Đến" để thẻ hiện một khoảng giá, vd. 40k–120k/người. Miễn phí thì để "Từ" = 0.</p>
+            } @else {
+              <p class="mt-1 text-xs text-slate-500">Thẻ hiện "40k–120k/người"; "Từ" = 0 và bỏ trống "Đến" là miễn phí.</p>
             }
           </div>
 

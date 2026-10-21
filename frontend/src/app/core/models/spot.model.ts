@@ -95,10 +95,10 @@ export function spotCategory(value: SpotCategory): { icon: IconName; label: stri
 }
 
 /** 150000 → "150k", 1200000 → "1,2tr" */
-/** "Miễn phí", "40k/người", "150k–300k/người", "Đến 50k/người" */
+/** "Miễn phí", "Từ 40k/người" (dữ liệu cũ chỉ có giá từ), "150k–300k/người", "Đến 50k/người" */
 export function spotPriceText(spot: Pick<SpotItem, 'priceFrom' | 'priceTo'>): string {
   if (spot.priceFrom === 0 && !spot.priceTo) return 'Miễn phí';
-  if (!spot.priceTo) return `${shortVnd(spot.priceFrom)}/người`;
+  if (!spot.priceTo) return `Từ ${shortVnd(spot.priceFrom)}/người`;
   if (spot.priceFrom === 0) return `Đến ${shortVnd(spot.priceTo)}/người`;
   return `${shortVnd(spot.priceFrom)}–${shortVnd(spot.priceTo)}/người`;
 }
