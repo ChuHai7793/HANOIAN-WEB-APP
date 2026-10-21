@@ -215,10 +215,13 @@ interface PlaceRow {
                   <span class="absolute left-3 top-3 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-brand-800">
                     {{ typeLabels[item.place.type] }}
                   </span>
+                  <!-- Góc trên phải như thẻ chỗ chơi: khoảng cách khi đã có vị trí, không thì giá mỗi người -->
                   @if (item.distanceKm !== null) {
                     <span class="absolute right-3 top-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">
                       {{ distanceText(item.distanceKm) }}
                     </span>
+                  } @else if (priceText(item.place); as price) {
+                    <span class="absolute right-3 top-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">{{ price }}</span>
                   }
                 </div>
                 <div class="flex flex-[1_0_25%] flex-col justify-between gap-2 px-3.5 pb-3 pt-2.5">
@@ -227,9 +230,6 @@ interface PlaceRow {
                     <div class="flex items-center gap-2">
                       <span class="shrink-0 text-[13px] font-semibold text-slate-700" [attr.aria-label]="'HANOIVIBE chấm ' + item.place.rating + ' trên 5'"><span class="text-[#E29A2D]">★</span> {{ item.place.rating }}</span>
                       <span class="min-w-0 flex-1 truncate text-[13px] text-slate-500">{{ item.place.address || 'Chưa có địa chỉ' }}</span>
-                      @if (priceText(item.place); as price) {
-                        <span class="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">{{ price }}</span>
-                      }
                     </div>
                   </div>
                   <!-- Một nút chính (Vào plan); Chỉ đường / Bỏ là icon, rê chuột thì hiện chữ -->

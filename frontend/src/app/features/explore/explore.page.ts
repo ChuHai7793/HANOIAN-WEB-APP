@@ -234,13 +234,14 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
                 <span class="absolute left-3 top-3 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-brand-800">
                   {{ typeLabels[item.type] }}
                 </span>
+                <!-- Giá ở góc trên phải như thẻ chỗ chơi; số người đã lưu xuống góc dưới trái -->
+                @if (cardPrice(item); as price) {
+                  <span class="absolute right-3 top-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">{{ price }}</span>
+                }
                 @if (item.fans) {
-                  <span class="absolute right-3 top-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">
+                  <span class="absolute bottom-3 left-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">
                     {{ item.fans }} người hợp gu đã lưu
                   </span>
-                }
-                @if (cardPrice(item); as price) {
-                  <span class="absolute bottom-3 left-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">{{ price }}</span>
                 }
                 @if (canEdit()) {
                   <div class="absolute bottom-3 right-3 flex gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
