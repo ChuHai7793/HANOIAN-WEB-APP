@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
@@ -42,6 +43,8 @@ public class GoogleTokenVerifier {
   private final String publicKeyPem;
   private volatile JwtDecoder decoder;
 
+  // Có hai constructor (một cho test) nên phải chỉ rõ Spring dùng cái này
+  @Autowired
   public GoogleTokenVerifier(GfmProperties props) {
     GfmProperties.Google g = props.social().google();
     this.clientId = g.clientId() == null ? "" : g.clientId().strip();
