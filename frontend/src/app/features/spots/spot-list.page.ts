@@ -364,10 +364,12 @@ export class SpotListPage implements OnInit {
   protected readonly defaultBanner = DEFAULT_BANNER;
   protected readonly defaultCredit = DEFAULT_BANNER_CREDIT;
   protected readonly defaultSrcset = DEFAULT_BANNER_SRCSET;
-  /** Hiện ảnh mặc định ngay (ảnh đầu trang, không chờ API); biết ảnh admin / nổi bật thì đổi sang */
+  /** Chưa biết ảnh nào thì chỉ nền tím (null), không hiện tạm ảnh mặc định rồi đổi (nháy) */
   protected readonly bannerImage = computed(() => {
-    if (!this.banner.ready() || !this.featuredLoaded()) return DEFAULT_BANNER;
-    return this.banner.custom() ?? this.featured().find((f) => f.spot.imageUrl)?.spot.imageUrl ?? DEFAULT_BANNER;
+    if (!this.banner.ready()) return null;
+    if (this.banner.custom()) return this.banner.custom();
+    if (!this.featuredLoaded()) return null;
+    return this.featured().find((f) => f.spot.imageUrl)?.spot.imageUrl ?? DEFAULT_BANNER;
   });
 
   async ngOnInit(): Promise<void> {

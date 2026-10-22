@@ -1,6 +1,5 @@
 import { Component, inject, input, output, signal } from '@angular/core';
-import { CatalogService } from '../../core/services/catalog.service';
-import { SpotService } from '../../core/services/spot.service';
+import { BannerPage, BannerService } from '../../core/services/banner.service';
 import { ToastService } from '../../core/services/toast.service';
 import { UploadService } from '../../core/services/upload.service';
 
@@ -118,40 +117,29 @@ export class PageBannerComponent {
 
 /**
  * Ảnh nền banner admin đổi được, lưu ở backend (app_settings): `custom` null = dùng ảnh mặc định của trang.
- * Ảnh mặc định hiện ngay từ đầu (không chờ API); API trả ảnh admin thì đổi sang.
+ * Giá trị nhớ trong BannerService (chung cho mọi trang, suốt phiên, server gửi kèm cho bản SSR); chưa biết
+ * ảnh nào (`ready` false) thì trang chỉ hiện nền tím, không hiện tạm ảnh mặc định rồi đổi (nháy).
  * Gọi trong ngữ cảnh inject (khởi tạo field của component).
  */
-export function editableBanner(page: 'explore' | 'spots') {
-  const catalog = inject(CatalogService);
-  const spots = inject(SpotService);
+export function editableBanner(page: BannerPage) {
+  const banners = inject(BannerService);
   const uploads = inject(UploadService);
   const toast = inject(ToastService);
-  const api =
-    page === 'explore'
-      ? { get: () => catalog.banner(), set: (url: string | null) => catalog.setBanner(url), name: 'banner kham pha quan' }
-      : { get: () => spots.banner(), set: (url: string | null) => spots.setBanner(url), name: 'banner tim cho choi' };
-
-  const custom = signal<string | null>(null);
-  /** Đã biết ảnh nào (có ảnh admin hay không) */
-  const ready = signal(false);
+  const name = page === 'explore' ? 'banner kham pha quan' : 'banner tim cho choi';
   const busy = signal(false);
 
   return {
-    custom: custom.asReadonly(),
-    ready: ready.asReadonly(),
+    custom: banners.custom(page),
+    ready: banners.ready(page),
     busy: busy.asReadonly(),
     load(): void {
-      void api
-        .get()
-        .then((b) => custom.set(b.imageUrl))
-        .catch(() => undefined)
-        .finally(() => ready.set(true));
+      void banners.load(page);
     },
     async upload(file: File): Promise<void> {
       busy.set(true);
       try {
-        const up = await uploads.uploadFile(file, 1920, undefined, { purpose: 'banner', name: api.name });
-        custom.set((await api.set(up.url)).imageUrl);
+        const up = await uploads.uploadFile(file, 1920, undefined, { purpose: 'banner', name });
+        await banners.set(page, up.url);
         toast.success('Đã đổi ảnh nền.');
       } catch {
         // Lỗi HTTP đã được báo bằng toast
@@ -160,7 +148,7 @@ export function editableBanner(page: 'explore' | 'spots') {
       }
     },
     async reset(): Promise<void> {
-      custom.set((await api.set(null)).imageUrl);
+      await banners.set(page, null);
       toast.success('Đã dùng lại ảnh nền mặc định.');
     },
   };
