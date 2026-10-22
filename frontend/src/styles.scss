@@ -2,6 +2,8 @@
 
 /* touch: thiết bị không rê chuột được (điện thoại, máy tính bảng): những gì chỉ hiện khi hover phải hiện luôn */
 @custom-variant touch (@media (hover: none));
+/* dark: chế độ Tối, bật bằng lớp .dark trên <html> (ThemeService); không theo hệ điều hành */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   /* HANOIVIBE: tím chính #6D4FD6 (brand-600), tím sương #F1ECFD (brand-100) */
@@ -29,6 +31,122 @@
   --color-slate-900: #1e1b2e;
 
   --font-sans: 'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif;
+}
+
+/*
+ * Chế độ Tối: đổi giá trị các biến màu ngay trên .dark, nên mọi tiện ích bg-/text-/border- slate, brand, rose,
+ * amber, emerald tự đảo theo (chữ sáng trên nền tối, viền tối, nền tím sẫm). Bảng màu theo tông: nền trang
+ * #0b0a12, thẻ #17141f, viền #2c2840, chữ #f4f2fa, tím #7a5be3.
+ * Không đổi `white` (text-white trên nút tím, chip trên ảnh phải giữ trắng); các tiện ích dùng white hoặc slate-900
+ * làm NỀN được ghi đè riêng bên dưới.
+ */
+.dark {
+  color-scheme: dark;
+
+  --color-slate-50: #1a1727;
+  --color-slate-100: #221f31;
+  --color-slate-200: #2c2840;
+  --color-slate-300: #3b3654;
+  --color-slate-400: #837d9e;
+  --color-slate-500: #9f99bb;
+  --color-slate-600: #b9b4cd;
+  --color-slate-700: #d1cde0;
+  --color-slate-800: #e5e2ee;
+  --color-slate-900: #f4f2fa;
+
+  --color-brand-50: #1c1733;
+  --color-brand-100: #251d44;
+  --color-brand-200: #352b5e;
+  --color-brand-300: #483b82;
+  --color-brand-400: #9d86f0;
+  --color-brand-500: #8e74ea;
+  --color-brand-600: #7a5be3;
+  --color-brand-700: #a78ff0;
+  --color-brand-800: #c2b2f5;
+  --color-brand-900: #d9cef9;
+
+  --color-rose-50: #2a1420;
+  --color-rose-100: #3b1a2a;
+  --color-rose-200: #5c2340;
+  --color-rose-500: #fb7185;
+  --color-rose-600: #fb7185;
+  --color-rose-700: #fda4af;
+  --color-rose-800: #fecdd3;
+
+  --color-amber-50: #2a1f0c;
+  --color-amber-100: #3b2b10;
+  --color-amber-200: #5a4318;
+  --color-amber-600: #fbbf24;
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fef3c7;
+
+  --color-emerald-50: #0e2a21;
+  --color-emerald-100: #14382c;
+  --color-emerald-200: #1d4d3c;
+  --color-emerald-600: #34d399;
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+}
+
+.dark body {
+  background-color: #0b0a12;
+}
+
+/* Nền trắng là mặt thẻ / panel: thành #17141f. Chip mờ trên ảnh (bg-white/90, /15…) giữ nguyên trắng. */
+.dark .bg-white,
+.dark .bg-white\/95 {
+  background-color: #17141f;
+}
+.dark .hover\:bg-white:hover {
+  background-color: #1f1b2b;
+}
+/* slate-900 giờ là màu chữ sáng, nhưng chỗ dùng nó làm nền tối (nút đen, nền ảnh, lớp phủ) phải vẫn tối */
+.dark .bg-slate-900 {
+  background-color: #1f1b2b;
+}
+.dark .hover\:bg-slate-700:hover {
+  background-color: #2c2840;
+}
+.dark .bg-slate-900\/70 {
+  background-color: rgb(8 7 14 / 0.7);
+}
+.dark .bg-slate-900\/50 {
+  background-color: rgb(8 7 14 / 0.5);
+}
+.dark .bg-slate-900\/45 {
+  background-color: rgb(8 7 14 / 0.45);
+}
+.dark .bg-slate-900\/40 {
+  background-color: rgb(8 7 14 / 0.4);
+}
+/* brand-700 / rose-700 giờ là màu chữ sáng; nút tím / đỏ khi rê chuột phải tối đi chứ không sáng lên */
+.dark .hover\:bg-brand-700:hover {
+  background-color: #6646d2;
+}
+.dark .bg-rose-600 {
+  background-color: #e11d48;
+}
+.dark .hover\:bg-rose-700:hover {
+  background-color: #be123c;
+}
+.dark .hover\:bg-amber-700:hover {
+  background-color: #b45309;
+}
+/* Bóng tím nhạt thành bóng đen */
+.dark .shadow-brand-900\/20,
+.dark .shadow-brand-900\/30 {
+  --tw-shadow-color: rgb(0 0 0 / 0.45);
+}
+/* Màu đặt cứng: nền ảnh trống, sao chưa chấm, link kiểu Google */
+.dark .bg-\[\#EFEAFC\] {
+  background-color: #221d3a;
+}
+.dark .text-\[\#D9D3EA\] {
+  color: #3b3654;
+}
+.dark .text-\[\#1a0dab\] {
+  color: #8ab4f8;
 }
 
 /*

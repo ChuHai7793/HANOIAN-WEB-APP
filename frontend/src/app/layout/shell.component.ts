@@ -12,6 +12,7 @@ import { IconComponent, IconName } from '../shared/ui/icon.component';
 import { SavedSpotService } from '../core/services/saved-spot.service';
 import { DateVibeService } from '../core/services/date-vibe.service';
 import { OverlayHandle } from '../shared/ui/overlay';
+import { ThemeService } from '../core/theme/theme.service';
 
 interface NavSection {
   /** Rỗng: không có tiêu đề nhóm */
@@ -123,6 +124,23 @@ function readCollapsed(): boolean {
             }
           }
         </nav>
+
+        <!-- Chế độ Sáng / Tối (nhớ theo trình duyệt) -->
+        <div class="mx-4 shrink-0 px-1 pb-2 lg:group-data-collapsed/shell:mx-3 lg:group-data-collapsed/shell:px-0">
+          <button
+            type="button"
+            class="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-[15px] text-slate-700 transition hover:bg-slate-50 lg:group-data-collapsed/shell:justify-center lg:group-data-collapsed/shell:px-0"
+            [attr.aria-pressed]="theme.isDark()"
+            [attr.title]="collapsed() ? (theme.isDark() ? 'Chuyển sang chế độ Sáng' : 'Chuyển sang chế độ Tối') : null"
+            (click)="theme.toggle()"
+          >
+            <app-icon [name]="theme.isDark() ? 'sun' : 'moon'" />
+            <span class="flex-1 text-left lg:group-data-collapsed/shell:hidden">{{ theme.isDark() ? 'Chế độ Sáng' : 'Chế độ Tối' }}</span>
+            <span class="relative h-5 w-9 shrink-0 rounded-full transition lg:group-data-collapsed/shell:hidden" [class]="theme.isDark() ? 'bg-brand-600' : 'bg-slate-300'" aria-hidden="true">
+              <span class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-[left]" [class]="theme.isDark() ? 'left-[18px]' : 'left-0.5'"></span>
+            </span>
+          </button>
+        </div>
 
         <div
           #account
@@ -261,6 +279,15 @@ function readCollapsed(): boolean {
             <img src="logo.png" alt="" class="h-7 w-auto" />
             <span class="font-extrabold tracking-wide text-slate-900">HANOI<span class="text-brand-600">VIBE</span></span>
           </a>
+          <button
+            type="button"
+            class="ml-auto flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
+            [attr.aria-label]="theme.isDark() ? 'Chuyển sang chế độ Sáng' : 'Chuyển sang chế độ Tối'"
+            [attr.aria-pressed]="theme.isDark()"
+            (click)="theme.toggle()"
+          >
+            <app-icon [name]="theme.isDark() ? 'sun' : 'moon'" [size]="22" />
+          </button>
         </header>
 
         <!-- Không đặt padding ở đây: từng trang tự lo, để vùng sticky bám sát mép trên -->
@@ -385,6 +412,7 @@ export class ShellComponent {
   }
   protected readonly bootstrap = inject(DataBootstrapService);
   protected readonly auth = inject(AuthService);
+  protected readonly theme = inject(ThemeService);
 
   protected initial(name: string): string {
     return name.trim().charAt(0).toUpperCase() || '?';

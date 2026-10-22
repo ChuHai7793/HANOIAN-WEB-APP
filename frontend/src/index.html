@@ -7,6 +7,15 @@
     <!-- viewport-fit=cover: dùng được vùng tai thỏ / thanh home (env(safe-area-inset-*)); interactive-widget: bàn phím ảo co trang thay vì che -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#6d4fd6" />
+    <!-- Chế độ Tối: đọc lựa chọn đã lưu và gắn lớp dark ngay lúc đọc HTML, trước khi Angular chạy, để không nháy sáng → tối -->
+    <script>
+      try {
+        if (localStorage.getItem('gfm.theme') === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.querySelector('meta[name="theme-color"]').content = '#0b0a12';
+        }
+      } catch (e) {}
+    </script>
     <meta name="application-name" content="HANOIVIBE" />
     <meta name="apple-mobile-web-app-title" content="HANOIVIBE" />
     <link rel="manifest" href="manifest.webmanifest" />
