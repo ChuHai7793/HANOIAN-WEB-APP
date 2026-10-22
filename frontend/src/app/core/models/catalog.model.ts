@@ -34,6 +34,8 @@ export interface CatalogPage {
 export interface DistrictOption {
   code: string;
   label: string;
+  /** Số quán trong Khám phá quán ở khu vực này */
+  count: number;
 }
 
 /** Nhóm trong My place của từng loại quán, dùng trong thông báo "Đã được add vào …". */

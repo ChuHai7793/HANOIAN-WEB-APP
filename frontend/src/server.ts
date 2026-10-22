@@ -59,7 +59,7 @@ app.get('/sitemap.xml', async (req, res) => {
     const r = await fetch(`${apiOrigin}/api/v1/public/sitemap`);
     const entries = r.ok ? ((await r.json()) as { path: string; updatedAt: string | null }[]) : [];
     const base = origin(req);
-    const fixed = ['/explore', '/spots', '/cam-nang', '/quiz', '/autoplan'].map((path) => ({ path, updatedAt: null }));
+    const fixed = ['/', '/explore', '/spots', '/cam-nang', '/quiz', '/autoplan'].map((path) => ({ path, updatedAt: null }));
     const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
     const urls = [...fixed, ...entries]
       .map(

@@ -101,6 +101,7 @@ function readCollapsed(): boolean {
               <a
                 [routerLink]="item.path"
                 routerLinkActive="!bg-brand-100 !text-brand-800 font-semibold"
+                [routerLinkActiveOptions]="{ exact: item.path === '/' }"
                 class="relative flex min-h-11 items-center gap-3 rounded-xl px-3 text-[15px] text-slate-700 transition hover:bg-slate-50 lg:group-data-collapsed/shell:justify-center lg:group-data-collapsed/shell:px-0"
                 [attr.title]="collapsed() ? item.label : null"
                 [attr.aria-label]="item.label"
@@ -300,6 +301,7 @@ function readCollapsed(): boolean {
               <a
                 [routerLink]="t.path"
                 routerLinkActive="text-brand-700"
+                [routerLinkActiveOptions]="{ exact: t.path === '/' }"
                 #rla="routerLinkActive"
                 class="relative flex h-full flex-col items-center justify-center gap-0.5 text-xs font-medium text-slate-500"
                 (click)="menuOpen.set(false)"
@@ -390,6 +392,7 @@ export class ShellComponent {
 
   /** Thanh tab dưới của điện thoại */
   protected readonly tabs: TabItem[] = [
+    { path: '/', label: 'Trang chủ', icon: 'home' },
     { path: '/explore', label: 'Khám phá', icon: 'compass' },
     { path: '/spots', label: 'Chỗ chơi', icon: 'gate' },
     { path: '/places', label: 'My place', icon: 'bookmark', fillable: true },
@@ -404,6 +407,7 @@ export class ShellComponent {
     {
       title: '',
       items: [
+        { path: '/', label: 'Trang chủ', icon: 'home' },
         { path: '/explore', label: 'Khám phá quán', icon: 'compass' },
         { path: '/spots', label: 'Tìm chỗ chơi', icon: 'gate' },
         { path: '/quiz', label: 'Gu hẹn hò', icon: 'smile' },

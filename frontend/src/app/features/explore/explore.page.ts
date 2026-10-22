@@ -1,7 +1,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { errorCode, problemOf } from '../../core/api/api';
 import { AuthService } from '../../core/auth/auth.service';
-import { CatalogItem, FeaturedItem, DistrictOption, MY_PLACE_GROUP, TypeCounts } from '../../core/models/catalog.model';
+import { CatalogItem, DistrictOption, MY_PLACE_GROUP, TypeCounts } from '../../core/models/catalog.model';
 import { Place, placePriceDetail, placePriceText, PlaceType } from '../../core/models/place.model';
 import { CatalogRequest, CatalogService } from '../../core/services/catalog.service';
 import { PlaceService } from '../../core/services/place.service';
@@ -47,8 +47,6 @@ import { AutoplanDialogComponent } from '../plans/autoplan-dialog.component';
 import { ratingText } from '../../core/models/review.model';
 import { ReviewsComponent } from '../../shared/ui/reviews.component';
 import { DetailModalComponent } from '../../shared/ui/detail-modal.component';
-import { FeaturedCard, FeaturedSectionComponent } from '../../shared/ui/featured-section.component';
-import { FeaturedEditorComponent } from '../../shared/ui/featured-editor.component';
 import { DEFAULT_BANNER, DEFAULT_BANNER_CREDIT, DEFAULT_BANNER_SRCSET, editableBanner, PageBannerComponent } from '../../shared/ui/page-banner.component';
 
 const CONFIGS: Record<PlaceType, PlaceTypeConfig> = {
@@ -74,7 +72,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
 
 @Component({
   selector: 'app-explore-page',
-  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, PriceRangeInputComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, FeaturedEditorComponent, FeaturedSectionComponent, DetailModalComponent, ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
+  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, PriceRangeInputComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, DetailModalComponent, ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <!-- Banner đầu trang: ảnh nền (admin đổi được, mặc định Hồ Gươm đêm) + lớp phủ tím, chữ giới thiệu và bộ lọc -->
@@ -155,7 +153,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
               <span class="sr-only">Khu vực</span>
               <select
                 [value]="district()"
-                (change)="district.set($any($event.target).value); reload()"
+                (change)="setDistrict($any($event.target).value)"
                 class="cursor-pointer bg-transparent text-sm text-slate-900 outline-none"
               >
                 <option value="">Mọi khu vực</option>
@@ -169,25 +167,6 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
         </div>
       </app-page-banner>
 
-      <!-- Điểm hẹn nổi bật (admin chọn): ẩn / hiện, nhớ theo trình duyệt -->
-      <app-featured-section
-        heading="Điểm hẹn nổi bật"
-        storageKey="gfm.featuredHidden"
-        [cards]="featuredCards()"
-        [canEdit]="canEdit()"
-        (open)="openFeatured($event)"
-        (edit)="featuredEditorOpen.set(true)"
-      />
-
-      <!-- Cầu nối: có quán ưng ý thì đi tìm người hẹn -->
-      <a
-        routerLink="/dating"
-        class="flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-100 py-2.5 pl-3 pr-2.5 text-sm text-slate-700 transition hover:bg-brand-50 sm:text-[15px]"
-      >
-        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-brand-600 shadow-sm"><app-icon name="heart" [size]="20" /></span>
-        <span class="min-w-0 flex-1 truncate"><b class="text-slate-900">Đã có quán ưng ý?</b><span class="max-sm:hidden"> Bật Tìm đối tượng, quẹt và match rồi hẹn nhau ở quán bạn thích.</span></span>
-        <span class="flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-sm font-semibold text-white">Tìm người đi cùng<app-icon name="arrowRight" [size]="15" [stroke]="2.4" /></span>
-      </a>
 
       <app-active-filters [items]="filterChips()" (remove)="removeFilter($event)" (clear)="clearFilters()" />
       @if (loading() && items().length === 0) {
@@ -424,10 +403,6 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
       </app-detail-modal>
     }
 
-    @if (featuredEditorOpen()) {
-      <app-featured-editor kind="place" [current]="featuredSlots()" (closed)="featuredEditorOpen.set(false)" (saved)="reloadFeatured(); featuredEditorOpen.set(false)" />
-    }
-
     @if (autoplanOpen()) {
       <app-autoplan-dialog (closed)="autoplanOpen.set(false)" />
     }
@@ -472,39 +447,11 @@ export class ExplorePage implements OnInit {
     this.toast.show('Sắp có thêm thành phố khác. Hiện HANOIVIBE dành cho Hà Nội.', 'info');
   }
 
-
   /** Tiêu đề khu danh sách theo chip loại quán đang chọn */
   protected typeTitle(): string {
     return this.typeFilters.find((t) => t.value === this.type())?.label ?? 'Tất cả quán';
   }
 
-  /** Điểm hẹn nổi bật (admin chọn) */
-  protected readonly featured = signal<FeaturedItem[]>([]);
-  protected readonly featuredEditorOpen = signal(false);
-  protected readonly featuredCards = computed<FeaturedCard[]>(() =>
-    this.featured().map((f) => ({
-      id: f.place.id,
-      position: f.position,
-      kicker: f.kicker,
-      headline: f.headline,
-      imageUrl: f.place.imageUrl || null,
-      meta: `${TYPE_LABELS[f.place.type]} · ${f.place.districtLabel}`,
-      name: f.place.name,
-      address: f.place.address,
-      rating: f.place.ratingCount && f.place.ratingAvg !== null ? ratingText(f.place.ratingAvg) : null,
-      note: null,
-    })),
-  );
-  protected readonly featuredSlots = computed(() => this.featured().map((f) => ({ id: f.place.id, kicker: f.kicker, headline: f.headline })));
-
-  protected openFeatured(id: string): void {
-    const f = this.featured().find((x) => x.place.id === id);
-    if (f) this.detail.set(f.place);
-  }
-
-  protected reloadFeatured(): void {
-    void this.catalog.featured().then((f) => this.featured.set(f)).catch(() => undefined);
-  }
   protected readonly rating = ratingText;
 
   /** Mình vừa viết / sửa / xoá đánh giá trong popup: cập nhật sao trên thẻ */
@@ -568,6 +515,13 @@ export class ExplorePage implements OnInit {
     this.applyFilters(EMPTY_PLACE_FILTERS);
   }
 
+  /** Chọn khu vực ('' = mọi khu vực); ghi ?khuvuc= lên đường dẫn để Back / link giữ đúng danh sách */
+  protected setDistrict(code: string): void {
+    this.district.set(code);
+    void this.router.navigate([], { queryParams: { khuvuc: code || null }, queryParamsHandling: 'merge', replaceUrl: true });
+    void this.reload();
+  }
+
   /** Chọn loại quán (chip "Tất cả" = ''); bấm lại loại đang chọn thì về Tất cả. Ghi ?loai= lên đường dẫn. */
   protected setType(value: PlaceType | ''): void {
     const next = value && value === this.type() ? '' : value;
@@ -611,11 +565,11 @@ export class ExplorePage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     void this.catalog.districts().then((d) => this.districts.set(d));
-    this.reloadFeatured();
     this.banner.load();
     // Mở từ "Gợi ý điểm hẹn" của Tìm đối tượng: /explore?q=<tên quán>
     const params = this.route.snapshot.queryParamMap;
     this.q.set(params.get('q') ?? '');
+    this.district.set(params.get('khuvuc') ?? '');
     const loai = params.get('loai');
     this.type.set(this.typeFilters.some((t) => t.value && t.value === loai) ? (loai as PlaceType) : '');
     this.filters.set(placeFiltersFromParams(Object.fromEntries(params.keys.map((k) => [k, params.get(k)]))));

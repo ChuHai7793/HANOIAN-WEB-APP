@@ -248,10 +248,15 @@ class CatalogIT extends ApiTestSupport {
             """)
         .andExpect(status().isBadRequest());
     postAs(admin, "/api/v1/admin/catalog", cafe("Sai khu vực", "SAI_GON", null)).andExpect(status().isBadRequest());
+    postAs(admin, "/api/v1/admin/catalog", cafe("Cafe Giảng", "HOAN_KIEM", null)).andExpect(status().isCreated());
+    postAs(admin, "/api/v1/admin/catalog", cafe("Cafe Đinh", "HOAN_KIEM", null)).andExpect(status().isCreated());
     getAs(guest, "/api/v1/catalog/districts")
         .andExpect(jsonPath("$", hasSize(12)))
         .andExpect(jsonPath("$[0].code").value("BA_DINH"))
-        .andExpect(jsonPath("$[0].label").value("Ba Đình"));
+        .andExpect(jsonPath("$[0].label").value("Ba Đình"))
+        .andExpect(jsonPath("$[0].count").value(0))
+        .andExpect(jsonPath("$[1].code").value("HOAN_KIEM"))
+        .andExpect(jsonPath("$[1].count").value(2));
   }
 
   @Test

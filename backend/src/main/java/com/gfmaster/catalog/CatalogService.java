@@ -29,6 +29,7 @@ import com.gfmaster.place.dto.PlaceRequest;
 import com.gfmaster.place.dto.PlaceResponse;
 import com.gfmaster.upload.storage.ImageUrls;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.LinkedHashMap;
@@ -178,9 +179,14 @@ public class CatalogService {
     return featured(null);
   }
 
+  /** Mọi khu vực (kể cả chưa có quán, count 0) theo thứ tự của enum, kèm số quán để trang chủ hiện */
   @Transactional(readOnly = true)
   public List<DistrictOption> districts() {
-    return Arrays.stream(CatalogDistrict.values()).map(d -> new DistrictOption(d.name(), d.label())).toList();
+    Map<CatalogDistrict, Long> counts = new EnumMap<>(CatalogDistrict.class);
+    for (Object[] row : catalog.countByDistrict()) counts.put((CatalogDistrict) row[0], (Long) row[1]);
+    return Arrays.stream(CatalogDistrict.values())
+        .map(d -> new DistrictOption(d.name(), d.label(), counts.getOrDefault(d, 0L)))
+        .toList();
   }
 
   /**

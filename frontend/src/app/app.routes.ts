@@ -1,6 +1,4 @@
-import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
-import { AuthService } from './core/auth/auth.service';
 import { ShellComponent } from './layout/shell.component';
 import { adminGuard, authGuard, guestGuard } from './core/auth/auth.guard';
 
@@ -32,7 +30,8 @@ export const routes: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        redirectTo: () => (inject(AuthService).isLoggedIn() ? 'places' : 'explore'),
+        title: 'HANOIVIBE: Hẹn ở đâu cũng đẹp',
+        loadComponent: () => import('./features/home/home.page').then((m) => m.HomePage),
       },
       {
         path: 'places',

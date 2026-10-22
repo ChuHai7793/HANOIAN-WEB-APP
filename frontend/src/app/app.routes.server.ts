@@ -7,6 +7,7 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
  *   nên server không bao giờ cần biết người dùng là ai.
  */
 export const serverRoutes: ServerRoute[] = [
+  { path: '', renderMode: RenderMode.Server },
   { path: 'explore', renderMode: RenderMode.Server },
   { path: 'spots', renderMode: RenderMode.Server },
   { path: 'quiz', renderMode: RenderMode.Server },

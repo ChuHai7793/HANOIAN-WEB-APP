@@ -3,6 +3,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 /** Nét vẽ (viewBox 24×24) của các icon trong thiết kế HANOIVIBE. */
 const PATHS = {
+  home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
   compass: '<circle cx="12" cy="12" r="10"/><polygon points="16.2 7.8 14.1 14.1 7.8 16.2 9.9 9.9 16.2 7.8"/>',
   gate: '<path d="M2 20h20"/><path d="M5 20V9l7-5 7 5v11"/><path d="M10 20v-6h4v6"/>',
   heart:
