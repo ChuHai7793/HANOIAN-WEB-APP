@@ -160,8 +160,7 @@
 }
 @media (min-width: 64rem) {
   :root {
-    /* Màn rộng: thanh trên cùng (tìm kiếm, thông báo, Autoplan) vẫn còn; thanh tab dưới thay bằng thanh bên */
-    --app-header-h: 3.5rem;
+    --app-header-h: 0px;
     --app-tabbar-h: 0px;
   }
 }

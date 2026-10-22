@@ -13,7 +13,6 @@ import { SavedSpotService } from '../core/services/saved-spot.service';
 import { DateVibeService } from '../core/services/date-vibe.service';
 import { OverlayHandle } from '../shared/ui/overlay';
 import { ThemeService } from '../core/theme/theme.service';
-import { AutoplanDialogComponent } from '../features/plans/autoplan-dialog.component';
 
 interface NavSection {
   /** Rỗng: không có tiêu đề nhóm */
@@ -52,7 +51,7 @@ function readCollapsed(): boolean {
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LegacyImportDialogComponent, IconComponent, ConfirmDialogComponent, AutoplanDialogComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LegacyImportDialogComponent, IconComponent, ConfirmDialogComponent],
   template: `
     <!-- data-collapsed: thanh bên thu gọn (chỉ logo + icon), chỉ áp dụng màn rộng (lg:); điện thoại vẫn là menu trượt -->
     <div class="group/shell flex min-h-dvh" [attr.data-collapsed]="collapsed() ? '' : null">
@@ -264,20 +263,20 @@ function readCollapsed(): boolean {
 
       <!-- Nội dung: sidebar đã fixed nên chừa lề trái bằng đúng bề rộng của nó; điện thoại chừa chỗ cho thanh tab dưới -->
       <div class="flex min-w-0 flex-1 flex-col pb-[var(--app-tabbar-h)] transition-[margin] duration-200 lg:ml-64 lg:group-data-collapsed/shell:ml-[72px]">
-        <!-- Thanh trên cùng: điện thoại có nút menu + logo; màn rộng chỉ còn chuông và Autoplan (ô tìm đã có trong từng trang) -->
+        <!-- Thanh trên cùng (chỉ điện thoại): nút menu, logo, chuông, đổi giao diện; màn rộng dùng thanh bên -->
         <header
-          class="sticky top-0 z-30 flex h-[var(--app-header-h)] items-center gap-2 border-b border-slate-200 bg-white/95 pl-1.5 pr-3 backdrop-blur lg:px-6"
+          class="sticky top-0 z-30 flex h-[var(--app-header-h)] items-center gap-2 border-b border-slate-200 bg-white/95 pl-1.5 pr-3 backdrop-blur lg:hidden"
         >
           <button
             type="button"
-            class="flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 lg:hidden"
+            class="flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
             (click)="menuOpen.set(!menuOpen())"
             aria-label="Mở menu"
             [attr.aria-expanded]="menuOpen()"
           >
             <app-icon name="menu" [size]="24" />
           </button>
-          <a routerLink="/" class="flex items-center gap-2 lg:hidden" aria-label="Trang chủ HANOIVIBE">
+          <a routerLink="/" class="flex items-center gap-2" aria-label="Trang chủ HANOIVIBE">
             <img src="logo.png" alt="" class="h-7 w-auto" />
             <span class="font-extrabold tracking-wide text-slate-900">HANOI<span class="text-brand-600">VIBE</span></span>
           </a>
@@ -293,19 +292,12 @@ function readCollapsed(): boolean {
             }
             <button
               type="button"
-              class="flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 lg:hidden"
+              class="flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
               [attr.aria-label]="theme.isDark() ? 'Chuyển sang chế độ Sáng' : 'Chuyển sang chế độ Tối'"
               [attr.aria-pressed]="theme.isDark()"
               (click)="theme.toggle()"
             >
               <app-icon [name]="theme.isDark() ? 'sun' : 'moon'" [size]="22" />
-            </button>
-            <button
-              type="button"
-              class="hidden h-10 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-[13px] font-semibold text-white transition hover:bg-brand-700 lg:flex"
-              (click)="autoplanOpen.set(true)"
-            >
-              <app-icon name="shuffle" [size]="15" />Autoplan
             </button>
           </div>
         </header>
@@ -335,9 +327,6 @@ function readCollapsed(): boolean {
         </main>
         <!-- Hỏi đưa dữ liệu localStorage của bản cũ lên tài khoản (chỉ hiện khi có) -->
         <app-legacy-import-dialog />
-        @if (autoplanOpen()) {
-          <app-autoplan-dialog (closed)="autoplanOpen.set(false)" />
-        }
       </div>
 
       <!-- Thanh tab dưới (điện thoại, máy tính bảng dọc): 4 mục chính trong tầm ngón cái + "Thêm" mở menu đầy đủ -->
@@ -436,7 +425,6 @@ export class ShellComponent {
   protected readonly bootstrap = inject(DataBootstrapService);
   protected readonly auth = inject(AuthService);
   protected readonly theme = inject(ThemeService);
-  protected readonly autoplanOpen = signal(false);
 
   protected initial(name: string): string {
     return name.trim().charAt(0).toUpperCase() || '?';
