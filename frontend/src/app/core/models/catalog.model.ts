@@ -36,6 +36,8 @@ export interface DistrictOption {
   label: string;
   /** Số quán trong Khám phá quán ở khu vực này */
   count: number;
+  /** Ảnh một quán tiêu biểu trong khu vực (ô trên trang chủ); null = chưa có */
+  imageUrl: string | null;
 }
 
 /** Nhóm trong My place của từng loại quán, dùng trong thông báo "Đã được add vào …". */

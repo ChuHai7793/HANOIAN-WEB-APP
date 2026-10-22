@@ -36,33 +36,35 @@ export const DEFAULT_BANNER_CREDIT = {
           [style.object-position]="imagePosition()"
         />
       }
-      <!-- Tông tím: đậm bên trái (chỗ có chữ), nhạt dần sang phải; tối nhẹ ở trên / dưới -->
-      <div class="absolute inset-0 -z-10 bg-gradient-to-r from-[#2d1f66]/90 via-[#4b33b0]/50 to-[#6d4fd6]/10"></div>
+      <!-- Tông tím: đậm bên trái (chỗ có chữ), nhạt dần sang phải; căn giữa thì phủ đều. Tối nhẹ ở trên / dưới -->
+      <div class="absolute inset-0 -z-10" [class]="centered() ? 'bg-[#2d1f66]/60' : 'bg-gradient-to-r from-[#2d1f66]/90 via-[#4b33b0]/50 to-[#6d4fd6]/10'"></div>
       <div class="absolute inset-0 -z-10 bg-gradient-to-t from-[#24184f]/75 via-transparent to-[#24184f]/35"></div>
       <ng-content select="[bannerAside]" />
 
-      <div class="flex flex-col gap-3 p-3.5 pb-3 sm:gap-5 sm:p-6 sm:pb-9 lg:p-7 lg:pb-9">
-        <div class="flex items-center gap-2">
+      <div class="flex flex-col gap-3 p-3.5 pb-3 sm:gap-5 sm:p-6 sm:pb-9 lg:p-7 lg:pb-9" [class.items-center]="centered()" [class.sm:py-14]="centered()" [class.lg:py-16]="centered()">
+        <div class="flex items-center gap-2 empty:hidden" [class.w-full]="centered()">
           <ng-content select="[bannerLeft]" />
           <div class="ml-auto flex items-center gap-2">
             <ng-content select="[bannerRight]" />
           </div>
         </div>
 
-        <div class="max-w-xl">
-          <p class="hidden items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-white/85 sm:flex">
+        <div class="max-w-xl" [class.text-center]="centered()" [class.max-w-2xl]="centered()">
+          <p class="hidden items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-white/85 sm:flex" [class.justify-center]="centered()">
             <span class="h-px w-7 bg-white/60"></span>{{ kicker() }}
           </p>
-          <h1 class="text-[26px] font-extrabold leading-tight tracking-tight sm:mt-2 sm:text-[40px]">
-            {{ heading() }}
+          <h1 class="text-[26px] font-extrabold leading-tight tracking-tight sm:mt-2 sm:text-[40px]" [class.sm:text-[44px]]="centered()">
+            {{ heading() }}@if (typing()) {<span class="ml-0.5 inline-block w-[3px] animate-caret bg-white align-[-0.1em]" style="height: 0.9em" aria-hidden="true"></span>}
             @if (headingAccent(); as accent) {
               <span class="block bg-gradient-to-r from-[#d9ccff] via-[#f0a6e6] to-[#ffb199] bg-clip-text text-transparent">{{ accent }}</span>
             }
           </h1>
-          <p class="mt-1 hidden text-[15px] text-white/85 sm:block">{{ tagline() }}</p>
+          <p class="mt-1 hidden text-[15px] text-white/85 sm:block" [class.!block]="centered()">{{ tagline() }}</p>
         </div>
 
-        <ng-content />
+        <div class="w-full" [class.max-w-2xl]="centered()">
+          <ng-content />
+        </div>
       </div>
 
       @if (credit() || editable()) {
@@ -100,8 +102,12 @@ export class PageBannerComponent {
   readonly imagePosition = input('center');
   readonly kicker = input.required<string>();
   readonly heading = input.required<string>();
-  /** Dòng tiêu đề thứ hai, chữ đổi màu gradient (trang chủ) */
+  /** Dòng tiêu đề thứ hai, chữ đổi màu gradient */
   readonly headingAccent = input<string | null>(null);
+  /** Trang chủ: chữ và nội dung căn giữa, banner cao hơn, nền phủ đều */
+  readonly centered = input(false);
+  /** Con trỏ nhấp nháy sau tiêu đề */
+  readonly typing = input(false);
   readonly tagline = input.required<string>();
   readonly credit = input<{ text: string; href: string } | null>(null);
   /** Admin: hiện nút "Đổi ảnh nền" */

@@ -17,4 +17,15 @@ public interface CatalogPlaceRepository
   /** Số quán theo khu vực (chỉ khu vực đang có quán): [district, count] */
   @Query("select p.district, count(p) from CatalogPlace p group by p.district")
   List<Object[]> countByDistrict();
+
+  /** Ảnh đại diện mỗi khu vực: ảnh bìa của quán điểm cao nhất (mới nhất nếu bằng điểm) có ảnh: [district, image_url] */
+  @Query(
+      value =
+          """
+          SELECT DISTINCT ON (district) district, image_url FROM place_catalog
+          WHERE image_url IS NOT NULL AND image_url <> ''
+          ORDER BY district, rating DESC, created_at DESC
+          """,
+      nativeQuery = true)
+  List<Object[]> coverByDistrict();
 }

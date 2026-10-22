@@ -2,8 +2,6 @@ package com.gfmaster.config;
 
 import com.gfmaster.maps.MapsService;
 import com.gfmaster.maps.ShortLinkResolver.Resolved;
-import com.gfmaster.stats.HomeStatsService;
-import com.gfmaster.stats.HomeStatsService.HomeStats;
 import com.gfmaster.stats.StatsService;
 import com.gfmaster.stats.StatsService.StatsResponse;
 import java.time.Duration;
@@ -41,12 +39,6 @@ public class CacheConfig {
                     .serializeValuesWith(
                         SerializationPair.fromSerializer(
                             new JacksonJsonRedisSerializer<>(json, StatsResponse.class))))
-            .withCacheConfiguration(
-                HomeStatsService.CACHE,
-                defaults
-                    .entryTtl(Duration.ofMinutes(5))
-                    .serializeValuesWith(
-                        SerializationPair.fromSerializer(new JacksonJsonRedisSerializer<>(json, HomeStats.class))))
             .withCacheConfiguration(
                 MapsService.CACHE,
                 defaults

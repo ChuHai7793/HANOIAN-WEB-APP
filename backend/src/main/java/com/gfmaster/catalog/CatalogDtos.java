@@ -23,8 +23,8 @@ public final class CatalogDtos {
 
   private CatalogDtos() {}
 
-  /** Một khu vực và số quán đang có ở đó (ô "Khu vực" trên trang chủ) */
-  public record DistrictOption(String code, String label, long count) {}
+  /** Một khu vực, số quán đang có ở đó và ảnh một quán tiêu biểu (ô "Khu vực" trên trang chủ; null = chưa có ảnh) */
+  public record DistrictOption(String code, String label, long count, String imageUrl) {}
 
   /**
    * Admin thêm (POST) hoặc sửa (PUT) quán trong danh mục: gửi đủ mọi field. {@code version}: bỏ qua khi

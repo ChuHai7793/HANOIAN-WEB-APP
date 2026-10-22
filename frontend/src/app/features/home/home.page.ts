@@ -1,26 +1,12 @@
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { errorCode } from '../../core/api/api';
 import { AuthService } from '../../core/auth/auth.service';
-import { LoginGate } from '../../core/auth/login-gate.service';
-import { ArticleSummary } from '../../core/models/article.model';
-import { DistrictOption, FeaturedItem, MY_PLACE_GROUP } from '../../core/models/catalog.model';
-import { nowHHmm } from '../../core/models/filters.model';
-import {
-  imageVariant,
-  PLACE_LABELS,
-  placePriceText,
-  PlaceType,
-} from '../../core/models/place.model';
-import { ratingText } from '../../core/models/review.model';
-import { FeaturedSpot, SPOT_CATEGORIES, spotPriceText } from '../../core/models/spot.model';
+import { DistrictOption, FeaturedItem } from '../../core/models/catalog.model';
+import { imageVariant, PLACE_LABELS, PlaceType } from '../../core/models/place.model';
+import { FeaturedSpot, SPOT_CATEGORIES } from '../../core/models/spot.model';
 import { Vibe } from '../../core/models/vibe.model';
 import { SeoService } from '../../core/seo/seo.service';
-import { ArticleService } from '../../core/services/article.service';
 import { CatalogService } from '../../core/services/catalog.service';
-import { HomeStats, HomeStatsService } from '../../core/services/home-stats.service';
-import { PlaceService } from '../../core/services/place.service';
-import { SavedSpotService } from '../../core/services/saved-spot.service';
 import { SpotService } from '../../core/services/spot.service';
 import { ToastService } from '../../core/services/toast.service';
 import { FeaturedEditorComponent } from '../../shared/ui/featured-editor.component';
@@ -32,110 +18,107 @@ import {
   editableBanner,
   PageBannerComponent,
 } from '../../shared/ui/page-banner.component';
+import { ScrollRowComponent } from '../../shared/ui/scroll-row.component';
 import { SiteFooterComponent } from '../../shared/ui/site-footer.component';
-import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
 import { AutoplanDialogComponent } from '../plans/autoplan-dialog.component';
 
-/** Ô "Hẹn kiểu gì?": một kiểu hẹn dẫn tới danh sách đã lọc sẵn */
-interface VibeTile {
-  vibe: Vibe;
+/** Ô ảnh "Hẹn kiểu gì?": kiểu hẹn hoặc loại quán, dẫn tới danh sách đã lọc sẵn */
+interface PurposeTile {
+  key: string;
   icon: IconName;
   title: string;
-  text: string;
-  link: string;
-  linkLabel: string;
-  tone: string;
-}
-
-/** Chip trong banner: loại quán / chỗ chơi kèm số lượng */
-interface KindChip {
-  key: PlaceType | 'spot';
-  icon: IconName;
-  label: string;
   link: string;
   query: Record<string, string>;
+  /** Nền khi chưa có ảnh */
+  tone: string;
+  /** Lấy ảnh quán tiêu biểu của nhóm này ở đâu */
+  source: { kind: 'place'; vibe?: Vibe; type?: PlaceType } | { kind: 'spot'; vibe?: Vibe };
 }
 
 /** Một thẻ trong lưới "Điểm hẹn nổi bật": quán hoặc chỗ chơi, cùng một hình dạng để xếp chung */
 interface VenueCard {
-  kind: 'place' | 'spot';
-  /** Khoá chip lọc: loại quán hoặc 'spot' */
-  group: PlaceType | 'spot';
-  id: string;
-  position: number;
+  key: string;
   link: string[];
   imageUrl: string | null;
   badge: string;
   name: string;
   address: string;
-  districtLabel: string;
-  rating: string | null;
-  ratingCount: number;
-  price: string;
-  note: string;
-  vibes: Vibe[];
-  saved: boolean;
 }
 
-const VIBE_TILES: VibeTile[] = [
+const PURPOSE_TILES: PurposeTile[] = [
   {
-    vibe: 'chill',
+    key: 'chill',
     icon: 'leaf',
     title: 'Chill',
-    text: 'Ngồi lâu, nói chuyện, nhạc nhẹ. Cafe sân vườn, quán ăn ấm cúng.',
     link: '/explore',
-    linkLabel: 'Xem quán',
-    tone: 'from-emerald-500 to-teal-700',
+    query: { kieu: 'chill' },
+    tone: 'from-emerald-600 to-teal-800',
+    source: { kind: 'place', vibe: 'chill' },
   },
   {
-    vibe: 'active',
+    key: 'active',
     icon: 'zap',
     title: 'Năng động',
-    text: 'Cùng làm một thứ: workshop, vận động, chợ đêm, music box.',
     link: '/spots',
-    linkLabel: 'Xem chỗ chơi',
-    tone: 'from-amber-500 to-orange-600',
+    query: { kieu: 'active' },
+    tone: 'from-amber-600 to-orange-700',
+    source: { kind: 'spot', vibe: 'active' },
   },
   {
-    vibe: 'romantic',
+    key: 'romantic',
     icon: 'heart',
     title: 'Lãng mạn',
-    text: 'Bar tầng cao, nhà hàng view đẹp, buổi tối đáng nhớ.',
     link: '/explore',
-    linkLabel: 'Xem quán',
-    tone: 'from-rose-500 to-pink-700',
+    query: { kieu: 'romantic' },
+    tone: 'from-rose-600 to-pink-800',
+    source: { kind: 'place', vibe: 'romantic' },
   },
-];
-
-const KIND_CHIPS: KindChip[] = [
-  { key: 'cafe', icon: 'cup', label: 'Quán cafe', link: '/explore', query: { loai: 'cafe' } },
+  {
+    key: 'cafe',
+    icon: 'cup',
+    title: 'Quán cafe',
+    link: '/explore',
+    query: { loai: 'cafe' },
+    tone: 'from-brand-600 to-brand-900',
+    source: { kind: 'place', type: 'cafe' },
+  },
   {
     key: 'restaurant',
     icon: 'utensils',
-    label: 'Quán ăn',
+    title: 'Quán ăn',
     link: '/explore',
     query: { loai: 'restaurant' },
+    tone: 'from-brand-600 to-brand-900',
+    source: { kind: 'place', type: 'restaurant' },
   },
-  { key: 'bar', icon: 'cocktail', label: 'Quán bar', link: '/explore', query: { loai: 'bar' } },
-  { key: 'spot', icon: 'gate', label: 'Chỗ chơi', link: '/spots', query: {} },
+  {
+    key: 'bar',
+    icon: 'cocktail',
+    title: 'Quán bar',
+    link: '/explore',
+    query: { loai: 'bar' },
+    tone: 'from-brand-600 to-brand-900',
+    source: { kind: 'place', type: 'bar' },
+  },
+  {
+    key: 'spot',
+    icon: 'gate',
+    title: 'Chỗ chơi',
+    link: '/spots',
+    query: {},
+    tone: 'from-brand-600 to-brand-900',
+    source: { kind: 'spot' },
+  },
 ];
 
-/** Chip lọc trên lưới nổi bật */
-const GROUP_CHIPS: { value: PlaceType | 'spot' | ''; label: string }[] = [
-  { value: '', label: 'Tất cả' },
-  { value: 'cafe', label: 'Quán cafe' },
-  { value: 'restaurant', label: 'Quán ăn' },
-  { value: 'bar', label: 'Quán bar' },
-  { value: 'spot', label: 'Chỗ chơi' },
-];
-
-/** Số thẻ tối đa trong lưới nổi bật */
-const GRID_SIZE = 6;
+/** Số thẻ tối đa trong lưới nổi bật (4 cột × 2 hàng) */
+const GRID_SIZE = 8;
 
 /**
  * Trang chủ (/): nơi hạ cánh cho mọi người, khách lẫn người đã đăng nhập. Chỉ để duyệt và dẫn đi; danh sách
  * và bộ lọc nằm ở Khám phá quán / Tìm chỗ chơi, mọi ô ở đây dẫn sang đó với bộ lọc đã chọn sẵn trên đường dẫn.
- * Mọi con số đều là số thật từ backend (số quán, chỗ chơi, đánh giá, plan, số chỗ đang mở cửa).
+ * Thứ tự: hero căn giữa với ô tìm; "Hẹn kiểu gì?" (ô ảnh trượt ngang); "Hẹn ở khu nào?" (ô ảnh trượt ngang,
+ * số quán); "Điểm hẹn nổi bật" (lưới 4×2, admin chọn); Tìm đối tượng + Autoplan + quiz; chân trang.
  */
 @Component({
   selector: 'app-home-page',
@@ -145,20 +128,21 @@ const GRID_SIZE = 6;
     FeaturedEditorComponent,
     IconComponent,
     AutoplanDialogComponent,
-    VibeTagsComponent,
+    ScrollRowComponent,
     SiteFooterComponent,
   ],
   template: `
-    <div class="flex flex-col gap-8 px-4 pb-8 pt-4 sm:px-6 lg:px-8 lg:pt-5">
-      <!-- Banner: dùng chung ảnh nền với Khám phá quán (admin đổi ở đâu cũng được) -->
+    <div class="flex flex-col gap-10 px-4 pb-8 pt-4 sm:px-6 lg:px-8 lg:pt-5">
+      <!-- Hero căn giữa: dùng chung ảnh nền với Khám phá quán (admin đổi ở đâu cũng được) -->
       <app-page-banner
         kicker="Hà Nội, hẹn hò"
-        heading="Đi đâu cũng vui."
-        headingAccent="Hẹn ở đâu cũng đẹp."
-        tagline="Quán cafe, quán ăn, bar và chỗ chơi cho buổi hẹn của bạn. Chọn kiểu hẹn, chọn khu vực, hoặc để Autoplan lo."
+        heading="Hẹn ở đâu cũng đẹp."
+        tagline="Gợi ý quán cafe, quán ăn, bar và chỗ chơi cho buổi hẹn ở Hà Nội."
+        [centered]="true"
+        [typing]="true"
         [image]="banner.ready() ? (banner.custom() ?? defaultBanner) : null"
         [imageSrcset]="banner.custom() ? null : defaultSrcset"
-        [imagePosition]="banner.custom() ? 'center' : '70% 28%'"
+        [imagePosition]="banner.custom() ? 'center' : '70% 40%'"
         [credit]="banner.custom() ? null : defaultCredit"
         [editable]="canEdit()"
         [custom]="!!banner.custom()"
@@ -166,39 +150,14 @@ const GRID_SIZE = 6;
         (upload)="banner.upload($event)"
         (reset)="banner.reset()"
       >
-        <button
-          bannerLeft
-          type="button"
-          class="flex h-9 items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 text-[13px] font-medium text-white backdrop-blur transition hover:bg-white/25"
-          (click)="cityHint()"
+        <!-- Tìm: Enter hoặc bấm nút thì sang Khám phá quán với từ khoá -->
+        <form
+          class="mx-auto flex w-full max-w-2xl items-center gap-2"
+          role="search"
+          (submit)="search($event)"
         >
-          <app-icon name="pin" [size]="15" />Hà Nội<app-icon name="chevronDown" [size]="14" />
-        </button>
-        <!-- Số chỗ đang mở cửa lúc này (giờ máy người xem) -->
-        @if (openNow(); as n) {
-          <span
-            bannerLeft
-            class="flex h-9 items-center gap-1.5 rounded-full bg-emerald-500/20 px-3 text-[13px] font-medium text-white backdrop-blur max-sm:hidden"
-          >
-            <span class="h-2 w-2 rounded-full bg-emerald-400"></span>{{ n }} chỗ đang mở cửa
-          </span>
-        }
-        <button
-          bannerRight
-          type="button"
-          class="flex h-9 items-center gap-1 rounded-full bg-white px-2 text-[12px] font-semibold text-brand-700 shadow-md shadow-brand-900/20 transition hover:bg-brand-50 sm:px-3"
-          aria-label="Autoplan buổi hẹn"
-          (click)="autoplanOpen.set(true)"
-        >
-          <app-icon name="shuffle" [size]="14" /><span class="max-sm:hidden"
-            >Autoplan buổi hẹn</span
-          >
-        </button>
-
-        <!-- Tìm: Enter hoặc bấm nút thì sang Khám phá quán với từ khoá; chip loại kèm số lượng -->
-        <form class="flex flex-wrap items-center gap-2" role="search" (submit)="search($event)">
           <label
-            class="flex h-11 min-w-0 flex-[1_1_100%] items-center gap-2.5 rounded-full bg-white px-4 text-slate-500 shadow-lg shadow-brand-900/20 sm:max-w-[480px] sm:flex-[1_1_320px]"
+            class="flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-xl bg-white px-4 text-slate-500 shadow-lg shadow-brand-900/30 sm:h-14"
           >
             <app-icon name="search" [size]="18" />
             <span class="sr-only">Tìm quán</span>
@@ -207,203 +166,146 @@ const GRID_SIZE = 6;
               name="q"
               [value]="q()"
               (input)="q.set($any($event.target).value)"
-              class="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-              placeholder="Tìm quán theo tên, địa chỉ…"
+              class="min-w-0 flex-1 bg-transparent text-[15px] text-slate-900 outline-none placeholder:text-slate-400"
+              placeholder="Tên quán, khu vực, kiểu quán…"
             />
-            <button
-              type="submit"
-              class="-mr-2 flex h-8 items-center rounded-full bg-brand-600 px-3 text-[13px] font-semibold text-white hover:bg-brand-700"
-            >
-              Tìm
-            </button>
           </label>
-          <div
-            role="group"
-            aria-label="Đi đâu"
-            class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:contents"
+          <button
+            type="submit"
+            class="flex h-12 shrink-0 items-center gap-2 rounded-xl bg-brand-600 px-4 text-[15px] font-semibold text-white shadow-lg shadow-brand-900/30 transition hover:bg-brand-700 sm:h-14 sm:px-6"
           >
-            @for (k of kinds; track k.key) {
-              <a
-                [routerLink]="k.link"
-                [queryParams]="k.query"
-                class="flex h-11 items-center gap-2 rounded-full bg-white/15 px-4 text-sm font-medium text-white backdrop-blur transition hover:bg-white/25 sm:bg-white sm:text-slate-700 sm:shadow-lg sm:shadow-brand-900/20 sm:hover:bg-brand-50"
-              >
-                <span class="text-brand-200 sm:text-brand-600"
-                  ><app-icon [name]="k.icon" [size]="17" /></span
-                >{{ k.label }}
-                @if (kindCount(k.key); as n) {
-                  <span
-                    class="rounded-full bg-white/20 px-1.5 text-xs font-semibold sm:bg-brand-100 sm:text-brand-800"
-                    >{{ n }}</span
-                  >
-                }
-              </a>
-            }
-          </div>
+            <app-icon name="search" [size]="18" [stroke]="2.4" /><span class="max-sm:hidden"
+              >Tìm quán</span
+            >
+          </button>
         </form>
       </app-page-banner>
 
-      <!-- Con số thật: điểm hẹn tuyển chọn, đánh giá, plan -->
-      @if (stats(); as s) {
-        <section class="-mt-4 grid gap-3 sm:grid-cols-3" aria-label="HANOIVIBE có gì">
-          <div
-            class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5"
-          >
-            <span
-              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700"
-              ><app-icon name="pin" [size]="20"
-            /></span>
-            <span>
-              <span class="block text-2xl font-extrabold leading-none text-slate-900">{{
-                s.places + s.spots
-              }}</span>
-              <span class="mt-1 block text-[13px] text-slate-500"
-                >điểm hẹn tuyển chọn: {{ s.places }} quán, {{ s.spots }} chỗ chơi</span
-              >
-            </span>
-          </div>
-          <div
-            class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5"
-          >
-            <span
-              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700"
-              ><app-icon name="star" [size]="20"
-            /></span>
-            <span>
-              @if (s.reviews && s.ratingAvg !== null) {
-                <span class="block text-2xl font-extrabold leading-none text-slate-900"
-                  >{{ rating(s.ratingAvg)
-                  }}<span class="text-base font-semibold text-slate-500">/5</span></span
-                >
-                <span class="mt-1 block text-[13px] text-slate-500"
-                  >từ {{ s.reviews }} đánh giá của người đã đi</span
-                >
-              } @else {
-                <span class="block text-2xl font-extrabold leading-none text-slate-900">★</span>
-                <span class="mt-1 block text-[13px] text-slate-500"
-                  >Chưa có đánh giá. Đi rồi kể lại nhé!</span
-                >
-              }
-            </span>
-          </div>
-          <div
-            class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5"
-          >
-            <span
-              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600"
-              ><app-icon name="route" [size]="20"
-            /></span>
-            <span>
-              <span class="block text-2xl font-extrabold leading-none text-slate-900">{{
-                s.plans
-              }}</span>
-              <span class="mt-1 block text-[13px] text-slate-500">plan hẹn hò đã được lập</span>
-            </span>
-          </div>
-        </section>
-      }
-
-      <!-- Hẹn kiểu gì: 3 kiểu hẹn (nhãn Autoplan dùng) dẫn tới danh sách đã lọc -->
-      <section class="flex flex-col gap-3">
-        <h2 class="text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
-          Tối nay hẹn kiểu gì?
+      <!-- Hẹn kiểu gì: ô ảnh lớn, chữ căn giữa trên ảnh, trượt ngang -->
+      <section class="flex flex-col gap-5">
+        <h2
+          class="flex flex-col items-center gap-2 text-center text-2xl font-extrabold tracking-tight text-slate-900 sm:text-[28px]"
+        >
+          Hẹn kiểu gì?<span class="h-1 w-12 rounded-full bg-brand-600" aria-hidden="true"></span>
         </h2>
-        <div class="grid gap-3 sm:grid-cols-3">
-          @for (t of vibes; track t.vibe) {
+        <app-scroll-row>
+          @for (t of purposes; track t.key) {
             <a
               [routerLink]="t.link"
-              [queryParams]="{ kieu: t.vibe }"
-              class="group relative flex min-h-[150px] flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br p-4 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:min-h-[180px] sm:p-5"
+              [queryParams]="t.query"
+              class="group relative flex h-[150px] w-[72%] shrink-0 snap-start items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br text-white shadow-sm transition hover:shadow-md sm:h-[190px] sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]"
               [class]="t.tone"
             >
-              <span class="flex h-10 w-10 items-center justify-center rounded-full bg-white/20"
-                ><app-icon [name]="t.icon" [size]="20"
-              /></span>
-              <span>
-                <span class="block text-[22px] font-extrabold leading-tight sm:text-2xl">{{
-                  t.title
-                }}</span>
-                <span class="mt-1 block text-sm text-white/85">{{ t.text }}</span>
-                <span class="mt-2.5 inline-flex items-center gap-1 text-[13px] font-semibold"
-                  >{{ t.linkLabel }}<app-icon name="arrowRight" [size]="14" [stroke]="2.4"
-                /></span>
+              @if (tileImage(t.key); as src) {
+                <img
+                  [src]="src"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  (error)="imageFailed(t.key)"
+                  class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                />
+                <span
+                  class="absolute inset-0 bg-black/45 transition group-hover:bg-black/35"
+                ></span>
+              }
+              <span
+                class="relative flex items-center gap-2.5 text-2xl font-extrabold tracking-tight [text-shadow:0_2px_12px_rgb(0_0_0/0.5)] sm:text-[28px]"
+              >
+                <app-icon [name]="t.icon" [size]="24" />{{ t.title }}
               </span>
             </a>
           }
-        </div>
+        </app-scroll-row>
       </section>
 
-      <!-- Điểm hẹn nổi bật (admin chọn quán và chỗ chơi): lưới thẻ, chip lọc theo nhóm -->
-      @if (allCards().length || canEdit()) {
-        <section class="flex flex-col gap-3">
-          <div class="flex flex-wrap items-center gap-2">
-            <div class="mr-auto">
-              <p
-                class="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.18em] text-brand-600"
-              >
-                <span class="h-1.5 w-1.5 rounded-full bg-brand-500"></span>Tuyển chọn
-              </p>
-              <h2 class="mt-1 text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
-                Điểm hẹn nổi bật
-              </h2>
-            </div>
-            @if (canEdit()) {
-              <button
-                type="button"
-                class="flex min-h-10 items-center gap-1.5 rounded-full border border-brand-200 bg-white px-3.5 text-sm font-medium text-brand-700 transition hover:bg-brand-50"
-                (click)="placeEditorOpen.set(true)"
-              >
-                <app-icon name="edit" [size]="15" />Chọn quán
-              </button>
-              <button
-                type="button"
-                class="flex min-h-10 items-center gap-1.5 rounded-full border border-brand-200 bg-white px-3.5 text-sm font-medium text-brand-700 transition hover:bg-brand-50"
-                (click)="spotEditorOpen.set(true)"
-              >
-                <app-icon name="edit" [size]="15" />Chọn chỗ chơi
-              </button>
-            }
-          </div>
-          <div
-            role="group"
-            aria-label="Lọc điểm hẹn nổi bật"
-            class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0"
+      <!-- Khu vực: ô ảnh, tên quận và số quán ở góc dưới; chỉ khu vực đang có quán, nhiều quán trước -->
+      @if (districtTiles().length) {
+        <section class="flex flex-col gap-5">
+          <h2
+            class="flex flex-col items-center gap-2 text-center text-2xl font-extrabold tracking-tight text-slate-900 sm:text-[28px]"
           >
-            @for (c of groupChips; track c.value) {
-              <button
-                type="button"
-                class="min-h-9 rounded-full border px-3.5 text-[13px] font-medium transition"
-                [class]="
-                  group() === c.value
-                    ? 'border-brand-600 bg-brand-600 text-white'
-                    : 'border-slate-200 bg-white text-slate-700 hover:border-brand-300 hover:bg-brand-50'
-                "
-                [attr.aria-pressed]="group() === c.value"
-                (click)="group.set(c.value)"
+            Hẹn ở khu nào?<span
+              class="h-1 w-12 rounded-full bg-brand-600"
+              aria-hidden="true"
+            ></span>
+          </h2>
+          <app-scroll-row>
+            @for (d of districtTiles(); track d.code) {
+              <a
+                routerLink="/explore"
+                [queryParams]="{ khuvuc: d.code }"
+                class="group relative flex h-[220px] w-[60%] shrink-0 snap-start flex-col justify-end overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-900 p-4 text-white shadow-sm transition hover:shadow-md sm:h-[260px] sm:w-[calc((100%-1rem)/2)] md:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-3rem)/4)]"
               >
-                {{ c.label }}
-              </button>
+                @if (d.imageUrl) {
+                  <img
+                    [src]="thumb(d.imageUrl)"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                  />
+                }
+                <span
+                  class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent"
+                ></span>
+                <span class="relative">
+                  <span class="block text-xl font-extrabold leading-tight">{{ d.label }}</span>
+                  <span class="mt-0.5 block text-[13px] text-white/85">{{ d.count }} quán</span>
+                </span>
+              </a>
+            }
+          </app-scroll-row>
+        </section>
+      }
+
+      <!-- Điểm hẹn nổi bật (admin chọn quán và chỗ chơi): lưới 4 cột, thẻ gọn -->
+      @if (cards().length || canEdit()) {
+        <section class="flex flex-col gap-5">
+          <div class="relative flex justify-center">
+            <h2
+              class="flex flex-col items-center gap-2 text-center text-2xl font-extrabold tracking-tight text-slate-900 sm:text-[28px]"
+            >
+              Điểm hẹn nổi bật<span
+                class="h-1 w-12 rounded-full bg-brand-600"
+                aria-hidden="true"
+              ></span>
+            </h2>
+            @if (canEdit()) {
+              <div
+                class="flex gap-2 max-sm:mt-3 max-sm:w-full max-sm:justify-center sm:absolute sm:right-0 sm:top-0"
+              >
+                <button
+                  type="button"
+                  class="flex min-h-9 items-center gap-1.5 rounded-full border border-brand-200 bg-white px-3 text-[13px] font-medium text-brand-700 transition hover:bg-brand-50"
+                  (click)="placeEditorOpen.set(true)"
+                >
+                  <app-icon name="edit" [size]="14" />Chọn quán
+                </button>
+                <button
+                  type="button"
+                  class="flex min-h-9 items-center gap-1.5 rounded-full border border-brand-200 bg-white px-3 text-[13px] font-medium text-brand-700 transition hover:bg-brand-50"
+                  (click)="spotEditorOpen.set(true)"
+                >
+                  <app-icon name="edit" [size]="14" />Chọn chỗ chơi
+                </button>
+              </div>
             }
           </div>
-
           @if (cards().length) {
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              @for (c of cards(); track c.kind + c.id) {
-                <article
-                  class="group relative flex flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md"
+            <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+              @for (c of cards(); track c.key) {
+                <a
+                  [routerLink]="c.link"
+                  class="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md"
                 >
-                  <a
-                    [routerLink]="c.link"
-                    class="relative block aspect-[4/3] overflow-hidden bg-[#EFEAFC]"
-                    [attr.aria-label]="'Xem ' + c.name"
-                  >
+                  <span class="relative block aspect-square overflow-hidden bg-[#EFEAFC]">
                     @if (c.imageUrl) {
                       <img
-                        [src]="imageSrc(c.imageUrl)"
+                        [src]="thumb(c.imageUrl)"
                         alt=""
                         loading="lazy"
                         decoding="async"
-                        (error)="imageFailed(c.imageUrl)"
                         class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                       />
                     } @else {
@@ -412,168 +314,35 @@ const GRID_SIZE = 6;
                       /></span>
                     }
                     <span
-                      class="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-brand-800"
+                      class="absolute left-2.5 top-2.5 rounded-full bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-brand-800"
                       >{{ c.badge }}</span
                     >
-                  </a>
-                  <!-- Lưu: trên ảnh, góc phải (khách bấm thì mời đăng nhập) -->
-                  @if (c.saved) {
+                  </span>
+                  <span class="flex flex-col gap-0.5 px-3 pb-3 pt-2.5">
                     <span
-                      class="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-[#C2335F] shadow-sm"
-                      title="Đã lưu vào My place"
-                      ><app-icon name="heart" [size]="17" [filled]="true"
-                    /></span>
-                  } @else {
-                    <button
-                      type="button"
-                      class="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow-sm transition hover:text-[#C2335F]"
-                      [attr.aria-label]="'Lưu ' + c.name + ' vào My place'"
-                      title="Lưu vào My place"
-                      [disabled]="saving() === c.id"
-                      (click)="save(c)"
-                    >
-                      <app-icon name="heart" [size]="17" />
-                    </button>
-                  }
-                  <div class="flex flex-1 flex-col gap-1.5 px-4 pb-4 pt-3">
-                    <a
-                      [routerLink]="c.link"
-                      class="truncate text-base font-bold tracking-tight text-slate-900 hover:text-brand-700"
+                      class="truncate text-[15px] font-bold tracking-tight text-slate-900 group-hover:text-brand-700"
                       [title]="c.name"
-                      >{{ c.name }}</a
+                      >{{ c.name }}</span
                     >
-                    <p class="flex flex-wrap items-center gap-x-2 text-[13px] text-slate-600">
-                      @if (c.rating) {
-                        <span class="font-semibold text-slate-800"
-                          ><span class="text-[#E29A2D]">★</span> {{ c.rating }}
-                          <span class="font-normal text-slate-400"
-                            >({{ c.ratingCount }})</span
-                          ></span
-                        >
-                      }
-                      @if (c.price) {
-                        <span class="font-medium text-slate-700">{{ c.price }}</span>
-                      }
-                    </p>
-                    <p class="truncate text-[13px] text-slate-500">
-                      <span class="text-slate-400"><app-icon name="pin" [size]="13" /></span>
-                      {{ c.address || 'Chưa có địa chỉ' }} ·
-                      <span class="font-medium text-slate-600">{{ c.districtLabel }}</span>
-                    </p>
-                    @if (c.note) {
-                      <p class="line-clamp-2 text-sm leading-relaxed text-slate-600">
-                        {{ c.note }}
-                      </p>
-                    }
-                    <app-vibe-tags class="mt-auto pt-1" [vibes]="c.vibes" />
-                  </div>
-                </article>
+                    <span class="truncate text-[13px] text-slate-500">{{
+                      c.address || 'Chưa có địa chỉ'
+                    }}</span>
+                  </span>
+                </a>
               }
             </div>
           } @else {
             <p
               class="rounded-2xl border border-dashed border-brand-200 bg-white px-6 py-10 text-center text-sm text-slate-500"
             >
-              {{
-                allCards().length
-                  ? 'Chưa có điểm nổi bật trong nhóm này.'
-                  : 'Admin chưa chọn điểm hẹn nổi bật.'
-              }}
+              Admin chưa chọn điểm hẹn nổi bật.
             </p>
           }
-          <div class="flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold text-brand-700">
+          <div
+            class="flex flex-wrap justify-center gap-x-6 gap-y-1 text-sm font-semibold text-brand-700"
+          >
             <a routerLink="/explore" class="hover:underline">Xem tất cả quán →</a>
             <a routerLink="/spots" class="hover:underline">Xem tất cả chỗ chơi →</a>
-          </div>
-        </section>
-      }
-
-      <!-- Bộ sưu tập: bài Cẩm nang có nhúng quán / chỗ chơi -->
-      @if (collections().length) {
-        <section class="flex flex-col gap-3">
-          <div class="flex items-end justify-between gap-3">
-            <div>
-              <p
-                class="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.18em] text-brand-600"
-              >
-                <span class="h-1.5 w-1.5 rounded-full bg-brand-500"></span>Cẩm nang
-              </p>
-              <h2 class="mt-1 text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
-                Bộ sưu tập cho buổi hẹn
-              </h2>
-            </div>
-            <a
-              routerLink="/cam-nang"
-              class="shrink-0 text-sm font-semibold text-brand-700 hover:underline"
-              >Xem tất cả</a
-            >
-          </div>
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            @for (a of collections(); track a.id) {
-              <a
-                [routerLink]="['/cam-nang', a.slug]"
-                class="group relative flex aspect-[4/5] flex-col justify-end overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-4 text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:aspect-[3/4]"
-              >
-                @if (a.coverUrl) {
-                  <img
-                    [src]="a.coverUrl"
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                  />
-                }
-                <span
-                  class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/5"
-                ></span>
-                @if (a.venueCount) {
-                  <span
-                    class="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-brand-800"
-                    >{{ a.venueCount }} điểm hẹn</span
-                  >
-                }
-                <span class="relative">
-                  <span class="block text-lg font-extrabold leading-tight">{{ a.title }}</span>
-                  @if (a.excerpt) {
-                    <span class="mt-1 line-clamp-2 block text-[13px] text-white/80">{{
-                      a.excerpt
-                    }}</span>
-                  }
-                </span>
-              </a>
-            }
-          </div>
-        </section>
-      }
-
-      <!-- Khu vực: chỉ khu vực đang có quán, nhiều quán xếp trước -->
-      @if (districtTiles().length) {
-        <section class="flex flex-col gap-3">
-          <div class="flex items-baseline justify-between gap-3">
-            <h2 class="text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
-              Hẹn ở khu nào?
-            </h2>
-            <a routerLink="/explore" class="text-sm font-semibold text-brand-700 hover:underline"
-              >Mọi khu vực</a
-            >
-          </div>
-          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            @for (d of districtTiles(); track d.code) {
-              <a
-                routerLink="/explore"
-                [queryParams]="{ khuvuc: d.code }"
-                class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm transition hover:border-brand-300 hover:bg-brand-50"
-              >
-                <span
-                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700"
-                  ><app-icon name="pin" [size]="18"
-                /></span>
-                <span class="min-w-0">
-                  <span class="block truncate font-bold text-slate-900">{{ d.label }}</span>
-                  <span class="block text-[13px] text-slate-500">{{ d.count }} quán</span>
-                </span>
-              </a>
-            }
           </div>
         </section>
       }
@@ -651,61 +420,6 @@ const GRID_SIZE = 6;
         </div>
       </section>
 
-      <!-- Dải kêu gọi cuối trang -->
-      <section
-        class="relative overflow-hidden rounded-[22px] bg-[#3b2a7a] px-5 py-7 text-white sm:px-8 sm:py-9"
-      >
-        <div
-          class="absolute inset-0 bg-gradient-to-r from-[#2d1f66] via-[#4b33b0] to-[#7a5be3]"
-        ></div>
-        <div class="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-          <div class="max-w-xl">
-            <p
-              class="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-white/80"
-            >
-              <span class="h-px w-7 bg-white/60"></span>Hẹn ở đâu cũng đẹp
-            </p>
-            <h2 class="mt-2 text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl">
-              Sẵn sàng cho buổi hẹn đáng nhớ tiếp theo?
-            </h2>
-            <p class="mt-2 text-[15px] text-white/85">
-              @if (auth.isLoggedIn()) {
-                Lưu quán ưng ý vào My place, lập plan cho cuối tuần, hoặc để Autoplan chọn giúp.
-              } @else {
-                Tạo tài khoản miễn phí để lưu quán, lập plan và tìm người đi cùng.
-              }
-            </p>
-          </div>
-          <div class="flex flex-wrap gap-2.5">
-            @if (auth.isLoggedIn()) {
-              <button
-                type="button"
-                class="flex min-h-11 items-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-brand-700 shadow-md transition hover:bg-brand-50"
-                (click)="autoplanOpen.set(true)"
-              >
-                <app-icon name="shuffle" [size]="16" />Lập plan ngay
-              </button>
-            } @else {
-              <a
-                routerLink="/register"
-                class="flex min-h-11 items-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-brand-700 shadow-md transition hover:bg-brand-50"
-                >Tạo tài khoản</a
-              >
-            }
-            <a
-              routerLink="/explore"
-              class="flex min-h-11 items-center gap-2 rounded-full border border-white/40 bg-white/10 px-5 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
-            >
-              Khám phá {{ stats()?.places ?? '' }} quán<app-icon
-                name="arrowRight"
-                [size]="15"
-                [stroke]="2.4"
-              />
-            </a>
-          </div>
-        </div>
-      </section>
-
       <app-site-footer />
     </div>
 
@@ -733,22 +447,12 @@ const GRID_SIZE = 6;
 export class HomePage implements OnInit, OnDestroy {
   private readonly catalog = inject(CatalogService);
   private readonly spots = inject(SpotService);
-  private readonly articleApi = inject(ArticleService);
-  private readonly statsApi = inject(HomeStatsService);
   private readonly seo = inject(SeoService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
-  private readonly gate = inject(LoginGate);
-  private readonly placeService = inject(PlaceService);
-  private readonly savedSpots = inject(SavedSpotService);
-  protected readonly auth = inject(AuthService);
-  protected readonly canEdit = this.auth.canEdit;
+  protected readonly canEdit = inject(AuthService).canEdit;
 
-  protected readonly vibes = VIBE_TILES;
-  protected readonly kinds = KIND_CHIPS;
-  protected readonly groupChips = GROUP_CHIPS;
-  protected readonly rating = ratingText;
-
+  protected readonly purposes = PURPOSE_TILES;
   protected readonly q = signal('');
   protected readonly autoplanOpen = signal(false);
 
@@ -758,24 +462,15 @@ export class HomePage implements OnInit, OnDestroy {
   protected readonly defaultSrcset = DEFAULT_BANNER_SRCSET;
   protected readonly defaultCredit = DEFAULT_BANNER_CREDIT;
 
-  /** Số quán theo loại và số chỗ chơi (chip trong banner) */
-  private readonly placeCounts = signal<Record<string, number> | null>(null);
-  private readonly spotCount = signal<number | null>(null);
-  /** Số quán + chỗ chơi đang mở cửa lúc này; 0 / chưa biết thì ẩn */
-  protected readonly openNow = signal(0);
-  protected readonly stats = signal<HomeStats | null>(null);
+  /** Ảnh quán tiêu biểu cho từng ô "Hẹn kiểu gì?" (theo key); thiếu = nền gradient */
+  private readonly tileImages = signal<Record<string, string>>({});
+  private readonly failedTiles = signal<Set<string>>(new Set());
 
   private readonly districts = signal<DistrictOption[]>([]);
   protected readonly districtTiles = computed(() =>
     this.districts()
       .filter((d) => d.count > 0)
       .sort((a, b) => b.count - a.count),
-  );
-
-  /** Bộ sưu tập: bài có nhúng quán xếp trước, tối đa 4 */
-  private readonly articles = signal<ArticleSummary[]>([]);
-  protected readonly collections = computed(() =>
-    [...this.articles()].sort((a, b) => b.venueCount - a.venueCount).slice(0, 4),
   );
 
   private readonly featuredPlaces = signal<FeaturedItem[]>([]);
@@ -789,29 +484,30 @@ export class HomePage implements OnInit, OnDestroy {
     this.featuredSpots().map((f) => ({ id: f.spot.id, kicker: f.kicker, headline: f.headline })),
   );
 
-  /** Chip đang chọn trên lưới nổi bật ('' = tất cả) */
-  protected readonly group = signal<PlaceType | 'spot' | ''>('');
-  /** id đang lưu vào My place */
-  protected readonly saving = signal<string | null>(null);
-  /** Ảnh bản thu nhỏ bị lỗi: quay về ảnh gốc */
-  private readonly failedImages = signal<Set<string>>(new Set());
-
-  /** Quán và chỗ chơi nổi bật trộn theo vị trí admin xếp (quán rồi chỗ chơi xen kẽ) */
-  protected readonly allCards = computed<VenueCard[]>(() => {
-    const places = this.featuredPlaces().map((f) => this.placeCard(f));
-    const spots = this.featuredSpots().map((f) => this.spotCard(f));
+  /** Quán và chỗ chơi nổi bật xen kẽ theo vị trí admin xếp, tối đa 8 */
+  protected readonly cards = computed<VenueCard[]>(() => {
+    const places = this.featuredPlaces().map<VenueCard>((f) => ({
+      key: 'place:' + f.place.id,
+      link: ['/quan', f.place.slug],
+      imageUrl: f.place.imageUrl || null,
+      badge: PLACE_LABELS[f.place.type].replace(/^quán /, 'Quán '),
+      name: f.place.name,
+      address: f.place.address,
+    }));
+    const spots = this.featuredSpots().map<VenueCard>((f) => ({
+      key: 'spot:' + f.spot.id,
+      link: ['/cho-choi', f.spot.slug],
+      imageUrl: f.spot.imageUrl || null,
+      badge: SPOT_CATEGORIES.find((c) => c.value === f.spot.category)?.short ?? f.spot.category,
+      name: f.spot.name,
+      address: f.spot.address,
+    }));
     const out: VenueCard[] = [];
     for (let i = 0; i < Math.max(places.length, spots.length); i++) {
       if (places[i]) out.push(places[i]);
       if (spots[i]) out.push(spots[i]);
     }
-    return out;
-  });
-  protected readonly cards = computed(() => {
-    const g = this.group();
-    return this.allCards()
-      .filter((c) => !g || c.group === g)
-      .slice(0, GRID_SIZE);
+    return out.slice(0, GRID_SIZE);
   });
 
   ngOnInit(): void {
@@ -835,38 +531,15 @@ export class HomePage implements OnInit, OnDestroy {
     this.banner.load();
     this.loadFeaturedPlaces();
     this.loadFeaturedSpots();
-    const now = nowHHmm();
-    void this.catalog
-      .counts({})
-      .then((c) => this.placeCounts.set(c))
-      .catch(() => undefined);
-    void this.spots
-      .counts({})
-      .then((c) => this.spotCount.set(c['all'] ?? 0))
-      .catch(() => undefined);
-    void Promise.all([this.catalog.counts({ openAt: now }), this.spots.counts({ openAt: now })])
-      .then(([p, s]) => this.openNow.set((p.all ?? 0) + (s['all'] ?? 0)))
-      .catch(() => undefined);
-    void this.statsApi
-      .get()
-      .then((s) => this.stats.set(s))
-      .catch(() => undefined);
+    this.loadTileImages();
     void this.catalog
       .districts()
       .then((d) => this.districts.set(d))
-      .catch(() => undefined);
-    void this.articleApi
-      .list(0, 8)
-      .then((r) => this.articles.set(r.items))
       .catch(() => undefined);
   }
 
   ngOnDestroy(): void {
     this.seo.clear();
-  }
-
-  protected kindCount(key: PlaceType | 'spot'): number | null {
-    return key === 'spot' ? this.spotCount() : (this.placeCounts()?.[key] ?? null);
   }
 
   protected loadFeaturedPlaces(): void {
@@ -883,52 +556,41 @@ export class HomePage implements OnInit, OnDestroy {
       .catch(() => undefined);
   }
 
-  /** Ảnh thẻ: bản 800px nếu là ảnh app tải lên (và chưa lỗi), không thì ảnh gốc */
-  protected imageSrc(url: string): string {
-    return this.failedImages().has(url) ? url : (imageVariant(url, 800) ?? url);
-  }
-
-  protected imageFailed(url: string): void {
-    if (!this.failedImages().has(url)) this.failedImages.update((s) => new Set(s).add(url));
-  }
-
-  /** Lưu vào My place (quán) hoặc chỗ chơi đã lưu; khách thì mời đăng nhập rồi làm tiếp */
-  protected async save(card: VenueCard): Promise<void> {
-    if (
-      !this.gate.check(
-        card.kind === 'place' ? 'lưu quán vào My place' : 'lưu chỗ chơi vào My place',
-        () => this.save(card),
-      )
-    )
-      return;
-    this.saving.set(card.id);
-    try {
-      if (card.kind === 'place') {
-        const item = this.featuredPlaces().find((f) => f.place.id === card.id)?.place;
-        await this.catalog.addToMyPlace(card.id);
-        this.markPlaceSaved(card.id);
-        this.toast.success(`Đã được add vào ${item ? MY_PLACE_GROUP[item.type] : 'My place'}.`);
-        void this.placeService.load();
-      } else {
-        const spot = this.featuredSpots().find((f) => f.spot.id === card.id)?.spot;
-        if (!spot) return;
-        await this.savedSpots.save(spot);
-        this.featuredSpots.update((l) =>
-          l.map((f) =>
-            f.spot.id === card.id ? { ...f, spot: { ...f.spot, inMyPlace: true } } : f,
-          ),
-        );
-        this.toast.success('Đã lưu chỗ chơi vào My place.');
-      }
-    } catch (err) {
-      if (errorCode(err) === 'ALREADY_IN_MY_PLACE') {
-        this.markPlaceSaved(card.id);
-        this.toast.success('Quán này đã có trong My place.');
-      }
-      // Lỗi khác: errorInterceptor đã hiện thông báo
-    } finally {
-      this.saving.set(null);
+  /** Mỗi ô lấy ảnh của một quán / chỗ chơi tiêu biểu trong nhóm (quán: điểm cao nhất) */
+  private loadTileImages(): void {
+    for (const t of this.purposes) {
+      const src = t.source;
+      const req =
+        src.kind === 'place'
+          ? this.catalog
+              .search({
+                vibe: src.vibe ? [src.vibe] : [],
+                type: src.type ?? '',
+                sort: 'rating',
+                size: 1,
+              })
+              .then((r) => r.items[0]?.imageUrl)
+          : this.spots
+              .search({ vibe: src.vibe ? [src.vibe] : [], size: 1 })
+              .then((r) => r.items[0]?.imageUrl);
+      void req
+        .then((url) => url && this.tileImages.update((m) => ({ ...m, [t.key]: url })))
+        .catch(() => undefined);
     }
+  }
+
+  protected tileImage(key: string): string | null {
+    const url = this.tileImages()[key];
+    return url && !this.failedTiles().has(key) ? (imageVariant(url, 800) ?? url) : null;
+  }
+
+  protected imageFailed(key: string): void {
+    this.failedTiles.update((s) => new Set(s).add(key));
+  }
+
+  /** Ảnh ô khu vực và thẻ nổi bật: bản 800px nếu là ảnh app tải lên */
+  protected thumb(url: string): string {
+    return imageVariant(url, 800) ?? url;
   }
 
   protected search(event: Event): void {
@@ -939,55 +601,5 @@ export class HomePage implements OnInit, OnDestroy {
 
   protected cityHint(): void {
     this.toast.show('Sắp có thêm thành phố khác. Hiện HANOIVIBE dành cho Hà Nội.', 'info');
-  }
-
-  private markPlaceSaved(id: string): void {
-    this.featuredPlaces.update((l) =>
-      l.map((f) => (f.place.id === id ? { ...f, place: { ...f.place, inMyPlace: true } } : f)),
-    );
-  }
-
-  private placeCard(f: FeaturedItem): VenueCard {
-    const p = f.place;
-    return {
-      kind: 'place',
-      group: p.type,
-      id: p.id,
-      position: f.position,
-      link: ['/quan', p.slug],
-      imageUrl: p.imageUrl || null,
-      badge: PLACE_LABELS[p.type].replace(/^quán /, 'Quán '),
-      name: p.name,
-      address: p.address,
-      districtLabel: p.districtLabel,
-      rating: p.ratingCount && p.ratingAvg !== null ? ratingText(p.ratingAvg) : null,
-      ratingCount: p.ratingCount,
-      price: placePriceText(p),
-      note: f.headline || p.note,
-      vibes: p.vibes,
-      saved: p.inMyPlace,
-    };
-  }
-
-  private spotCard(f: FeaturedSpot): VenueCard {
-    const s = f.spot;
-    return {
-      kind: 'spot',
-      group: 'spot',
-      id: s.id,
-      position: f.position,
-      link: ['/cho-choi', s.slug],
-      imageUrl: s.imageUrl || null,
-      badge: SPOT_CATEGORIES.find((c) => c.value === s.category)?.short ?? s.category,
-      name: s.name,
-      address: s.address,
-      districtLabel: s.districtLabel,
-      rating: s.ratingCount && s.ratingAvg !== null ? ratingText(s.ratingAvg) : null,
-      ratingCount: s.ratingCount,
-      price: spotPriceText(s),
-      note: f.headline || s.description,
-      vibes: s.vibes,
-      saved: s.inMyPlace,
-    };
   }
 }

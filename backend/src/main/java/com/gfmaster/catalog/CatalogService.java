@@ -179,13 +179,15 @@ public class CatalogService {
     return featured(null);
   }
 
-  /** Mọi khu vực (kể cả chưa có quán, count 0) theo thứ tự của enum, kèm số quán để trang chủ hiện */
+  /** Mọi khu vực (kể cả chưa có quán, count 0) theo thứ tự của enum, kèm số quán và ảnh tiêu biểu để trang chủ hiện */
   @Transactional(readOnly = true)
   public List<DistrictOption> districts() {
     Map<CatalogDistrict, Long> counts = new EnumMap<>(CatalogDistrict.class);
     for (Object[] row : catalog.countByDistrict()) counts.put((CatalogDistrict) row[0], (Long) row[1]);
+    Map<String, String> covers = new HashMap<>();
+    for (Object[] row : catalog.coverByDistrict()) covers.put((String) row[0], imageUrls.toPublic((String) row[1]));
     return Arrays.stream(CatalogDistrict.values())
-        .map(d -> new DistrictOption(d.name(), d.label(), counts.getOrDefault(d, 0L)))
+        .map(d -> new DistrictOption(d.name(), d.label(), counts.getOrDefault(d, 0L), covers.get(d.name())))
         .toList();
   }
 

@@ -35,7 +35,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
                 }
               </div>
               <div class="flex flex-1 flex-col gap-1.5 p-4">
-                <p class="text-xs text-slate-500">{{ date(a.publishedAt) }}</p>
+                <p class="text-xs text-slate-500">{{ date(a.publishedAt) }}@if (a.venueCount) {<span class="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-[11px] font-semibold text-brand-800">{{ a.venueCount }} điểm hẹn</span>}</p>
                 <h2 class="font-bold leading-snug text-slate-900 group-hover:text-brand-700" [class]="first ? 'text-2xl' : 'text-lg'">{{ a.title }}</h2>
                 @if (a.excerpt) {
                   <p class="line-clamp-3 text-sm text-slate-600">{{ a.excerpt }}</p>
