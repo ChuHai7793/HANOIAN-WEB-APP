@@ -202,7 +202,7 @@ const GRID_SIZE = 8;
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  (error)="imageFailed(t.key)"
+                  (error)="imageFailed(tileUrl(t.key))"
                   class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
                 />
                 <span
@@ -237,12 +237,13 @@ const GRID_SIZE = 8;
                 [queryParams]="{ khuvuc: d.code }"
                 class="group relative flex h-[220px] w-[60%] shrink-0 snap-start flex-col justify-end overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-900 p-4 text-white shadow-sm transition hover:shadow-md sm:h-[260px] sm:w-[calc((100%-1rem)/2)] md:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-3rem)/4)]"
               >
-                @if (d.imageUrl) {
+                @if (thumb(d.imageUrl); as src) {
                   <img
-                    [src]="thumb(d.imageUrl)"
+                    [src]="src"
                     alt=""
                     loading="lazy"
                     decoding="async"
+                    (error)="imageFailed(d.imageUrl)"
                     class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
                   />
                 }
@@ -300,12 +301,13 @@ const GRID_SIZE = 8;
                   class="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md"
                 >
                   <span class="relative block aspect-square overflow-hidden bg-[#EFEAFC]">
-                    @if (c.imageUrl) {
+                    @if (thumb(c.imageUrl); as src) {
                       <img
-                        [src]="thumb(c.imageUrl)"
+                        [src]="src"
                         alt=""
                         loading="lazy"
                         decoding="async"
+                        (error)="imageFailed(c.imageUrl)"
                         class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                       />
                     } @else {
@@ -464,7 +466,11 @@ export class HomePage implements OnInit, OnDestroy {
 
   /** Ảnh quán tiêu biểu cho từng ô "Hẹn kiểu gì?" (theo key); thiếu = nền gradient */
   private readonly tileImages = signal<Record<string, string>>({});
-  private readonly failedTiles = signal<Set<string>>(new Set());
+  /**
+   * Ảnh lỗi theo URL gốc: 1 = bản thu nhỏ 800px không có (ảnh cũ chưa sinh bản này) nên dùng ảnh gốc;
+   * 2 = ảnh gốc cũng lỗi nên ẩn ảnh, hiện nền màu.
+   */
+  private readonly failedImages = signal<Map<string, 1 | 2>>(new Map());
 
   private readonly districts = signal<DistrictOption[]>([]);
   protected readonly districtTiles = computed(() =>
@@ -579,18 +585,35 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
+  protected tileUrl(key: string): string | null {
+    return this.tileImages()[key] ?? null;
+  }
+
   protected tileImage(key: string): string | null {
-    const url = this.tileImages()[key];
-    return url && !this.failedTiles().has(key) ? (imageVariant(url, 800) ?? url) : null;
+    return this.thumb(this.tileUrl(key));
   }
 
-  protected imageFailed(key: string): void {
-    this.failedTiles.update((s) => new Set(s).add(key));
+  /**
+   * Ảnh để hiện: bản 800px nếu là ảnh app tải lên và chưa lỗi, không thì ảnh gốc; null = không có ảnh hoặc ảnh
+   * gốc cũng lỗi (ô hiện nền màu thay vì icon ảnh vỡ).
+   */
+  protected thumb(url: string | null | undefined): string | null {
+    if (!url) return null;
+    const stage = this.failedImages().get(url);
+    if (stage === 2) return null;
+    const variant = imageVariant(url, 800);
+    return stage === 1 || !variant ? url : variant;
   }
 
-  /** Ảnh ô khu vực và thẻ nổi bật: bản 800px nếu là ảnh app tải lên */
-  protected thumb(url: string): string {
-    return imageVariant(url, 800) ?? url;
+  /** Ảnh không tải được: lùi từ bản thu nhỏ về ảnh gốc, rồi từ ảnh gốc về không ảnh */
+  protected imageFailed(url: string | null | undefined): void {
+    if (!url) return;
+    this.failedImages.update((m) => {
+      const next = new Map(m);
+      const usedVariant = !m.has(url) && imageVariant(url, 800) !== null;
+      next.set(url, usedVariant ? 1 : 2);
+      return next;
+    });
   }
 
   protected search(event: Event): void {
