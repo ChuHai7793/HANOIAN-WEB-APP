@@ -13,6 +13,7 @@ import { SavedSpotService } from '../core/services/saved-spot.service';
 import { DateVibeService } from '../core/services/date-vibe.service';
 import { OverlayHandle } from '../shared/ui/overlay';
 import { ThemeService } from '../core/theme/theme.service';
+import { AutoplanDialogComponent } from '../features/plans/autoplan-dialog.component';
 
 interface NavSection {
   /** Rỗng: không có tiêu đề nhóm */
@@ -51,7 +52,7 @@ function readCollapsed(): boolean {
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LegacyImportDialogComponent, IconComponent, ConfirmDialogComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LegacyImportDialogComponent, IconComponent, ConfirmDialogComponent, AutoplanDialogComponent],
   template: `
     <!-- data-collapsed: thanh bên thu gọn (chỉ logo + icon), chỉ áp dụng màn rộng (lg:); điện thoại vẫn là menu trượt -->
     <div class="group/shell flex min-h-dvh" [attr.data-collapsed]="collapsed() ? '' : null">
@@ -263,31 +264,65 @@ function readCollapsed(): boolean {
 
       <!-- Nội dung: sidebar đã fixed nên chừa lề trái bằng đúng bề rộng của nó; điện thoại chừa chỗ cho thanh tab dưới -->
       <div class="flex min-w-0 flex-1 flex-col pb-[var(--app-tabbar-h)] transition-[margin] duration-200 lg:ml-64 lg:group-data-collapsed/shell:ml-[72px]">
+        <!-- Thanh trên cùng: điện thoại có nút menu + logo; màn rộng có ô tìm, chuông, Autoplan -->
         <header
-          class="sticky top-0 z-30 flex h-[var(--app-header-h)] items-center gap-2 border-b border-slate-200 bg-white/95 pl-1.5 pr-4 backdrop-blur lg:hidden"
+          class="sticky top-0 z-30 flex h-[var(--app-header-h)] items-center gap-2 border-b border-slate-200 bg-white/95 pl-1.5 pr-3 backdrop-blur lg:px-6"
         >
           <button
             type="button"
-            class="flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
+            class="flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 lg:hidden"
             (click)="menuOpen.set(!menuOpen())"
             aria-label="Mở menu"
             [attr.aria-expanded]="menuOpen()"
           >
             <app-icon name="menu" [size]="24" />
           </button>
-          <a routerLink="/" class="flex items-center gap-2" aria-label="Trang chủ HANOIVIBE">
+          <a routerLink="/" class="flex items-center gap-2 lg:hidden" aria-label="Trang chủ HANOIVIBE">
             <img src="logo.png" alt="" class="h-7 w-auto" />
             <span class="font-extrabold tracking-wide text-slate-900">HANOI<span class="text-brand-600">VIBE</span></span>
           </a>
-          <button
-            type="button"
-            class="ml-auto flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
-            [attr.aria-label]="theme.isDark() ? 'Chuyển sang chế độ Sáng' : 'Chuyển sang chế độ Tối'"
-            [attr.aria-pressed]="theme.isDark()"
-            (click)="theme.toggle()"
-          >
-            <app-icon [name]="theme.isDark() ? 'sun' : 'moon'" [size]="22" />
-          </button>
+          <!-- Màn rộng: ô tìm toàn cục, Enter thì sang Khám phá quán với từ khoá -->
+          <form class="hidden lg:flex lg:w-full lg:max-w-md" role="search" (submit)="search($event)">
+            <label class="flex h-10 w-full items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 text-slate-500 transition focus-within:border-brand-500 focus-within:bg-white">
+              <app-icon name="search" [size]="17" />
+              <span class="sr-only">Tìm quán</span>
+              <input
+                type="search"
+                name="q"
+                [value]="q()"
+                (input)="q.set($any($event.target).value)"
+                class="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                placeholder="Tìm quán cafe, quán ăn, bar…"
+              />
+            </label>
+          </form>
+          <div class="ml-auto flex items-center gap-1">
+            @if (auth.isLoggedIn()) {
+              <!-- Chuông: tin nhắn / match mới chưa đọc -->
+              <a routerLink="/dating" class="relative flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100" [attr.aria-label]="inbox.unread() ? inbox.unread() + ' tin mới' : 'Thông báo'">
+                <app-icon name="inbox" [size]="22" />
+                @if (inbox.unread() > 0) {
+                  <span class="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#C2335F] px-1 text-[10px] font-bold leading-none text-white">{{ inbox.unread() }}</span>
+                }
+              </a>
+            }
+            <button
+              type="button"
+              class="flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 lg:hidden"
+              [attr.aria-label]="theme.isDark() ? 'Chuyển sang chế độ Sáng' : 'Chuyển sang chế độ Tối'"
+              [attr.aria-pressed]="theme.isDark()"
+              (click)="theme.toggle()"
+            >
+              <app-icon [name]="theme.isDark() ? 'sun' : 'moon'" [size]="22" />
+            </button>
+            <button
+              type="button"
+              class="hidden h-10 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-[13px] font-semibold text-white transition hover:bg-brand-700 lg:flex"
+              (click)="autoplanOpen.set(true)"
+            >
+              <app-icon name="shuffle" [size]="15" />Autoplan
+            </button>
+          </div>
         </header>
 
         <!-- Không đặt padding ở đây: từng trang tự lo, để vùng sticky bám sát mép trên -->
@@ -315,6 +350,9 @@ function readCollapsed(): boolean {
         </main>
         <!-- Hỏi đưa dữ liệu localStorage của bản cũ lên tài khoản (chỉ hiện khi có) -->
         <app-legacy-import-dialog />
+        @if (autoplanOpen()) {
+          <app-autoplan-dialog (closed)="autoplanOpen.set(false)" />
+        }
       </div>
 
       <!-- Thanh tab dưới (điện thoại, máy tính bảng dọc): 4 mục chính trong tầm ngón cái + "Thêm" mở menu đầy đủ -->
@@ -369,7 +407,7 @@ export class ShellComponent {
   /** Chỗ chơi đã lưu: tính chung vào số của My place */
   private readonly savedSpots = inject(SavedSpotService);
   /** Mở kết nối realtime khi vào app và giữ số tin chưa đọc cho menu */
-  private readonly inbox = inject(MatchInboxService);
+  protected readonly inbox = inject(MatchInboxService);
 
   protected readonly menuOpen = signal(false);
   /** Menu tài khoản (cuối thanh bên) */
@@ -413,6 +451,17 @@ export class ShellComponent {
   protected readonly bootstrap = inject(DataBootstrapService);
   protected readonly auth = inject(AuthService);
   protected readonly theme = inject(ThemeService);
+  private readonly router = inject(Router);
+  /** Ô tìm trên thanh trên cùng (màn rộng) */
+  protected readonly q = signal('');
+  protected readonly autoplanOpen = signal(false);
+
+  protected search(event: Event): void {
+    event.preventDefault();
+    const q = this.q().trim();
+    void this.router.navigate(['/explore'], { queryParams: q ? { q } : {} });
+    this.q.set('');
+  }
 
   protected initial(name: string): string {
     return name.trim().charAt(0).toUpperCase() || '?';

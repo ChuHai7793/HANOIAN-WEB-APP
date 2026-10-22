@@ -53,7 +53,12 @@ export const DEFAULT_BANNER_CREDIT = {
           <p class="hidden items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] text-white/85 sm:flex">
             <span class="h-px w-7 bg-white/60"></span>{{ kicker() }}
           </p>
-          <h1 class="text-[26px] font-extrabold leading-tight tracking-tight sm:mt-2 sm:text-[40px]">{{ heading() }}</h1>
+          <h1 class="text-[26px] font-extrabold leading-tight tracking-tight sm:mt-2 sm:text-[40px]">
+            {{ heading() }}
+            @if (headingAccent(); as accent) {
+              <span class="block bg-gradient-to-r from-[#d9ccff] via-[#f0a6e6] to-[#ffb199] bg-clip-text text-transparent">{{ accent }}</span>
+            }
+          </h1>
           <p class="mt-1 hidden text-[15px] text-white/85 sm:block">{{ tagline() }}</p>
         </div>
 
@@ -95,6 +100,8 @@ export class PageBannerComponent {
   readonly imagePosition = input('center');
   readonly kicker = input.required<string>();
   readonly heading = input.required<string>();
+  /** Dòng tiêu đề thứ hai, chữ đổi màu gradient (trang chủ) */
+  readonly headingAccent = input<string | null>(null);
   readonly tagline = input.required<string>();
   readonly credit = input<{ text: string; href: string } | null>(null);
   /** Admin: hiện nút "Đổi ảnh nền" */

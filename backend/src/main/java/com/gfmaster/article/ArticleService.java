@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -32,7 +34,9 @@ public class ArticleService {
 
   static final int MAX_PAGE_SIZE = 50;
 
-  private static final String SUMMARY_COLS = "id, slug, title, excerpt, cover_url, status, published_at, updated_at";
+  private static final String SUMMARY_COLS = "id, slug, title, excerpt, cover_url, status, published_at, updated_at, body";
+  /** Dòng nhúng quán / chỗ chơi trong thân bài (giống EMBED ở frontend) */
+  private static final Pattern EMBED = Pattern.compile("^\\s*\\[\\[(quan|cho-choi):[a-z0-9-]+\\]\\]\\s*$", Pattern.MULTILINE);
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ImageUrls imageUrls;
@@ -195,7 +199,17 @@ public class ArticleService {
         imageUrls.toPublic(rs.getString("cover_url")),
         rs.getString("status"),
         instant(rs, "published_at"),
-        instant(rs, "updated_at"));
+        instant(rs, "updated_at"),
+        venueCount(rs.getString("body")));
+  }
+
+  /** Số dòng [[quan:…]] / [[cho-choi:…]] trong thân bài */
+  static int venueCount(String body) {
+    if (body == null) return 0;
+    int n = 0;
+    Matcher m = EMBED.matcher(body);
+    while (m.find()) n++;
+    return n;
   }
 
   private static SitemapEntry entry(ResultSet rs) throws SQLException {

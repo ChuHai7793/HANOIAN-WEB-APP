@@ -9,6 +9,8 @@ export interface ArticleSummary {
   status: ArticleStatus;
   publishedAt: string | null;
   updatedAt: string;
+  /** Số quán / chỗ chơi nhúng trong bài (thẻ "bộ sưu tập" ở trang chủ) */
+  venueCount: number;
 }
 
 export interface Article extends ArticleSummary {

@@ -12,9 +12,17 @@ public final class ArticleDtos {
 
   private ArticleDtos() {}
 
-  /** Thẻ bài trong danh sách Cẩm nang */
+  /** Thẻ bài trong danh sách Cẩm nang; {@code venueCount}: số quán / chỗ chơi nhúng trong bài (thẻ "bộ sưu tập" ở trang chủ) */
   public record ArticleSummary(
-      UUID id, String slug, String title, String excerpt, String coverUrl, String status, Instant publishedAt, Instant updatedAt) {}
+      UUID id,
+      String slug,
+      String title,
+      String excerpt,
+      String coverUrl,
+      String status,
+      Instant publishedAt,
+      Instant updatedAt,
+      int venueCount) {}
 
   public record ArticleView(
       UUID id,

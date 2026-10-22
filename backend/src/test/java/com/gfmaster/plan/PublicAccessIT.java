@@ -34,6 +34,13 @@ class PublicAccessIT extends ApiTestSupport {
     mvc.perform(get("/api/v1/catalog/districts")).andExpect(status().isOk());
     mvc.perform(get("/api/v1/spots")).andExpect(status().isOk());
     mvc.perform(get("/api/v1/spots/counts")).andExpect(status().isOk());
+    // Con số trang chủ: công khai, chưa có đánh giá thì ratingAvg null
+    mvc.perform(get("/api/v1/public/stats"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.places").isNumber())
+        .andExpect(jsonPath("$.spots").isNumber())
+        .andExpect(jsonPath("$.reviews").isNumber())
+        .andExpect(jsonPath("$.plans").isNumber());
 
     // Phần còn lại vẫn phải đăng nhập
     mvc.perform(get("/api/v1/places")).andExpect(status().isUnauthorized());
