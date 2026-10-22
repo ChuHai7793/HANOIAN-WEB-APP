@@ -129,8 +129,8 @@ function shortCategory(value: SpotCategory): string {
                 placeholder="Tìm theo tên, địa chỉ…"
               />
             </label>
-            <!-- Điện thoại: khu vực, Bộ lọc và nhóm chỗ chơi gom thành một hàng vuốt ngang (sm:contents: màn rộng xếp chung hàng trên) -->
-            <div role="group" aria-label="Khu vực và nhóm chỗ chơi" class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:contents">
+            <!-- Điện thoại: khu vực và Bộ lọc gom thành một hàng vuốt ngang (sm:contents: màn rộng xếp chung hàng trên); nhóm chỗ chơi nằm trong Bộ lọc -->
+            <div role="group" aria-label="Khu vực và bộ lọc" class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:contents">
               <label class="flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm text-slate-700 shadow-lg shadow-brand-900/20">
                 <span class="text-brand-600"><app-icon name="pin" [size]="18" /></span>
                 <span class="sr-only">Khu vực</span>
@@ -146,28 +146,6 @@ function shortCategory(value: SpotCategory): string {
                 </select>
               </label>
               <app-filter-button [count]="filterCount()" (open)="filterOpen.set(true)" />
-            <!-- Số đếm luôn chiếm chỗ (– khi đang tải) để chip không đổi bề ngang, không nhảy dòng -->
-            <button
-              type="button"
-              [attr.aria-pressed]="category() === ''"
-              class="inline-flex h-11 items-center gap-1.5 rounded-full text-[13px] shadow-lg shadow-brand-900/20 transition px-3"
-              [class]="category() === '' ? 'bg-brand-600 font-semibold text-white' : 'bg-white font-medium text-slate-700 hover:bg-brand-50'"
-              (click)="category.set(''); reload(false)"
-            >
-              <app-icon name="compass" [size]="16" />Tất cả · {{ counts()?.['all'] ?? '–' }}
-            </button>
-            @for (c of categories; track c.value) {
-              <button
-                type="button"
-                [attr.aria-pressed]="category() === c.value"
-                class="inline-flex h-11 items-center gap-1.5 rounded-full text-[13px] shadow-lg shadow-brand-900/20 transition px-3"
-                [class]="category() === c.value ? 'bg-brand-600 font-semibold text-white' : 'bg-white font-medium text-slate-700 hover:bg-brand-50'"
-                [title]="c.label"
-                (click)="category.set(c.value); reload(false)"
-              >
-                <app-icon [name]="c.icon" [size]="16" />{{ c.short }} · {{ counts()?.[c.value] ?? '–' }}
-              </button>
-            }
             </div>
         </div>
       </app-page-banner>
@@ -293,6 +271,9 @@ function shortCategory(value: SpotCategory): string {
 
     @if (filterOpen()) {
       <app-filter-sheet [resultLabel]="'Xem ' + total() + ' chỗ'" [activeCount]="filterCount()" (closed)="filterOpen.set(false)" (cleared)="clearFilters()">
+        <app-filter-group title="Nhóm chỗ chơi">
+          <app-choice-chips [options]="categoryOptions()" [selected]="[category()]" (toggle)="setCategory($any($event))" />
+        </app-filter-group>
         <app-filter-group title="Ngân sách" hint="giá thấp nhất mỗi người">
           <app-choice-chips [options]="budgetOptions" [selected]="[filters().budget]" (toggle)="setFilter({ budget: filters().budget === $event ? null : $any($event) })" />
         </app-filter-group>
@@ -432,6 +413,8 @@ export class SpotListPage implements OnInit {
 
   async ngOnInit(): Promise<void> {
     const params = this.route.snapshot.queryParamMap;
+    const nhom = params.get('nhom');
+    this.category.set(this.categories.some((c) => c.value === nhom) ? (nhom as SpotCategory) : '');
     this.filters.set(spotFiltersFromParams(Object.fromEntries(params.keys.map((k) => [k, params.get(k)]))));
     void this.catalog.districts().then((d) => this.districts.set(d));
     this.reloadFeatured();
@@ -473,8 +456,17 @@ export class SpotListPage implements OnInit {
   /** Bộ lọc chi tiết (bảng "Bộ lọc"): áp dụng ngay, ghi lên đường dẫn */
   protected readonly filters = signal<SpotFilters>(EMPTY_SPOT_FILTERS);
   protected readonly filterOpen = signal(false);
-  protected readonly filterChips = computed(() => spotFilterChips(this.filters()));
-  protected readonly filterCount = computed(() => spotFilterCount(this.filters()));
+  /** Chip nhóm chỗ chơi trong bảng lọc, kèm số chỗ theo từ khoá + khu vực + bộ lọc khác */
+  protected readonly categoryOptions = computed(() => [
+    { value: '', label: `Tất cả · ${this.counts()?.['all'] ?? '–'}`, icon: 'compass' as const },
+    ...this.categories.map((c) => ({ value: c.value, label: `${c.short} · ${this.counts()?.[c.value] ?? '–'}`, icon: c.icon })),
+  ]);
+  /** Nhóm đứng đầu hàng chip đang lọc (bỏ chip = về Tất cả) */
+  protected readonly filterChips = computed(() => [
+    ...(this.category() ? [{ key: 'category', label: spotCategory(this.category() as SpotCategory).label }] : []),
+    ...spotFilterChips(this.filters()),
+  ]);
+  protected readonly filterCount = computed(() => spotFilterCount(this.filters()) + (this.category() ? 1 : 0));
   protected readonly budgetOptions = SPOT_BUDGETS;
   protected readonly durationOptions = DURATION_OPTIONS;
   protected readonly vibeOptions = VIBE_OPTIONS;
@@ -489,11 +481,22 @@ export class SpotListPage implements OnInit {
   }
 
   protected removeFilter(key: string): void {
+    if (key === 'category') return this.setCategory('');
     this.applyFilters(removeSpotFilter(this.filters(), key));
   }
 
   protected clearFilters(): void {
+    if (this.category()) this.setCategory('');
     this.applyFilters(EMPTY_SPOT_FILTERS);
+  }
+
+  /** Chọn nhóm chỗ chơi (chip "Tất cả" = ''); bấm lại nhóm đang chọn thì về Tất cả. Ghi ?nhom= lên đường dẫn. */
+  protected setCategory(value: SpotCategory | ''): void {
+    const next = value && value === this.category() ? '' : value;
+    if (next === this.category()) return;
+    this.category.set(next);
+    void this.router.navigate([], { queryParams: { nhom: next || null }, queryParamsHandling: 'merge', replaceUrl: true });
+    void this.reload(false);
   }
 
   private applyFilters(next: SpotFilters): void {
