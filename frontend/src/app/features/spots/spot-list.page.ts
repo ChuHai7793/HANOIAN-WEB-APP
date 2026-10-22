@@ -55,6 +55,8 @@ import { SpotDetailDialogComponent } from './spot-detail-dialog.component';
 import { LoginGate } from '../../core/auth/login-gate.service';
 import { ratingText } from '../../core/models/review.model';
 import { AutoplanDialogComponent } from '../plans/autoplan-dialog.component';
+import { FeaturedCard, FeaturedSectionComponent } from '../../shared/ui/featured-section.component';
+import { FeaturedEditorComponent } from '../../shared/ui/featured-editor.component';
 import { DEFAULT_BANNER, DEFAULT_BANNER_CREDIT, DEFAULT_BANNER_SRCSET, editableBanner, PageBannerComponent } from '../../shared/ui/page-banner.component';
 
 /** "Giải trí trong nhà" → "Giải trí": nhãn ngắn cho thẻ và chip */
@@ -68,7 +70,7 @@ function shortCategory(value: SpotCategory): string {
  */
 @Component({
   selector: 'app-spot-list-page',
-  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, AutoplanDialogComponent, SpotDetailDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
+  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, FeaturedSectionComponent, FeaturedEditorComponent, AutoplanDialogComponent, SpotDetailDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <!-- Banner đầu trang như Khám phá quán: ảnh nền (admin đổi được; chưa đổi thì lấy ảnh chỗ chơi nổi bật đầu tiên) -->
@@ -148,6 +150,15 @@ function shortCategory(value: SpotCategory): string {
         </div>
       </app-page-banner>
 
+      <!-- Chỗ chơi nổi bật (admin chọn): ẩn / hiện, nhớ theo trình duyệt -->
+      <app-featured-section
+        heading="Chỗ chơi nổi bật"
+        storageKey="gfm.featuredSpotsHidden"
+        [cards]="featuredCards()"
+        [canEdit]="canEdit()"
+        (open)="openFeatured($event)"
+        (edit)="featuredEditorOpen.set(true)"
+      />
 
       <app-active-filters [items]="filterChips()" (remove)="removeFilter($event)" (clear)="clearFilters()" />
       @if (loading() && items().length === 0) {
@@ -292,6 +303,10 @@ function shortCategory(value: SpotCategory): string {
       <app-add-to-plan-dialog [kind]="t.kind" [refId]="t.refId" [name]="t.name" [district]="t.district" (closed)="planTarget.set(null)" />
     }
 
+    @if (featuredEditorOpen()) {
+      <app-featured-editor kind="spot" [current]="featuredSlots()" (closed)="featuredEditorOpen.set(false)" (saved)="reloadFeatured(); featuredEditorOpen.set(false)" />
+    }
+
     @if (autoplanOpen()) {
       <app-autoplan-dialog (closed)="autoplanOpen.set(false)" />
     }
@@ -355,9 +370,30 @@ export class SpotListPage implements OnInit {
 
   protected readonly autoplanOpen = signal(false);
 
-  /** Chỗ chơi nổi bật (admin chọn ở trang chủ): chỉ dùng ảnh đầu làm nền banner khi admin chưa đổi ảnh; featuredLoaded: đã biết */
-  private readonly featured = signal<FeaturedSpot[]>([]);
+  /** Chỗ chơi nổi bật (admin chọn; trang chủ cũng chọn cùng danh sách); featuredLoaded: đã biết, để chọn ảnh nền banner */
+  protected readonly featured = signal<FeaturedSpot[]>([]);
   private readonly featuredLoaded = signal(false);
+  protected readonly featuredEditorOpen = signal(false);
+  protected readonly featuredCards = computed<FeaturedCard[]>(() =>
+    this.featured().map((f) => ({
+      id: f.spot.id,
+      position: f.position,
+      kicker: f.kicker,
+      headline: f.headline,
+      imageUrl: f.spot.imageUrl || null,
+      meta: `${shortCategory(f.spot.category)} · ${f.spot.districtLabel}`,
+      name: f.spot.name,
+      address: f.spot.address,
+      rating: f.spot.ratingCount && f.spot.ratingAvg !== null ? ratingText(f.spot.ratingAvg) : null,
+      note: spotPriceText(f.spot),
+    })),
+  );
+  protected readonly featuredSlots = computed(() => this.featured().map((f) => ({ id: f.spot.id, kicker: f.kicker, headline: f.headline })));
+
+  protected openFeatured(id: string): void {
+    const f = this.featured().find((x) => x.spot.id === id);
+    if (f) this.detail.set(f.spot);
+  }
 
   /** Ảnh nền banner: ảnh admin chọn, không thì ảnh chỗ chơi nổi bật đầu tiên, không nữa thì Hồ Gươm đêm */
   protected readonly banner = editableBanner('spots');
@@ -384,7 +420,7 @@ export class SpotListPage implements OnInit {
     await this.reload();
   }
 
-  private reloadFeatured(): void {
+  protected reloadFeatured(): void {
     void this.spots
       .featured()
       .then((f) => this.featured.set(f))
