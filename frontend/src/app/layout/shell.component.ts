@@ -264,7 +264,7 @@ function readCollapsed(): boolean {
 
       <!-- Nội dung: sidebar đã fixed nên chừa lề trái bằng đúng bề rộng của nó; điện thoại chừa chỗ cho thanh tab dưới -->
       <div class="flex min-w-0 flex-1 flex-col pb-[var(--app-tabbar-h)] transition-[margin] duration-200 lg:ml-64 lg:group-data-collapsed/shell:ml-[72px]">
-        <!-- Thanh trên cùng: điện thoại có nút menu + logo; màn rộng có ô tìm, chuông, Autoplan -->
+        <!-- Thanh trên cùng: điện thoại có nút menu + logo; màn rộng chỉ còn chuông và Autoplan (ô tìm đã có trong từng trang) -->
         <header
           class="sticky top-0 z-30 flex h-[var(--app-header-h)] items-center gap-2 border-b border-slate-200 bg-white/95 pl-1.5 pr-3 backdrop-blur lg:px-6"
         >
@@ -281,21 +281,6 @@ function readCollapsed(): boolean {
             <img src="logo.png" alt="" class="h-7 w-auto" />
             <span class="font-extrabold tracking-wide text-slate-900">HANOI<span class="text-brand-600">VIBE</span></span>
           </a>
-          <!-- Màn rộng: ô tìm toàn cục, Enter thì sang Khám phá quán với từ khoá -->
-          <form class="hidden lg:flex lg:w-full lg:max-w-md" role="search" (submit)="search($event)">
-            <label class="flex h-10 w-full items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 text-slate-500 transition focus-within:border-brand-500 focus-within:bg-white">
-              <app-icon name="search" [size]="17" />
-              <span class="sr-only">Tìm quán</span>
-              <input
-                type="search"
-                name="q"
-                [value]="q()"
-                (input)="q.set($any($event.target).value)"
-                class="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                placeholder="Tìm quán cafe, quán ăn, bar…"
-              />
-            </label>
-          </form>
           <div class="ml-auto flex items-center gap-1">
             @if (auth.isLoggedIn()) {
               <!-- Chuông: tin nhắn / match mới chưa đọc -->
@@ -451,17 +436,7 @@ export class ShellComponent {
   protected readonly bootstrap = inject(DataBootstrapService);
   protected readonly auth = inject(AuthService);
   protected readonly theme = inject(ThemeService);
-  private readonly router = inject(Router);
-  /** Ô tìm trên thanh trên cùng (màn rộng) */
-  protected readonly q = signal('');
   protected readonly autoplanOpen = signal(false);
-
-  protected search(event: Event): void {
-    event.preventDefault();
-    const q = this.q().trim();
-    void this.router.navigate(['/explore'], { queryParams: q ? { q } : {} });
-    this.q.set('');
-  }
 
   protected initial(name: string): string {
     return name.trim().charAt(0).toUpperCase() || '?';
