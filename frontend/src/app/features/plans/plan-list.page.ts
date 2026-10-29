@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { DistrictOption } from '../../core/models/catalog.model';
 import {
@@ -15,13 +15,14 @@ import { ToastService } from '../../core/services/toast.service';
 import { IconComponent } from '../../shared/ui/icon.component';
 import { ModalComponent } from '../../shared/ui/modal.component';
 import { AutoplanDialogComponent } from './autoplan-dialog.component';
+import { listPager, PagerComponent } from '../../shared/ui/pager.component';
 
 const INPUT = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500';
 
 /** Danh sách plan của mình; tạo plan trống hoặc để Autoplan dựng sẵn từ khu vực. */
 @Component({
   selector: 'app-plan-list-page',
-  imports: [AutoplanDialogComponent, RouterLink, IconComponent, ModalComponent],
+  imports: [AutoplanDialogComponent, RouterLink, IconComponent, ModalComponent, PagerComponent],
   template: `
     <div class="flex flex-col gap-4 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <header class="flex flex-wrap items-end justify-between gap-4">
@@ -57,8 +58,8 @@ const INPUT = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text
           </button>
         </div>
       } @else {
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          @for (p of plans(); track p.id) {
+        <div id="danh-sach" class="grid scroll-mt-4 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          @for (p of pageItems(); track p.id) {
             <a
               [routerLink]="['/plans', p.id]"
               class="flex flex-col overflow-hidden rounded-2xl border border-brand-100 bg-white transition hover:border-brand-300 hover:shadow-md"
@@ -90,6 +91,7 @@ const INPUT = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text
             </a>
           }
         </div>
+        <app-pager [page]="pager.page()" [total]="plans().length" unit="plan" (pageChange)="pager.go($event)" />
       }
     </div>
 
@@ -144,6 +146,9 @@ export class PlanListPage implements OnInit {
   protected readonly vibes = VIBES;
 
   protected readonly plans = signal<PlanSummary[]>([]);
+  /** Trang đang xem (?trang=), mỗi trang 20 plan */
+  protected readonly pager = listPager('danh-sach');
+  protected readonly pageItems = computed(() => this.pager.slice(this.plans()));
   protected readonly loaded = signal(false);
   protected readonly districts = signal<DistrictOption[]>([]);
   protected readonly createOpen = signal(false);
@@ -164,6 +169,7 @@ export class PlanListPage implements OnInit {
     this.plans.set(plans);
     this.districts.set(districts);
     this.loaded.set(true);
+    this.pager.clamp(plans.length);
   }
 
   protected status(p: PlanSummary) {

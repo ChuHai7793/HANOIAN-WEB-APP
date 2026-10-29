@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PlaceService } from '../../core/services/place.service';
 import { PlaceLinkService } from '../../core/services/place-link.service';
@@ -46,6 +46,7 @@ import {
 import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
 import { DEFAULT_BANNER, DEFAULT_BANNER_CREDIT, DEFAULT_BANNER_SRCSET, PageBannerComponent } from '../../shared/ui/page-banner.component';
 import { ratingText } from '../../core/models/review.model';
+import { listPager, PagerComponent } from '../../shared/ui/pager.component';
 
 type SortKey = 'rating' | 'name' | 'distance' | 'price';
 
@@ -74,7 +75,7 @@ interface PlaceRow {
 
 @Component({
   selector: 'app-place-list',
-  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, PriceRangeInputComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, AutoplanDialogComponent, VibeTagsComponent, AddToPlanDialogComponent, SpotDetailDialogComponent, PhotoCarouselComponent, FitRowDirective, RouterLink, PlaceDetailComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent],
+  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, PriceRangeInputComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, AutoplanDialogComponent, VibeTagsComponent, AddToPlanDialogComponent, SpotDetailDialogComponent, PhotoCarouselComponent, FitRowDirective, RouterLink, PlaceDetailComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent, PagerComponent],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <!-- Banner như Khám phá quán: nền là ảnh một nơi đã lưu, bên phải vài ảnh đã lưu xếp kiểu polaroid -->
@@ -173,7 +174,7 @@ interface PlaceRow {
         <span class="flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-brand-600 px-4 text-sm font-semibold text-white">Lên plan<app-icon name="arrowRight" [size]="15" [stroke]="2.4" /></span>
       </a>
 
-      <app-active-filters [items]="filterChips()" (remove)="removeFilter($event)" (clear)="clearFilters()" />
+      <app-active-filters id="danh-sach" class="scroll-mt-4" [items]="filterChips()" (remove)="removeFilter($event)" (clear)="clearFilters()" />
       @if (visible().length === 0 && visibleSpots().length === 0) {
         <app-empty-state
           [icon]="emptyIcon()"
@@ -191,13 +192,13 @@ interface PlaceRow {
           }
         </app-empty-state>
       } @else {
-        @if (visible().length) {
+        @if (pagePlaces().length) {
           <h2 class="mt-2 flex items-baseline gap-2 text-lg font-bold tracking-tight text-slate-900">
             {{ placeTitle() }}<span class="text-sm font-medium text-slate-500">{{ visible().length }} quán</span>
           </h2>
           <!-- Hàng thẻ đầu vừa khít màn hình, hàng sau cuộn mới thấy -->
           <div appFitRow class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
-            @for (item of visible(); track item.place.id) {
+            @for (item of pagePlaces(); track item.place.id) {
               <article
                 class="flex h-[var(--row-h,420px)] cursor-pointer flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)] transition hover:border-brand-300 focus-visible:outline-2 focus-visible:outline-brand-500"
                 tabindex="0"
@@ -256,12 +257,12 @@ interface PlaceRow {
             }
           </div>
         }
-        @if (visibleSpots().length) {
+        @if (pageSpots().length) {
           <h2 class="mt-2 flex items-baseline gap-2 text-lg font-bold tracking-tight text-slate-900">
             Chỗ chơi đã lưu<span class="text-sm font-medium text-slate-500">{{ visibleSpots().length }} chỗ</span>
           </h2>
           <div appFitRow class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
-            @for (row of visibleSpots(); track row.spot.id) {
+            @for (row of pageSpots(); track row.spot.id) {
               <article
                 class="flex h-[var(--row-h,420px)] cursor-pointer flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)] transition hover:border-brand-300 focus-visible:outline-2 focus-visible:outline-brand-500"
                 tabindex="0"
@@ -308,6 +309,7 @@ interface PlaceRow {
             }
           </div>
         }
+        <app-pager class="mt-2" [page]="pager.page()" [total]="visible().length + visibleSpots().length" (pageChange)="pager.go($event)" />
       }
     </div>
 
@@ -570,6 +572,38 @@ export class PlaceListComponent implements OnInit {
       }
     });
   });
+
+  /** Trang đang xem (?trang=), mỗi trang 20 mục: quán trước, chỗ chơi đã lưu nối sau */
+  protected readonly pager = listPager('danh-sach');
+  protected readonly pagePlaces = computed(() => this.pager.slice(this.visible()));
+  protected readonly pageSpots = computed(() => {
+    const places = this.visible().length;
+    const from = Math.max(0, this.pager.offset() - places);
+    const to = Math.max(0, this.pager.offset() + this.pager.size - places);
+    return this.visibleSpots().slice(from, to);
+  });
+
+  constructor() {
+    // Đổi từ khoá, bộ lọc, loại hay cách xếp: về trang 1 (lần chạy đầu là trạng thái mở trang, giữ ?trang=)
+    let first = true;
+    effect(() => {
+      this.search();
+      this.filters();
+      this.type();
+      this.sortKey();
+      if (first) {
+        first = false;
+        return;
+      }
+      untracked(() => this.pager.reset());
+    });
+    // Danh sách ngắn lại (bỏ lưu mục cuối của trang cuối): lùi về trang cuối; chờ dữ liệu tải xong mới tính
+    effect(() => {
+      if (!this.placeService.loaded()) return;
+      const total = this.visible().length + this.visibleSpots().length;
+      untracked(() => this.pager.clamp(total));
+    });
+  }
 
   ngOnInit(): void {
     const t = this.route.snapshot.queryParamMap.get('type');

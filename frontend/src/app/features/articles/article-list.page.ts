@@ -5,14 +5,15 @@ import { ArticleSummary, dateText } from '../../core/models/article.model';
 import { SeoService } from '../../core/seo/seo.service';
 import { ArticleService } from '../../core/services/article.service';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { listPager, PagerComponent } from '../../shared/ui/pager.component';
 
 /** Cẩm nang (/cam-nang): danh sách bài viết đã xuất bản, mới nhất trước. Render trên server cho SEO. */
 @Component({
   selector: 'app-article-list-page',
-  imports: [RouterLink, IconComponent],
+  imports: [RouterLink, IconComponent, PagerComponent],
   template: `
     <div class="mx-auto flex max-w-6xl flex-col gap-6 px-4 pb-12 pt-4 sm:px-6 lg:px-8 lg:pt-6">
-      <header class="flex flex-wrap items-end justify-between gap-4">
+      <header id="danh-sach" class="flex scroll-mt-4 flex-wrap items-end justify-between gap-4">
         <div>
           <p class="flex items-center gap-3 text-[12px] font-bold uppercase tracking-[0.2em] text-brand-600"><span class="h-px w-7 bg-brand-500"></span>Cẩm nang hẹn hò</p>
           <h1 class="mt-2 text-[30px] font-extrabold leading-tight tracking-tight text-slate-900 sm:text-[38px]">Hẹn ở đâu, đi chơi gì ở Hà Nội.</h1>
@@ -44,11 +45,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
             </a>
           }
         </div>
-        @if (items().length < total()) {
-          <button type="button" class="mx-auto min-h-10 rounded-xl border border-brand-200 bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-brand-50 disabled:opacity-60" [disabled]="loading()" (click)="more()">
-            {{ loading() ? 'Đang tải…' : 'Xem thêm bài' }}
-          </button>
-        }
+        <app-pager [page]="pager.page()" [total]="total()" unit="bài" (pageChange)="goPage($event)" />
       } @else if (!loading()) {
         <p class="rounded-2xl border border-dashed border-brand-200 bg-white px-6 py-14 text-center text-sm text-slate-500">Sắp có bài viết đầu tiên. Quay lại sau nhé!</p>
       }
@@ -63,7 +60,8 @@ export class ArticleListPage implements OnInit, OnDestroy {
   protected readonly items = signal<ArticleSummary[]>([]);
   protected readonly total = signal(0);
   protected readonly loading = signal(true);
-  private page = 0;
+  /** Trang đang xem (?trang=), mỗi trang 20 bài */
+  protected readonly pager = listPager('danh-sach');
 
   async ngOnInit(): Promise<void> {
     this.seo.set({
@@ -72,13 +70,7 @@ export class ArticleListPage implements OnInit, OnDestroy {
       path: '/cam-nang',
       jsonLd: { '@context': 'https://schema.org', '@type': 'Blog', name: 'Cẩm nang hẹn hò HANOIVIBE', url: this.seo.absolute('/cam-nang') },
     });
-    try {
-      const res = await this.api.list(0, 12);
-      this.items.set(res.items);
-      this.total.set(res.total);
-    } finally {
-      this.loading.set(false);
-    }
+    await this.load();
   }
 
   ngOnDestroy(): void {
@@ -89,12 +81,21 @@ export class ArticleListPage implements OnInit, OnDestroy {
     return dateText(iso);
   }
 
-  protected async more(): Promise<void> {
+  protected async goPage(n: number): Promise<void> {
+    this.pager.go(n);
+    await this.load();
+  }
+
+  private async load(): Promise<void> {
     this.loading.set(true);
     try {
-      const res = await this.api.list(this.page + 1, 12);
-      this.page = res.page;
-      this.items.update((l) => [...l, ...res.items]);
+      const res = await this.api.list(this.pager.page() - 1, this.pager.size);
+      // ?trang= vượt quá số trang: lùi về trang cuối
+      if (!res.items.length && res.total && this.pager.page() > 1) {
+        this.pager.clamp(res.total);
+        return this.load();
+      }
+      this.items.set(res.items);
       this.total.set(res.total);
     } finally {
       this.loading.set(false);

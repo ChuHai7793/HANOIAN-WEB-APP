@@ -13,6 +13,7 @@ import {
 import { DatingService } from '../../core/services/dating.service';
 import { ToastService } from '../../core/services/toast.service';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { listPager, PagerComponent } from '../../shared/ui/pager.component';
 
 type Tab = 'users' | 'reports';
 
@@ -22,7 +23,7 @@ type Tab = 'users' | 'reports';
  */
 @Component({
   selector: 'app-admin-users-page',
-  imports: [DatePipe, IconComponent, RouterLink],
+  imports: [DatePipe, IconComponent, RouterLink, PagerComponent],
   template: `
     <div class="p-4 sm:p-5 lg:p-6">
       <div class="mb-6">
@@ -41,9 +42,9 @@ type Tab = 'users' | 'reports';
         </div>
       }
 
-      <div class="mb-4 flex rounded-lg bg-slate-100 p-1 text-sm sm:inline-flex">
-        <button type="button" class="min-h-10 flex-1 rounded-md px-3 font-medium sm:flex-none" [class]="tab() === 'users' ? 'bg-white shadow-sm' : 'text-slate-500'" (click)="setTab('users')"><app-icon name="users" [size]="14" class="mr-1.5 align-middle" />Người dùng</button>
-        <button type="button" class="min-h-10 flex-1 rounded-md px-3 font-medium sm:flex-none" [class]="tab() === 'reports' ? 'bg-white shadow-sm' : 'text-slate-500'" (click)="setTab('reports')">
+      <div id="danh-sach" class="mb-4 flex scroll-mt-4 rounded-lg bg-slate-100 p-1 text-sm sm:inline-flex">
+        <button type="button" class="min-h-10 flex-1 rounded-md px-3 font-medium sm:flex-none" [class]="tab() === 'users' ? 'bg-white shadow-sm' : 'text-slate-500'" (click)="setTab('users'); pager.reset()"><app-icon name="users" [size]="14" class="mr-1.5 align-middle" />Người dùng</button>
+        <button type="button" class="min-h-10 flex-1 rounded-md px-3 font-medium sm:flex-none" [class]="tab() === 'reports' ? 'bg-white shadow-sm' : 'text-slate-500'" (click)="setTab('reports'); pager.reset()">
           <app-icon name="flag" [size]="14" class="mr-1.5 align-middle" />Báo cáo
           @if (stats()?.openReports) {
             <span class="ml-1 rounded-full bg-rose-100 px-1.5 text-xs font-semibold text-rose-700">{{ stats()?.openReports }}</span>
@@ -56,14 +57,14 @@ type Tab = 'users' | 'reports';
           <input
             type="search"
             [value]="search()"
-            (input)="search.set($any($event.target).value)"
+            (input)="search.set($any($event.target).value); pager.reset()"
             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand-500 sm:w-64"
             placeholder="Tìm theo tên, email, thành phố…"
           />
           <div class="flex flex-wrap gap-1.5 text-xs">
-            <button type="button" class="min-h-9 rounded-full px-3" [class]="filter() === '' ? 'bg-brand-100 font-semibold text-brand-700' : 'bg-slate-100 text-slate-600'" (click)="filter.set('')">Tất cả · {{ users().length }}</button>
+            <button type="button" class="min-h-9 rounded-full px-3" [class]="filter() === '' ? 'bg-brand-100 font-semibold text-brand-700' : 'bg-slate-100 text-slate-600'" (click)="filter.set(''); pager.reset()">Tất cả · {{ users().length }}</button>
             @for (st of statuses; track st.value) {
-              <button type="button" class="min-h-9 rounded-full px-3" [class]="filter() === st.value ? 'bg-brand-100 font-semibold text-brand-700' : 'bg-slate-100 text-slate-600'" (click)="filter.set(st.value)">{{ st.label }} · {{ countOf(st.value) }}</button>
+              <button type="button" class="min-h-9 rounded-full px-3" [class]="filter() === st.value ? 'bg-brand-100 font-semibold text-brand-700' : 'bg-slate-100 text-slate-600'" (click)="filter.set(st.value); pager.reset()">{{ st.label }} · {{ countOf(st.value) }}</button>
             }
           </div>
         </div>
@@ -88,7 +89,7 @@ type Tab = 'users' | 'reports';
                 </tr>
               </thead>
               <tbody>
-                @for (u of filtered(); track u.user.id) {
+                @for (u of pageUsers(); track u.user.id) {
                   <tr class="cursor-pointer border-t border-slate-100 hover:bg-brand-50/40" (click)="open(u.user.id)">
                     <td class="px-3 py-2">
                       <a [routerLink]="['/admin/users', u.user.id]" class="flex items-center gap-2.5" (click)="$event.stopPropagation()">
@@ -120,17 +121,18 @@ type Tab = 'users' | 'reports';
               </tbody>
             </table>
           </div>
+          <app-pager class="mt-4 block" [page]="pager.page()" [total]="filtered().length" unit="người dùng" (pageChange)="pager.go($event)" />
         }
       } @else {
         <div class="mb-3 flex gap-2 text-xs">
-          <button type="button" class="min-h-9 rounded-full px-3" [class]="reportStatus() === 'OPEN' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'" (click)="loadReports('OPEN')">Chưa xử lý</button>
-          <button type="button" class="min-h-9 rounded-full px-3" [class]="reportStatus() === 'RESOLVED' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'" (click)="loadReports('RESOLVED')">Đã xử lý</button>
+          <button type="button" class="min-h-9 rounded-full px-3" [class]="reportStatus() === 'OPEN' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'" (click)="loadReports('OPEN'); pager.reset()">Chưa xử lý</button>
+          <button type="button" class="min-h-9 rounded-full px-3" [class]="reportStatus() === 'RESOLVED' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'" (click)="loadReports('RESOLVED'); pager.reset()">Đã xử lý</button>
         </div>
         @if (reports().length === 0) {
           <p class="text-sm text-slate-500">Không có báo cáo nào.</p>
         } @else {
           <div class="space-y-3">
-            @for (r of reports(); track r.id) {
+            @for (r of pageReports(); track r.id) {
               <div class="rounded-xl border border-slate-200 bg-white p-4 text-sm">
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="rounded bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">{{ reasonLabel(r.reason) }}</span>
@@ -155,6 +157,7 @@ type Tab = 'users' | 'reports';
               </div>
             }
           </div>
+          <app-pager class="mt-4 block" [page]="pager.page()" [total]="reports().length" unit="báo cáo" (pageChange)="pager.go($event)" />
         }
       }
     </div>
@@ -187,10 +190,16 @@ export class AdminUsersPage implements OnInit {
     );
   });
 
+  /** Trang đang xem (?trang=), mỗi trang 20 dòng; dùng chung cho tab đang mở (đổi tab thì về trang 1) */
+  protected readonly pager = listPager('danh-sach');
+  protected readonly pageUsers = computed(() => this.pager.slice(this.filtered()));
+  protected readonly pageReports = computed(() => this.pager.slice(this.reports()));
+
   async ngOnInit(): Promise<void> {
     // Quay lại từ trang chi tiết bằng link "Báo cáo": mở đúng tab
     if (this.route.snapshot.queryParamMap.get('tab') === 'reports') this.setTab('reports');
     await Promise.all([this.refreshStats(), this.loadUsers()]);
+    if (this.tab() === 'users') this.pager.clamp(this.filtered().length);
   }
 
   protected statTiles(s: DatingStats) {
@@ -232,6 +241,8 @@ export class AdminUsersPage implements OnInit {
   protected async loadReports(status: 'OPEN' | 'RESOLVED'): Promise<void> {
     this.reportStatus.set(status);
     this.reports.set(await this.dating.adminReports(status));
+    // Vừa xử lý báo cáo cuối của trang cuối: lùi về trang cuối
+    this.pager.clamp(this.reports().length);
   }
 
   protected async resolve(r: DatingReport, status: 'OPEN' | 'RESOLVED'): Promise<void> {

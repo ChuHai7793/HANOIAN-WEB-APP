@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { GirlfriendService } from '../../core/services/girlfriend.service';
 import { PlaceLinkService } from '../../core/services/place-link.service';
@@ -16,9 +16,11 @@ import { AuthService } from '../../core/auth/auth.service';
 import { MatchInboxService } from '../../core/services/match-inbox.service';
 import { IconComponent } from '../../shared/ui/icon.component';
 
+import { listPager, PagerComponent } from '../../shared/ui/pager.component';
+
 @Component({
   selector: 'app-girlfriend-list-page',
-  imports: [RouterLink, GirlfriendFormComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent],
+  imports: [RouterLink, GirlfriendFormComponent, EmptyStateComponent, ConfirmDialogComponent, IconComponent, PagerComponent],
   template: `
     <div class="p-4 sm:p-5 lg:p-6">
       <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -92,7 +94,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
             ? 'bg-brand-100 text-brand-700'
             : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
         "
-        (click)="statusFilter.set('')"
+        (click)="statusFilter.set(''); pager.reset()"
       >
         Tất cả ({{ all().length }})
       </button>
@@ -105,7 +107,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
               ? 'bg-brand-100 text-brand-700'
               : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
           "
-          (click)="statusFilter.set(s.value)"
+          (click)="statusFilter.set(s.value); pager.reset()"
         >
           {{ s.label }} ({{ countByStatus(s.value) }})
         </button>
@@ -133,8 +135,8 @@ import { IconComponent } from '../../shared/ui/icon.component';
         }
       </app-empty-state>
     } @else {
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        @for (gf of visible(); track gf.id) {
+      <div id="danh-sach" class="grid scroll-mt-4 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        @for (gf of pageItems(); track gf.id) {
           <article
             class="flex flex-col rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-300 hover:shadow-md"
           >
@@ -226,6 +228,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
           </article>
         }
       </div>
+      <app-pager class="mt-6 block" [page]="pager.page()" [total]="visible().length" unit="người" (pageChange)="pager.go($event)" />
     }
 
     @if (formOpen()) {
@@ -278,6 +281,14 @@ export class GirlfriendListPage implements OnInit {
   protected readonly visible = computed(() => {
     const filter = this.statusFilter();
     return this.all().filter((gf) => !filter || gf.status === filter);
+  });
+
+  /** Trang đang xem (?trang=), mỗi trang 20 người */
+  protected readonly pager = listPager('danh-sach');
+  protected readonly pageItems = computed(() => this.pager.slice(this.visible()));
+  /** Xoá người cuối của trang cuối: lùi về trang cuối (chờ dữ liệu tải xong) */
+  private readonly keepPageInRange = effect(() => {
+    if (this.service.loaded()) this.pager.clamp(this.visible().length);
   });
 
   protected countByStatus(status: string): number {

@@ -55,6 +55,7 @@ import { SpotDetailDialogComponent } from './spot-detail-dialog.component';
 import { LoginGate } from '../../core/auth/login-gate.service';
 import { ratingText } from '../../core/models/review.model';
 import { AutoplanDialogComponent } from '../plans/autoplan-dialog.component';
+import { listPager, PagerComponent } from '../../shared/ui/pager.component';
 import { FeaturedCard, FeaturedSectionComponent } from '../../shared/ui/featured-section.component';
 import { FeaturedEditorComponent } from '../../shared/ui/featured-editor.component';
 import { DEFAULT_BANNER, DEFAULT_BANNER_CREDIT, DEFAULT_BANNER_SRCSET, editableBanner, PageBannerComponent } from '../../shared/ui/page-banner.component';
@@ -70,7 +71,7 @@ function shortCategory(value: SpotCategory): string {
  */
 @Component({
   selector: 'app-spot-list-page',
-  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, FeaturedSectionComponent, FeaturedEditorComponent, AutoplanDialogComponent, SpotDetailDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent],
+  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, FeaturedSectionComponent, FeaturedEditorComponent, AutoplanDialogComponent, SpotDetailDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, SpotFormComponent, ConfirmDialogComponent, IconComponent, PagerComponent],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <!-- Banner đầu trang như Khám phá quán: ảnh nền (admin đổi được; chưa đổi thì lấy ảnh chỗ chơi nổi bật đầu tiên) -->
@@ -168,7 +169,7 @@ function shortCategory(value: SpotCategory): string {
           {{ hasFilter() ? 'Không tìm thấy chỗ nào hợp bộ lọc. Thử bỏ bớt bộ lọc nhé.' : 'Chưa có chỗ chơi nào.' }}
         </div>
       } @else {
-        <h2 class="mt-2 flex items-baseline gap-2 text-lg font-bold tracking-tight text-slate-900">
+        <h2 id="danh-sach" class="mt-2 flex scroll-mt-4 items-baseline gap-2 text-lg font-bold tracking-tight text-slate-900">
           {{ categoryTitle() }}<span class="text-sm font-medium text-slate-500">{{ total() }} chỗ</span>
         </h2>
         <!-- Hàng thẻ đầu vừa khít màn hình, hàng sau cuộn mới thấy -->
@@ -244,18 +245,7 @@ function shortCategory(value: SpotCategory): string {
             </article>
           }
         </div>
-        @if (items().length < total()) {
-          <div class="text-center">
-            <button
-              type="button"
-              class="min-h-10 rounded-xl border border-brand-200 bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-brand-50 disabled:opacity-60"
-              [disabled]="loading()"
-              (click)="loadMore()"
-            >
-              {{ loading() ? 'Đang tải…' : 'Xem thêm' }}
-            </button>
-          </div>
-        }
+        <app-pager class="mt-2" [page]="pager.page()" [total]="total()" unit="chỗ chơi" (pageChange)="goPage($event)" />
       }
     </div>
 
@@ -363,7 +353,8 @@ export class SpotListPage implements OnInit {
   protected readonly pendingDelete = signal<SpotItem | null>(null);
   private readonly saving = signal(false);
 
-  private page = 0;
+  /** Trang đang xem (?trang= trên đường dẫn), mỗi trang 20 */
+  protected readonly pager = listPager('danh-sach');
   private searchTimer?: ReturnType<typeof setTimeout>;
   /** Bỏ kết quả của lần tải cũ nếu người dùng đã đổi bộ lọc */
   private requestSeq = 0;
@@ -417,7 +408,7 @@ export class SpotListPage implements OnInit {
     void this.catalog.districts().then((d) => this.districts.set(d));
     this.reloadFeatured();
     this.banner.load();
-    await this.reload();
+    await this.reload(true, true);
   }
 
   protected reloadFeatured(): void {
@@ -513,8 +504,11 @@ export class SpotListPage implements OnInit {
   }
 
   /** {@code withCounts}: tính lại số trên chip (đổi nhóm thì không cần, số không theo nhóm). */
-  protected async reload(withCounts = true): Promise<void> {
-    this.page = 0;
+  /**
+   * {@code keepPage}: giữ trang đang xem (mở trang, sau khi admin thêm / sửa / xoá); mặc định về trang 1 vì bộ lọc vừa đổi.
+   */
+  protected async reload(withCounts = true, keepPage = false): Promise<void> {
+    if (!keepPage) this.pager.reset();
     if (withCounts) {
       const filter = this.filter();
       const key = JSON.stringify(filter);
@@ -523,7 +517,7 @@ export class SpotListPage implements OnInit {
         if (key === JSON.stringify(this.filter())) this.counts.set(c);
       });
     }
-    await this.load(false);
+    await this.load();
   }
 
   /** Bộ lọc hiện tại, trừ nhóm và trang */
@@ -540,19 +534,25 @@ export class SpotListPage implements OnInit {
     };
   }
 
-  protected async loadMore(): Promise<void> {
-    this.page++;
-    await this.load(true);
+  /** Bấm số trang ở thanh phân trang */
+  protected async goPage(n: number): Promise<void> {
+    this.pager.go(n);
+    await this.load();
   }
 
-  private async load(append: boolean): Promise<void> {
+  private async load(): Promise<void> {
     const seq = ++this.requestSeq;
     this.loading.set(true);
     try {
-      const res = await this.spots.search({ ...this.filter(), category: this.category(), sort: this.filters().sort, page: this.page, size: 30 });
+      const res = await this.spots.search({ ...this.filter(), category: this.category(), sort: this.filters().sort, page: this.pager.page() - 1, size: this.pager.size });
       if (seq !== this.requestSeq) return;
-      this.items.set(append ? [...this.items(), ...res.items] : res.items);
+      this.items.set(res.items);
       this.total.set(res.total);
+      // Trang trên đường dẫn vượt quá số trang (vd. vừa xoá mục cuối của trang cuối): lùi về trang cuối
+      if (!res.items.length && res.total && this.pager.page() > 1) {
+        this.pager.clamp(res.total);
+        await this.load();
+      }
     } finally {
       if (seq === this.requestSeq) this.loading.set(false);
     }
@@ -617,7 +617,7 @@ export class SpotListPage implements OnInit {
         this.toast.success(`Đã thêm "${request.name}" vào Tìm chỗ chơi.`);
       }
       this.closeForm();
-      await this.reload();
+      await this.reload(true, true);
     } catch (err) {
       if (errorCode(err) === 'VERSION_CONFLICT') {
         const current = problemOf(err)?.current as SpotItem | undefined;
@@ -641,7 +641,7 @@ export class SpotListPage implements OnInit {
     try {
       await this.spots.remove(target.id);
       this.toast.success(`Đã xoá "${target.name}" khỏi Tìm chỗ chơi.`);
-      await this.reload();
+      await this.reload(true, true);
     } catch {
       // errorInterceptor đã hiện thông báo
     }

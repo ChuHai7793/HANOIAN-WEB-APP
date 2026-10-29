@@ -47,6 +47,7 @@ import { AutoplanDialogComponent } from '../plans/autoplan-dialog.component';
 import { ratingText } from '../../core/models/review.model';
 import { ReviewsComponent } from '../../shared/ui/reviews.component';
 import { DetailModalComponent } from '../../shared/ui/detail-modal.component';
+import { listPager, PagerComponent } from '../../shared/ui/pager.component';
 import { FeaturedCard, FeaturedSectionComponent } from '../../shared/ui/featured-section.component';
 import { FeaturedEditorComponent } from '../../shared/ui/featured-editor.component';
 import { DEFAULT_BANNER, DEFAULT_BANNER_CREDIT, DEFAULT_BANNER_SRCSET, editableBanner, PageBannerComponent } from '../../shared/ui/page-banner.component';
@@ -74,7 +75,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
 
 @Component({
   selector: 'app-explore-page',
-  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, PriceRangeInputComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, FeaturedEditorComponent, FeaturedSectionComponent, DetailModalComponent, ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink],
+  imports: [FilterSheetComponent, FilterGroupComponent, ChoiceChipsComponent, FilterSwitchComponent, PriceRangeInputComponent, ActiveFiltersComponent, FilterButtonComponent, PageBannerComponent, FeaturedEditorComponent, FeaturedSectionComponent, DetailModalComponent, ReviewsComponent, AutoplanDialogComponent, PhotoCarouselComponent, FitRowDirective, AddToPlanDialogComponent, VibeTagsComponent, PlaceFormComponent, ConfirmDialogComponent, IconComponent, RouterLink, PagerComponent],
   template: `
     <div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
       <!-- Banner đầu trang: ảnh nền (admin đổi được, mặc định Hồ Gươm đêm) + lớp phủ tím, chữ giới thiệu và bộ lọc -->
@@ -187,7 +188,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
           {{ filterCount() ? 'Không có quán nào hợp bộ lọc. Thử bỏ bớt bộ lọc nhé.' : q() || type() || district() ? 'Không tìm thấy quán phù hợp. Thử từ khoá khác nhé.' : 'Chưa có quán nào trong danh mục.' }}
         </div>
       } @else {
-        <h2 class="mt-2 flex items-baseline gap-2 text-lg font-bold tracking-tight text-slate-900">
+        <h2 id="danh-sach" class="mt-2 flex scroll-mt-4 items-baseline gap-2 text-lg font-bold tracking-tight text-slate-900">
           {{ type() ? typeTitle() : 'Tất cả quán' }}<span class="text-sm font-medium text-slate-500">{{ total() }} quán</span>
         </h2>
         <!-- Hàng thẻ đầu vừa khít màn hình, hàng sau cuộn mới thấy -->
@@ -264,18 +265,7 @@ const TYPE_ICONS: Record<PlaceType, IconName> = { cafe: 'cup', bar: 'cocktail', 
             </article>
           }
         </div>
-        @if (items().length < total()) {
-          <div class="text-center">
-            <button
-              type="button"
-              class="min-h-10 rounded-xl border border-brand-200 bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-brand-50 disabled:opacity-60"
-              [disabled]="loading()"
-              (click)="loadMore()"
-            >
-              {{ loading() ? 'Đang tải…' : 'Xem thêm' }}
-            </button>
-          </div>
-        }
+        <app-pager class="mt-2" [page]="pager.page()" [total]="total()" unit="quán" (pageChange)="goPage($event)" />
       }
     </div>
 
@@ -516,7 +506,8 @@ export class ExplorePage implements OnInit {
   protected readonly pendingDelete = signal<CatalogItem | null>(null);
   private readonly saving = signal(false);
 
-  private page = 0;
+  /** Trang đang xem (?trang= trên đường dẫn), mỗi trang 20 */
+  protected readonly pager = listPager('danh-sach');
   private searchTimer?: ReturnType<typeof setTimeout>;
   /** Bỏ kết quả của lần tải cũ nếu người dùng đã đổi bộ lọc */
   private requestSeq = 0;
@@ -617,7 +608,7 @@ export class ExplorePage implements OnInit {
     const loai = params.get('loai');
     this.type.set(this.typeFilters.some((t) => t.value && t.value === loai) ? (loai as PlaceType) : '');
     this.filters.set(placeFiltersFromParams(Object.fromEntries(params.keys.map((k) => [k, params.get(k)]))));
-    await this.reload();
+    await this.reload(true, true);
   }
 
   protected onSearch(value: string): void {
@@ -627,8 +618,11 @@ export class ExplorePage implements OnInit {
   }
 
   /** {@code withCounts}: tính lại số trên chip (đổi loại thì không cần, số không theo loại). */
-  protected async reload(withCounts = true): Promise<void> {
-    this.page = 0;
+  /**
+   * {@code keepPage}: giữ trang đang xem (mở trang, sau khi admin thêm / sửa / xoá); mặc định về trang 1 vì bộ lọc vừa đổi.
+   */
+  protected async reload(withCounts = true, keepPage = false): Promise<void> {
+    if (!keepPage) this.pager.reset();
     if (withCounts) {
       const filter = { q: this.q().trim(), district: this.district(), ...this.filterQuery() };
       const key = JSON.stringify(filter);
@@ -637,15 +631,16 @@ export class ExplorePage implements OnInit {
         if (key === JSON.stringify({ q: this.q().trim(), district: this.district(), ...this.filterQuery() })) this.counts.set(c);
       });
     }
-    await this.load(false);
+    await this.load();
   }
 
-  protected async loadMore(): Promise<void> {
-    this.page++;
-    await this.load(true);
+  /** Bấm số trang ở thanh phân trang */
+  protected async goPage(n: number): Promise<void> {
+    this.pager.go(n);
+    await this.load();
   }
 
-  private async load(append: boolean): Promise<void> {
+  private async load(): Promise<void> {
     const seq = ++this.requestSeq;
     this.loading.set(true);
     try {
@@ -655,12 +650,17 @@ export class ExplorePage implements OnInit {
         district: this.district(),
         ...this.filterQuery(),
         sort: this.filters().sort,
-        page: this.page,
-        size: 30,
+        page: this.pager.page() - 1,
+        size: this.pager.size,
       });
       if (seq !== this.requestSeq) return;
-      this.items.set(append ? [...this.items(), ...res.items] : res.items);
+      this.items.set(res.items);
       this.total.set(res.total);
+      // Trang trên đường dẫn vượt quá số trang (vd. vừa xoá mục cuối của trang cuối): lùi về trang cuối
+      if (!res.items.length && res.total && this.pager.page() > 1) {
+        this.pager.clamp(res.total);
+        await this.load();
+      }
     } finally {
       if (seq === this.requestSeq) this.loading.set(false);
     }
@@ -744,7 +744,7 @@ export class ExplorePage implements OnInit {
         this.toast.success(`Đã thêm "${place.name}" vào Khám phá quán.`);
       }
       this.closeForm();
-      await this.reload();
+      await this.reload(true, true);
     } catch (err) {
       if (errorCode(err) === 'VERSION_CONFLICT') {
         const current = problemOf(err)?.current as CatalogItem | undefined;
@@ -768,7 +768,7 @@ export class ExplorePage implements OnInit {
     try {
       await this.catalog.remove(target.id);
       this.toast.success(`Đã xoá "${target.name}" khỏi Khám phá quán.`);
-      await this.reload();
+      await this.reload(true, true);
     } catch {
       // errorInterceptor đã hiện thông báo
     }

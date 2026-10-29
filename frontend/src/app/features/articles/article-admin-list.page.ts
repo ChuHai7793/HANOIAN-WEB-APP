@@ -1,14 +1,15 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ArticleSummary, dateText } from '../../core/models/article.model';
 import { ArticleService } from '../../core/services/article.service';
 import { ToastService } from '../../core/services/toast.service';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { listPager, PagerComponent } from '../../shared/ui/pager.component';
 
 /** Quản trị Cẩm nang: mọi bài (nháp + đã xuất bản), viết bài mới, sửa, xoá. */
 @Component({
   selector: 'app-article-admin-list-page',
-  imports: [RouterLink, IconComponent],
+  imports: [RouterLink, IconComponent, PagerComponent],
   template: `
     <div class="mx-auto flex max-w-5xl flex-col gap-5 px-4 pb-12 pt-4 sm:px-6 lg:px-8 lg:pt-6">
       <header class="flex flex-wrap items-center justify-between gap-3">
@@ -22,8 +23,8 @@ import { IconComponent } from '../../shared/ui/icon.component';
       </header>
 
       @if (items().length) {
-        <ul class="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          @for (a of items(); track a.id) {
+        <ul id="danh-sach" class="scroll-mt-4 divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          @for (a of pageItems(); track a.id) {
             <li class="flex items-center gap-4 p-3">
               <div class="h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-brand-100">
                 @if (a.coverUrl) {
@@ -57,6 +58,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
             </li>
           }
         </ul>
+        <app-pager [page]="pager.page()" [total]="items().length" unit="bài" (pageChange)="pager.go($event)" />
       } @else if (!loading()) {
         <p class="rounded-2xl border border-dashed border-brand-200 bg-white px-6 py-14 text-center text-sm text-slate-500">Chưa có bài nào. Bấm "Viết bài mới" để bắt đầu.</p>
       }
@@ -69,10 +71,14 @@ export class ArticleAdminListPage implements OnInit {
   protected readonly items = signal<ArticleSummary[]>([]);
   protected readonly loading = signal(true);
   protected readonly confirmId = signal<string | null>(null);
+  /** Trang đang xem (?trang=), mỗi trang 20 bài */
+  protected readonly pager = listPager('danh-sach');
+  protected readonly pageItems = computed(() => this.pager.slice(this.items()));
 
   async ngOnInit(): Promise<void> {
     try {
       this.items.set(await this.api.adminList());
+      this.pager.clamp(this.items().length);
     } finally {
       this.loading.set(false);
     }
@@ -91,6 +97,7 @@ export class ArticleAdminListPage implements OnInit {
     }
     await this.api.remove(a.id);
     this.items.update((l) => l.filter((x) => x.id !== a.id));
+    this.pager.clamp(this.items().length);
     this.confirmId.set(null);
     this.toast.success('Đã xoá bài viết.');
   }
