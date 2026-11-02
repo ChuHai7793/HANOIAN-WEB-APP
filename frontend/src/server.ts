@@ -7,7 +7,7 @@ import {
 import compression from 'compression';
 import express from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
-import { Agent as HttpAgent } from 'node:http';
+import { Agent as HttpAgent, type IncomingMessage } from 'node:http';
 import { Agent as HttpsAgent } from 'node:https';
 import { join } from 'node:path';
 
@@ -21,7 +21,8 @@ import { join } from 'node:path';
  *
  * Biến môi trường: PORT, API_ORIGIN (vd. http://gfm-api:10000), NG_ALLOWED_HOSTS (tên miền được render,
  * cách nhau dấu phẩy, vd. "www.hanoivibe.com.vn,hanoivibe.com.vn,hanoivibe.onrender.com"), SSR_CACHE_SECONDS (giữ HTML đã
- * render bao lâu, mặc định 60; 0 = tắt), CANONICAL_HOST (tên miền chính, host khác chuyển 301 về đây).
+ * render bao lâu, mặc định 60; 0 = tắt), CANONICAL_HOST (tên miền chính, host khác chuyển 301 về đây),
+ * PROXY_SECRET (chuỗi bí mật chung với backend, để backend tin IP người dùng do server này báo).
  *
  * Cho nhanh bằng bản Static Site (vốn đi qua CDN của Render):
  * - Nén gzip / brotli mọi phản hồi trừ /api (SSE không được nén vì nén sẽ giữ lại dữ liệu).
@@ -110,16 +111,40 @@ app.get('/sitemap.xml', async (req, res) => {
   }
 });
 
+/**
+ * IP thật của người dùng: phần tử cuối của X-Forwarded-For do Render nối vào. Phần đầu trình duyệt tự ghi được,
+ * nên không chuyển tiếp nguyên header đó cho backend (đổi IP giả mỗi lần là vượt được giới hạn dò mật khẩu).
+ */
+function clientIp(req: IncomingMessage): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  const list = (Array.isArray(forwarded) ? forwarded.join(',') : (forwarded ?? '')).split(',');
+  return list[list.length - 1].trim() || req.socket.remoteAddress || '';
+}
+
+/** Chung với backend (cùng biến PROXY_SECRET): backend chỉ tin X-Client-IP khi kèm đúng khoá này */
+const proxySecret = (process.env['PROXY_SECRET'] ?? '').trim();
+
 app.use(
   createProxyMiddleware({
     target: apiOrigin,
     changeOrigin: true,
-    // Backend thấy IP thật của người dùng (giới hạn tần suất theo IP)
-    xfwd: true,
     pathFilter: ['/api', '/uploads'],
     // SSE (tin nhắn realtime) giữ kết nối lâu: không cắt
     proxyTimeout: 0,
     agent: apiAgent,
+    on: {
+      // Backend thấy IP thật của người dùng (giới hạn tần suất theo IP); header trình duyệt tự gửi bị thay
+      proxyReq: (proxyReq, req) => {
+        const ip = clientIp(req);
+        proxyReq.setHeader('x-forwarded-for', ip);
+        proxyReq.removeHeader('x-client-ip');
+        proxyReq.removeHeader('x-proxy-key');
+        if (proxySecret && ip) {
+          proxyReq.setHeader('x-client-ip', ip);
+          proxyReq.setHeader('x-proxy-key', proxySecret);
+        }
+      },
+    },
   }),
 );
 

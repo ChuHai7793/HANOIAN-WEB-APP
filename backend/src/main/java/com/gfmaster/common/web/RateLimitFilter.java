@@ -35,9 +35,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
   private final int authPerMinute;
   private final int apiPerMinute;
   private final int mapsPerMinute;
+  private final ClientIp clientIp;
 
-  public RateLimitFilter(RateLimiter limiter, ProblemSecurityHandlers problems, GfmProperties props) {
+  public RateLimitFilter(
+      RateLimiter limiter, ProblemSecurityHandlers problems, GfmProperties props, ClientIp clientIp) {
     this.limiter = limiter;
+    this.clientIp = clientIp;
     this.problems = problems;
     this.authPerMinute = props.rateLimit().authPerMinute();
     this.apiPerMinute = props.rateLimit().apiPerMinute();
@@ -66,12 +69,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
   private RateLimiter.Decision decide(HttpServletRequest request) {
     if ("POST".equals(request.getMethod()) && AUTH_PATHS.contains(request.getRequestURI())) {
-      // remoteAddr đã được ForwardedHeaderFilter thay bằng IP thật khi chạy sau Caddy
-      return limiter.tryConsume("auth:" + request.getRemoteAddr(), authPerMinute);
+      return limiter.tryConsume("auth:" + clientIp.of(request), authPerMinute);
     }
     UUID userId = CurrentUserArgumentResolver.currentUserId();
     // Khách chưa đăng nhập (API công khai): giới hạn theo IP
-    if (userId == null) return limiter.tryConsume("anon:" + request.getRemoteAddr(), apiPerMinute);
+    if (userId == null) return limiter.tryConsume("anon:" + clientIp.of(request), apiPerMinute);
     if (MAPS_PATH.equals(request.getRequestURI())) {
       RateLimiter.Decision maps = limiter.tryConsume("maps:" + userId, mapsPerMinute);
       if (!maps.allowed()) return maps;

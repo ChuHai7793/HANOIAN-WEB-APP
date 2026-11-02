@@ -4,5 +4,10 @@ spring:
 
 management.endpoint.health.show-details: never
 
+# Trang tài liệu API (/api/docs) chỉ mở ở dev: production không cho người ngoài xem bản đồ API
+springdoc:
+  api-docs.enabled: false
+  swagger-ui.enabled: false
+
 logging.level:
   root: info

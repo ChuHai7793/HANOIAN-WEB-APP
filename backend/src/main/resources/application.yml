@@ -60,7 +60,9 @@ spring:
 
 server:
   port: 8080
-  forward-headers-strategy: framework
+  # Không để Spring tự đọc X-Forwarded-*: nó lấy phần tử đầu của X-Forwarded-For (trình duyệt tự ghi được)
+  # làm IP người gọi. IP cho rate limit do ClientIp tự tính.
+  forward-headers-strategy: none
 
 management:
   endpoints.web.exposure.include: health,info,prometheus
