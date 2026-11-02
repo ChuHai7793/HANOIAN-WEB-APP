@@ -49,12 +49,32 @@ const publicHosts = [
 const allowedHosts = ['localhost', '127.0.0.1', ...publicHosts];
 const angularApp = new AngularNodeAppEngine({
   allowedHosts,
-  // Render đứng trước server và gửi X-Forwarded-For/Host/Proto. Không tin các header này thì Angular lặng lẽ
-  // bỏ render trên server (trả khung trống như bản static).
-  trustProxyHeaders: true,
+  // Render đứng trước server và gửi X-Forwarded-Host/Proto. Không tin các header này thì Angular lặng lẽ
+  // bỏ render trên server (trả khung trống như bản static). Không tin X-Forwarded-Port: ai cũng gửi được
+  // "X-Forwarded-Port: 1337", link canonical trong HTML thành https://host:1337/... rồi bị giữ trong htmlCache
+  // cho mọi người (đầu độc cache).
+  trustProxyHeaders: ['x-forwarded-host', 'x-forwarded-proto'],
 });
 
 app.disable('x-powered-by');
+
+/**
+ * Header bảo mật cho mọi phản hồi (phản hồi /api giữ header của backend nếu backend tự đặt):
+ * - Không cho trang khác nhúng trang này vào iframe (chống clickjacking: lừa bấm nút dưới lớp trong suốt).
+ * - HSTS: trình duyệt luôn mở bằng https, kể cả khi gõ http:// (chỉ bật khi chạy thật, có CANONICAL_HOST).
+ * - nosniff: trình duyệt không đoán file tải lên là HTML / JS.
+ * - Không gửi đường dẫn đầy đủ sang trang khác; chỉ trang này được xin vị trí (nút "gần tôi"), không camera, mic.
+ * Không đặt script-src: Cloudflare Analytics, đăng nhập Google và script Angular chèn vào HTML đều cần chạy.
+ */
+app.use((_req, res, next) => {
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), payment=(), geolocation=(self)');
+  if (canonicalHost) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
 
 /**
  * Tên miền chính (CANONICAL_HOST, vd. www.hanoivibe.com.vn; phải trùng tên chính trên Render, ngược chiều thì
@@ -77,10 +97,13 @@ const apiAgent = apiOrigin.startsWith('https:')
   ? new HttpsAgent({ keepAlive: true, maxSockets: 64 })
   : new HttpAgent({ keepAlive: true, maxSockets: 64 });
 
-/** Tên miền đang được mở (sau proxy của Render), để viết URL tuyệt đối trong sitemap */
+/**
+ * Gốc URL tuyệt đối trong sitemap, robots.txt: luôn là tên miền chính, không lấy Host / X-Forwarded-Host của
+ * request (ai cũng gửi được tên miền giả, sitemap.xml lại được giữ cache 1 giờ). Chạy local (không có
+ * CANONICAL_HOST) thì dùng localhost.
+ */
 function origin(req: express.Request): string {
-  const proto = (req.get('x-forwarded-proto') ?? req.protocol).split(',')[0].trim();
-  return `${proto}://${req.get('x-forwarded-host') ?? req.get('host')}`;
+  return canonicalHost ? `https://${canonicalHost}` : `${req.protocol}://${req.get('host')}`;
 }
 
 // Bản SSR là bản cho Google index (bản static chặn index bằng public/robots.txt)
@@ -186,7 +209,7 @@ const htmlCache = new Map<string, CachedPage>();
 const refreshing = new Set<string>();
 
 function cacheKey(req: express.Request): string {
-  return `${req.get('x-forwarded-host') ?? req.get('host')}${req.originalUrl}`;
+  return `${(req.get('x-forwarded-host') ?? req.get('host') ?? '').toLowerCase()}${req.originalUrl}`;
 }
 
 /** Render một trang; trả về bản để giữ trong cache (null = không phải trang HTML 200, không giữ) */
@@ -214,6 +237,16 @@ function send(res: express.Response, page: CachedPage, state: 'HIT' | 'STALE' | 
 
 app.use(async (req, res, next) => {
   try {
+    // Chạy thật luôn là https (Render chuyển http → https): không để "X-Forwarded-Proto: http" tự gửi làm link
+    // canonical thành http:// rồi bị giữ trong cache cho mọi người
+    if (canonicalHost) req.headers['x-forwarded-proto'] = 'https';
+    // Angular gặp X-Forwarded-* ngoài trustProxyHeaders (Render luôn gửi X-Forwarded-For) thì bỏ render, trả
+    // khung trống, và khung đó bị giữ trong cache: bỏ các header này trước khi render
+    for (const name of Object.keys(req.headers)) {
+      if (name.startsWith('x-forwarded-') && name !== 'x-forwarded-host' && name !== 'x-forwarded-proto') {
+        delete req.headers[name];
+      }
+    }
     if (req.method !== 'GET' || CACHE_TTL_MS === 0) {
       const response = await angularApp.handle(req);
       return response ? writeResponseToNodeResponse(response, res) : next();
