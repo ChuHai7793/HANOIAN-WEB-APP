@@ -5,7 +5,9 @@
  */
 const TOKENS: Record<string, string> = {
   'datingmaster.onrender.com': '05b6b9e234b745e6b9abed672df46bb1',
-  // www và *.onrender.com của bản SSR bị chuyển 301 về đây (CANONICAL_HOST) nên không cần khai báo
+  // Tên miền chính là www (CANONICAL_HOST); bản không www vẫn khai báo phòng khi đổi chiều chuyển hướng.
+  // *.onrender.com của bản SSR bị chuyển 301 về www nên không cần khai báo.
+  'www.hanoivibe.com.vn': '2ae952a3d18f4abcb40d0e62115cf438',
   'hanoivibe.com.vn': '2ae952a3d18f4abcb40d0e62115cf438',
 };
 const DEFAULT_TOKEN = TOKENS['datingmaster.onrender.com'];

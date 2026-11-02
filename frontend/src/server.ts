@@ -20,7 +20,7 @@ import { join } from 'node:path';
  *   app.routes.server.ts).
  *
  * Biến môi trường: PORT, API_ORIGIN (vd. http://gfm-api:10000), NG_ALLOWED_HOSTS (tên miền được render,
- * cách nhau dấu phẩy, vd. "hanoivibe.com.vn,www.hanoivibe.com.vn,hanoivibe.onrender.com"), SSR_CACHE_SECONDS (giữ HTML đã
+ * cách nhau dấu phẩy, vd. "www.hanoivibe.com.vn,hanoivibe.com.vn,hanoivibe.onrender.com"), SSR_CACHE_SECONDS (giữ HTML đã
  * render bao lâu, mặc định 60; 0 = tắt), CANONICAL_HOST (tên miền chính, host khác chuyển 301 về đây).
  *
  * Cho nhanh bằng bản Static Site (vốn đi qua CDN của Render):
@@ -35,11 +35,12 @@ const apiOrigin = process.env['API_ORIGIN'] ?? 'http://localhost:8080';
 const app = express();
 // Chống SSRF: chỉ render cho tên miền khai báo. Danh sách truyền vào đây được ưu tiên hơn biến môi trường,
 // nên phải tự ghép NG_ALLOWED_HOSTS (tên miền trên Render) với localhost (chạy thử trên máy).
-// CANONICAL_HOST và bản www của nó luôn được nhận, kể cả khi quên khai báo trong NG_ALLOWED_HOSTS.
+// CANONICAL_HOST và bản có / không có www của nó luôn được nhận, kể cả khi quên khai báo trong NG_ALLOWED_HOSTS.
 const canonicalHost = (process.env['CANONICAL_HOST'] ?? '').trim().toLowerCase();
+const bareHost = canonicalHost.replace(/^www\./, '');
 const publicHosts = [
   ...new Set(
-    [...(process.env['NG_ALLOWED_HOSTS'] ?? '').split(','), canonicalHost, canonicalHost && `www.${canonicalHost}`]
+    [...(process.env['NG_ALLOWED_HOSTS'] ?? '').split(','), bareHost, bareHost && `www.${bareHost}`]
       .map((h) => h.trim().toLowerCase())
       .filter(Boolean),
   ),
@@ -55,7 +56,8 @@ const angularApp = new AngularNodeAppEngine({
 app.disable('x-powered-by');
 
 /**
- * Tên miền chính (CANONICAL_HOST, vd. hanoivibe.com.vn): mở trang bằng tên miền public khác (www, *.onrender.com)
+ * Tên miền chính (CANONICAL_HOST, vd. www.hanoivibe.com.vn; phải trùng tên chính trên Render, ngược chiều thì
+ * Render và server chuyển qua lại mãi): mở trang bằng tên miền public khác (bản không www, *.onrender.com)
  * thì chuyển 301 về đây, để Google chỉ index một bản và link cũ dồn về tên miền mới. Biến trống (chạy local) thì
  * bỏ qua.
  * - Chỉ chuyển host có trong publicHosts: health check của Render gọi bằng địa chỉ nội bộ, không bị chuyển.

@@ -13,11 +13,13 @@ describe('loadAnalytics', () => {
     expect(JSON.parse(scripts[0].getAttribute('data-cf-beacon')!).token).toBe('05b6b9e234b745e6b9abed672df46bb1');
   });
 
-  it('tên miền chính hanoivibe.com.vn dùng token riêng', () => {
-    const doc = fakeDoc();
-    loadAnalytics('hanoivibe.com.vn', doc);
-    const script = doc.querySelector('script[data-cf-beacon]')!;
-    expect(JSON.parse(script.getAttribute('data-cf-beacon')!).token).toBe('2ae952a3d18f4abcb40d0e62115cf438');
+  it('hanoivibe.com.vn, có hay không www, dùng token riêng', () => {
+    for (const host of ['www.hanoivibe.com.vn', 'hanoivibe.com.vn']) {
+      const doc = fakeDoc();
+      loadAnalytics(host, doc);
+      const script = doc.querySelector('script[data-cf-beacon]')!;
+      expect(JSON.parse(script.getAttribute('data-cf-beacon')!).token).toBe('2ae952a3d18f4abcb40d0e62115cf438');
+    }
   });
 
   it('tên miền khác (bản SSR) dùng token mặc định', () => {
