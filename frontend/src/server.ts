@@ -21,7 +21,7 @@ import { join } from 'node:path';
  *
  * Biến môi trường: PORT, API_ORIGIN (vd. http://gfm-api:10000), NG_ALLOWED_HOSTS (tên miền được render,
  * cách nhau dấu phẩy, vd. "hanoivibe-ssr.onrender.com,hanoivibe.com.vn"), SSR_CACHE_SECONDS (giữ HTML đã
- * render bao lâu, mặc định 60; 0 = tắt).
+ * render bao lâu, mặc định 60; 0 = tắt), CANONICAL_HOST (tên miền chính, host khác chuyển 301 về đây).
  *
  * Cho nhanh bằng bản Static Site (vốn đi qua CDN của Render):
  * - Nén gzip / brotli mọi phản hồi trừ /api (SSE không được nén vì nén sẽ giữ lại dữ liệu).
@@ -35,14 +35,11 @@ const apiOrigin = process.env['API_ORIGIN'] ?? 'http://localhost:8080';
 const app = express();
 // Chống SSRF: chỉ render cho tên miền khai báo. Danh sách truyền vào đây được ưu tiên hơn biến môi trường,
 // nên phải tự ghép NG_ALLOWED_HOSTS (tên miền trên Render) với localhost (chạy thử trên máy).
-const allowedHosts = [
-  'localhost',
-  '127.0.0.1',
-  ...(process.env['NG_ALLOWED_HOSTS'] ?? '')
-    .split(',')
-    .map((h) => h.trim())
-    .filter(Boolean),
-];
+const publicHosts = (process.env['NG_ALLOWED_HOSTS'] ?? '')
+  .split(',')
+  .map((h) => h.trim().toLowerCase())
+  .filter(Boolean);
+const allowedHosts = ['localhost', '127.0.0.1', ...publicHosts];
 const angularApp = new AngularNodeAppEngine({
   allowedHosts,
   // Render đứng trước server và gửi X-Forwarded-For/Host/Proto. Không tin các header này thì Angular lặng lẽ
@@ -51,6 +48,22 @@ const angularApp = new AngularNodeAppEngine({
 });
 
 app.disable('x-powered-by');
+
+/**
+ * Tên miền chính (CANONICAL_HOST, vd. hanoivibe.com.vn): mở trang bằng tên miền public khác (www, *.onrender.com)
+ * thì chuyển 301 về đây, để Google chỉ index một bản và link cũ dồn về tên miền mới. Biến trống (chạy local) thì
+ * bỏ qua.
+ * - Chỉ chuyển host có trong NG_ALLOWED_HOSTS: health check của Render gọi bằng địa chỉ nội bộ, không bị chuyển.
+ * - Không chuyển /api, /uploads: trình duyệt đang mở tên miền cũ vẫn gọi API được tới khi tải lại trang.
+ */
+const canonicalHost = (process.env['CANONICAL_HOST'] ?? '').trim().toLowerCase();
+app.use((req, res, next) => {
+  if (!canonicalHost || (req.method !== 'GET' && req.method !== 'HEAD')) return next();
+  if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) return next();
+  const host = (req.get('x-forwarded-host') ?? req.get('host') ?? '').split(',')[0].trim().toLowerCase().replace(/:\d+$/, '');
+  if (host === canonicalHost || !publicHosts.includes(host)) return next();
+  res.redirect(301, `https://${canonicalHost}${req.originalUrl}`);
+});
 
 /** Giữ kết nối tới backend giữa các request (mặc định Node mở kết nối mới cho mỗi request qua proxy) */
 const apiAgent = apiOrigin.startsWith('https:')
