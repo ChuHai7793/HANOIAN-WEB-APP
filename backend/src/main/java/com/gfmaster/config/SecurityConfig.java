@@ -1,11 +1,13 @@
 package com.gfmaster.config;
 
 import com.gfmaster.auth.JwtService;
+import com.gfmaster.common.web.ClientIp;
 import com.gfmaster.common.security.ProblemSecurityHandlers;
 import com.gfmaster.common.web.IdempotencyFilter;
 import com.gfmaster.common.web.RateLimitFilter;
 import com.gfmaster.common.web.RateLimiter;
 import com.gfmaster.user.Role;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -38,7 +40,8 @@ public class SecurityConfig {
       RateLimiter limiter,
       StringRedisTemplate redis,
       JsonMapper json,
-      GfmProperties props)
+      GfmProperties props,
+      @Value("${PROXY_SECRET:}") String proxySecret)
       throws Exception {
     http.csrf(csrf -> csrf.disable())
         .cors(Customizer.withDefaults())
@@ -124,6 +127,10 @@ public class SecurityConfig {
                     .hasRole(Role.ADMIN.name())
                     .requestMatchers("/api/v1/plans/**")
                     .authenticated()
+                    // Người yêu, liên kết quán, thống kê, import: dữ liệu riêng của admin. Guest tự đăng ký
+                    // cũng nhận admin làm chủ dữ liệu (@DataOwner), nên phải chặn theo role, kể cả GET
+                    .requestMatchers("/api/v1/girlfriends/**", "/api/v1/place-links/**", "/api/v1/stats/**", "/api/v1/import/**")
+                    .hasRole(Role.ADMIN.name())
                     // Guest chỉ xem: mọi GET đều cho, request ghi (POST/PATCH/PUT/DELETE) chỉ admin
                     .requestMatchers(HttpMethod.GET, "/api/**")
                     .authenticated()
@@ -140,7 +147,7 @@ public class SecurityConfig {
         .exceptionHandling(
             e -> e.authenticationEntryPoint(problems.entryPoint()).accessDeniedHandler(problems.accessDenied()));
     // Thứ tự: xác thực JWT → rate limit → idempotency (cả hai cần userId)
-    http.addFilterAfter(new RateLimitFilter(limiter, problems, props), BearerTokenAuthenticationFilter.class)
+    http.addFilterAfter(new RateLimitFilter(limiter, problems, props, new ClientIp(proxySecret)), BearerTokenAuthenticationFilter.class)
         .addFilterAfter(new IdempotencyFilter(redis, json, problems, props), RateLimitFilter.class);
     return http.build();
   }

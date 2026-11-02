@@ -45,7 +45,9 @@ import { AuthService } from '../../core/auth/auth.service';
           <ul class="mt-3 space-y-2 text-sm">
             @if (auth.isLoggedIn()) {
               <li><a routerLink="/profile" class="hover:text-white">Hồ sơ của tôi</a></li>
-              <li><a routerLink="/girlfriends" class="hover:text-white">Người yêu</a></li>
+              @if (auth.user()?.role === 'ADMIN') {
+                <li><a routerLink="/girlfriends" class="hover:text-white">Người yêu</a></li>
+              }
             } @else {
               <li><a routerLink="/register" class="hover:text-white">Tạo tài khoản</a></li>
               <li><a routerLink="/login" class="hover:text-white">Đăng nhập</a></li>

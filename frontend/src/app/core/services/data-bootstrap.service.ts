@@ -1,4 +1,5 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable, Injector, signal } from '@angular/core';
+import { AuthService } from '../auth/auth.service';
 import { PlaceService } from './place.service';
 import { GirlfriendService } from './girlfriend.service';
 import { PlaceLinkService } from './place-link.service';
@@ -16,6 +17,8 @@ export class DataBootstrapService {
   private readonly girlfriends = inject(GirlfriendService);
   private readonly links = inject(PlaceLinkService);
   private readonly savedSpots = inject(SavedSpotService);
+  /** AuthService cũng inject service này: lấy lúc gọi để không vòng phụ thuộc */
+  private readonly injector = inject(Injector);
 
   readonly status = signal<BootstrapStatus>('idle');
 
@@ -23,7 +26,13 @@ export class DataBootstrapService {
   async loadAll(): Promise<void> {
     this.status.set('loading');
     try {
-      await Promise.all([this.places.load(), this.girlfriends.load(), this.links.load(), this.savedSpots.load()]);
+      // Người yêu và liên kết quán là dữ liệu riêng của admin: backend trả 403 cho guest, không tải
+      const admin = this.injector.get(AuthService).user()?.role === 'ADMIN';
+      await Promise.all([
+        this.places.load(),
+        this.savedSpots.load(),
+        ...(admin ? [this.girlfriends.load(), this.links.load()] : []),
+      ]);
       this.status.set('ready');
     } catch {
       this.status.set('error');

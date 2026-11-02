@@ -46,14 +46,14 @@ export const routes: Routes = [
       {
         path: 'girlfriends',
         title: 'Người yêu · HANOIVIBE',
-        canMatch: [authGuard],
+        canMatch: [authGuard, adminGuard],
         loadComponent: () =>
           import('./features/girlfriends/girlfriend-list.page').then((m) => m.GirlfriendListPage),
       },
       {
         path: 'girlfriends/:id',
         title: 'Chi tiết · HANOIVIBE',
-        canMatch: [authGuard],
+        canMatch: [authGuard, adminGuard],
         loadComponent: () =>
           import('./features/girlfriends/girlfriend-detail.page').then(
             (m) => m.GirlfriendDetailPage,

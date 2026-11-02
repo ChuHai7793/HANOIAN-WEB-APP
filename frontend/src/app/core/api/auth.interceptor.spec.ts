@@ -6,7 +6,8 @@ import { firstValueFrom } from 'rxjs';
 import { authInterceptor } from './auth.interceptor';
 import { AuthService } from '../auth/auth.service';
 
-const USER = { id: 'u1', email: 'mai@test.local', displayName: 'Mai' };
+// Admin: guest không tải người yêu và liên kết quán (dữ liệu riêng của admin)
+const USER = { id: 'u1', email: 'mai@test.local', displayName: 'Mai', role: 'ADMIN' };
 
 /** Chờ mọi microtask (chuỗi Promise của refresh) chạy xong */
 const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));

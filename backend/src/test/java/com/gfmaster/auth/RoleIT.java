@@ -2,6 +2,7 @@ package com.gfmaster.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -23,8 +24,8 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import tools.jackson.databind.JsonNode;
 
 /**
- * Phân quyền: admin được ghi; guest xem người yêu, liên kết, stats của admin, mọi request ghi dữ liệu
- * bị 403. Ngoại lệ: hồ sơ, upload ảnh và My place của chính guest (ProfileIT, DirectUploadIT,
+ * Phân quyền: admin được ghi; guest (kể cả tự đăng ký, nhận admin làm chủ dữ liệu) không xem được người
+ * yêu, liên kết, stats của admin, mọi request ghi dữ liệu bị 403. Ngoại lệ: hồ sơ, upload ảnh và My place của chính guest (ProfileIT, DirectUploadIT,
  * CatalogIT). Quán (My place) là của riêng từng người nên guest không thấy quán của admin.
  */
 class RoleIT extends ApiTestSupport {
@@ -36,21 +37,26 @@ class RoleIT extends ApiTestSupport {
   private final String ip = "10.77." + (int) (Math.random() * 250) + "." + (1 + (int) (Math.random() * 250));
 
   @Test
-  void guestSeesAdminDataButEveryWriteIsForbidden() throws Exception {
+  void guestCannotSeeAdminPrivateDataAndEveryWriteIsForbidden() throws Exception {
     UUID admin = newUser();
     String placeId = createPlace(admin, "cafe", "Của admin").get("id").asString();
     String gfId = createGirlfriend(admin, "Mai").get("id").asString();
     String linkId = createLink(admin, gfId, placeId, 5).get("id").asString();
     UUID guest = newGuestOf(admin);
 
-    // Xem được đúng dữ liệu của admin
     // Quán (My place) là của riêng từng người: guest không thấy quán của admin
     getAs(guest, "/api/v1/places").andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(0)));
     getAs(guest, "/api/v1/places/" + placeId).andExpect(status().isNotFound());
-    getAs(guest, "/api/v1/girlfriends").andExpect(jsonPath("$[0].name").value("Mai"));
-    getAs(guest, "/api/v1/girlfriends/" + gfId + "/links").andExpect(jsonPath("$", hasSize(1)));
-    getAs(guest, "/api/v1/place-links").andExpect(jsonPath("$", hasSize(1)));
-    getAs(guest, "/api/v1/stats").andExpect(jsonPath("$.cafes").value(1)).andExpect(jsonPath("$.girlfriends").value(1));
+    // Người yêu (tên, SĐT, ngày sinh), liên kết, stats là dữ liệu riêng của admin: guest bị 403 cả khi chỉ xem
+    forbidden(getAs(guest, "/api/v1/girlfriends"));
+    forbidden(getAs(guest, "/api/v1/girlfriends/" + gfId));
+    forbidden(getAs(guest, "/api/v1/girlfriends/" + gfId + "/links"));
+    forbidden(getAs(guest, "/api/v1/place-links"));
+    forbidden(getAs(guest, "/api/v1/stats"));
+    getAs(admin, "/api/v1/girlfriends").andExpect(jsonPath("$[0].name").value("Mai"));
+    getAs(admin, "/api/v1/girlfriends/" + gfId + "/links").andExpect(jsonPath("$", hasSize(1)));
+    getAs(admin, "/api/v1/place-links").andExpect(jsonPath("$", hasSize(1)));
+    getAs(admin, "/api/v1/stats").andExpect(jsonPath("$.cafes").value(1)).andExpect(jsonPath("$.girlfriends").value(1));
 
     // Mọi thao tác ghi: 403 FORBIDDEN, dữ liệu không đổi
     forbidden(postAs(guest, "/api/v1/places", "{}"));
@@ -114,6 +120,9 @@ class RoleIT extends ApiTestSupport {
         .isEqualTo(firstAdmin);
     String token = "Bearer " + body.get("accessToken").asString();
     mvc.perform(post("/api/v1/places").header(HttpHeaders.AUTHORIZATION, token).contentType(MediaType.APPLICATION_JSON).content("{}"))
+        .andExpect(status().isForbidden());
+    // Ai ngoài Internet tự đăng ký cũng là guest này: không được đọc người yêu của admin
+    mvc.perform(get("/api/v1/girlfriends").header(HttpHeaders.AUTHORIZATION, token))
         .andExpect(status().isForbidden());
   }
 

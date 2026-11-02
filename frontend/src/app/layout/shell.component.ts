@@ -459,7 +459,10 @@ export class ShellComponent {
     {
       title: 'Hẹn hò',
       items: [
-        { path: '/girlfriends', label: 'Người yêu', icon: 'couple', badge: () => this.girlfriends.count() },
+        // Người yêu: dữ liệu riêng của admin, guest không thấy
+        ...(this.auth.user()?.role === 'ADMIN'
+          ? [{ path: '/girlfriends', label: 'Người yêu', icon: 'couple', badge: () => this.girlfriends.count() } satisfies NavItem]
+          : []),
         { path: '/plans', label: 'Plan', icon: 'route' },
       ],
     },
