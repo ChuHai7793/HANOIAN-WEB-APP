@@ -35,10 +35,15 @@ const apiOrigin = process.env['API_ORIGIN'] ?? 'http://localhost:8080';
 const app = express();
 // Chống SSRF: chỉ render cho tên miền khai báo. Danh sách truyền vào đây được ưu tiên hơn biến môi trường,
 // nên phải tự ghép NG_ALLOWED_HOSTS (tên miền trên Render) với localhost (chạy thử trên máy).
-const publicHosts = (process.env['NG_ALLOWED_HOSTS'] ?? '')
-  .split(',')
-  .map((h) => h.trim().toLowerCase())
-  .filter(Boolean);
+// CANONICAL_HOST và bản www của nó luôn được nhận, kể cả khi quên khai báo trong NG_ALLOWED_HOSTS.
+const canonicalHost = (process.env['CANONICAL_HOST'] ?? '').trim().toLowerCase();
+const publicHosts = [
+  ...new Set(
+    [...(process.env['NG_ALLOWED_HOSTS'] ?? '').split(','), canonicalHost, canonicalHost && `www.${canonicalHost}`]
+      .map((h) => h.trim().toLowerCase())
+      .filter(Boolean),
+  ),
+];
 const allowedHosts = ['localhost', '127.0.0.1', ...publicHosts];
 const angularApp = new AngularNodeAppEngine({
   allowedHosts,
@@ -53,10 +58,9 @@ app.disable('x-powered-by');
  * Tên miền chính (CANONICAL_HOST, vd. hanoivibe.com.vn): mở trang bằng tên miền public khác (www, *.onrender.com)
  * thì chuyển 301 về đây, để Google chỉ index một bản và link cũ dồn về tên miền mới. Biến trống (chạy local) thì
  * bỏ qua.
- * - Chỉ chuyển host có trong NG_ALLOWED_HOSTS: health check của Render gọi bằng địa chỉ nội bộ, không bị chuyển.
+ * - Chỉ chuyển host có trong publicHosts: health check của Render gọi bằng địa chỉ nội bộ, không bị chuyển.
  * - Không chuyển /api, /uploads: trình duyệt đang mở tên miền cũ vẫn gọi API được tới khi tải lại trang.
  */
-const canonicalHost = (process.env['CANONICAL_HOST'] ?? '').trim().toLowerCase();
 app.use((req, res, next) => {
   if (!canonicalHost || (req.method !== 'GET' && req.method !== 'HEAD')) return next();
   if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) return next();
