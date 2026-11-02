@@ -5,6 +5,7 @@ Sổ tay hẹn hò: lưu quán cafe, bar, quán ăn đã đi; lưu người yêu
 - **Frontend:** Angular (http://localhost:4200)
 - **Backend:** Spring Boot (http://localhost:8080)
 - **Hạ tầng:** PostgreSQL, Redis và RabbitMQ, chạy bằng Docker
+- **Production:** https://hanoivibe.com.vn (bản SSR trên Render; `www` và `*.onrender.com` chuyển 301 về đây). Cách deploy: [docs/render/12-deploy-render.md](docs/render/12-deploy-render.md), tên miền: [docs/render/13-deploy-hanoivibeDomain.md](docs/render/13-deploy-hanoivibeDomain.md)
 
 Kế hoạch tổng thể nằm ở [PLAN.md](PLAN.md). Tài liệu từng bước nằm trong [docs/](docs/README.md).
 

@@ -20,7 +20,7 @@ import { join } from 'node:path';
  *   app.routes.server.ts).
  *
  * Biến môi trường: PORT, API_ORIGIN (vd. http://gfm-api:10000), NG_ALLOWED_HOSTS (tên miền được render,
- * cách nhau dấu phẩy, vd. "hanoivibe-ssr.onrender.com,hanoivibe.com.vn"), SSR_CACHE_SECONDS (giữ HTML đã
+ * cách nhau dấu phẩy, vd. "hanoivibe.com.vn,www.hanoivibe.com.vn,hanoivibe.onrender.com"), SSR_CACHE_SECONDS (giữ HTML đã
  * render bao lâu, mặc định 60; 0 = tắt), CANONICAL_HOST (tên miền chính, host khác chuyển 301 về đây).
  *
  * Cho nhanh bằng bản Static Site (vốn đi qua CDN của Render):
