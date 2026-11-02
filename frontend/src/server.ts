@@ -4,8 +4,11 @@ import {
   isMainModule,
   writeResponseToNodeResponse,
 } from '@angular/ssr/node';
+import compression from 'compression';
 import express from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
+import { Agent as HttpAgent } from 'node:http';
+import { Agent as HttpsAgent } from 'node:https';
 import { join } from 'node:path';
 
 /**
@@ -17,7 +20,14 @@ import { join } from 'node:path';
  *   app.routes.server.ts).
  *
  * Biến môi trường: PORT, API_ORIGIN (vd. http://gfm-api:10000), NG_ALLOWED_HOSTS (tên miền được render,
- * cách nhau dấu phẩy, vd. "hanoivibe-ssr.onrender.com,hanoivibe.vn").
+ * cách nhau dấu phẩy, vd. "hanoivibe-ssr.onrender.com,hanoivibe.com.vn"), SSR_CACHE_SECONDS (giữ HTML đã
+ * render bao lâu, mặc định 60; 0 = tắt).
+ *
+ * Cho nhanh bằng bản Static Site (vốn đi qua CDN của Render):
+ * - Nén gzip / brotli mọi phản hồi trừ /api (SSE không được nén vì nén sẽ giữ lại dữ liệu).
+ * - Proxy /api giữ kết nối tới backend (keep-alive): không bắt tay TLS lại cho từng request.
+ * - HTML đã render được giữ trong bộ nhớ (xem htmlCache): server luôn render như khách nên HTML của mọi người
+ *   giống nhau.
  */
 const browserDistFolder = join(import.meta.dirname, '../browser');
 const apiOrigin = process.env['API_ORIGIN'] ?? 'http://localhost:8080';
@@ -41,6 +51,11 @@ const angularApp = new AngularNodeAppEngine({
 });
 
 app.disable('x-powered-by');
+
+/** Giữ kết nối tới backend giữa các request (mặc định Node mở kết nối mới cho mỗi request qua proxy) */
+const apiAgent = apiOrigin.startsWith('https:')
+  ? new HttpsAgent({ keepAlive: true, maxSockets: 64 })
+  : new HttpAgent({ keepAlive: true, maxSockets: 64 });
 
 /** Tên miền đang được mở (sau proxy của Render), để viết URL tuyệt đối trong sitemap */
 function origin(req: express.Request): string {
@@ -85,22 +100,103 @@ app.use(
     pathFilter: ['/api', '/uploads'],
     // SSE (tin nhắn realtime) giữ kết nối lâu: không cắt
     proxyTimeout: 0,
+    agent: apiAgent,
   }),
 );
 
+// Nén đặt SAU proxy: phản hồi /api (kể cả SSE) đi thẳng qua proxy, không bị nén và không bị giữ lại
+app.use(compression());
+
 app.use(
   express.static(browserDistFolder, {
-    maxAge: '1y',
+    // File có mã băm trong tên (main-AB12.js) không bao giờ đổi nội dung: trình duyệt khỏi hỏi lại
+    setHeaders: (res, path) => {
+      const hashed = /-[A-Z0-9]{8}\.(js|css)$/.test(path);
+      res.setHeader('Cache-Control', hashed ? 'public, max-age=31536000, immutable' : 'public, max-age=86400');
+    },
     index: false,
     redirect: false,
   }),
 );
 
-app.use((req, res, next) => {
-  angularApp
-    .handle(req)
-    .then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
-    .catch(next);
+/**
+ * HTML đã render, theo host + đường dẫn + query. Server không biết người xem là ai (luôn render như khách), nên
+ * cùng một URL cho ra cùng một HTML: giữ lại để lượt mở sau trả ngay, không phải chờ gọi API và render lại.
+ * - Còn mới (dưới SSR_CACHE_SECONDS): trả luôn.
+ * - Cũ hơn nhưng dưới 10 lần thời hạn: vẫn trả bản cũ ngay, render lại ở nền cho lượt sau (stale-while-revalidate).
+ * - Admin sửa quán thì trang công khai cập nhật chậm tối đa chừng ấy giây.
+ * Chỉ giữ trang 200 dạng HTML, tối đa CACHE_MAX_ENTRIES URL (bỏ URL lâu không dùng nhất).
+ */
+const CACHE_TTL_MS = Math.max(0, Number(process.env['SSR_CACHE_SECONDS'] ?? 60)) * 1000;
+const CACHE_STALE_MS = CACHE_TTL_MS * 10;
+const CACHE_MAX_ENTRIES = 300;
+
+interface CachedPage {
+  status: number;
+  headers: [string, string][];
+  body: string;
+  at: number;
+}
+const htmlCache = new Map<string, CachedPage>();
+/** URL đang render ở nền: không render trùng */
+const refreshing = new Set<string>();
+
+function cacheKey(req: express.Request): string {
+  return `${req.get('x-forwarded-host') ?? req.get('host')}${req.originalUrl}`;
+}
+
+/** Render một trang; trả về bản để giữ trong cache (null = không phải trang HTML 200, không giữ) */
+async function render(req: express.Request): Promise<CachedPage | Response | null> {
+  const response = await angularApp.handle(req);
+  if (!response) return null;
+  const type = response.headers.get('content-type') ?? '';
+  if (response.status !== 200 || !type.includes('text/html') || response.headers.has('set-cookie')) return response;
+  return { status: response.status, headers: [...response.headers.entries()], body: await response.text(), at: Date.now() };
+}
+
+function remember(key: string, page: CachedPage): void {
+  htmlCache.delete(key);
+  htmlCache.set(key, page);
+  if (htmlCache.size > CACHE_MAX_ENTRIES) htmlCache.delete(htmlCache.keys().next().value!);
+}
+
+function send(res: express.Response, page: CachedPage, state: 'HIT' | 'STALE' | 'MISS'): void {
+  for (const [name, value] of page.headers) {
+    if (name !== 'content-length') res.setHeader(name, value);
+  }
+  res.setHeader('X-SSR-Cache', state);
+  res.status(page.status).send(page.body);
+}
+
+app.use(async (req, res, next) => {
+  try {
+    if (req.method !== 'GET' || CACHE_TTL_MS === 0) {
+      const response = await angularApp.handle(req);
+      return response ? writeResponseToNodeResponse(response, res) : next();
+    }
+    const key = cacheKey(req);
+    const cached = htmlCache.get(key);
+    const age = cached ? Date.now() - cached.at : Infinity;
+    if (cached && age < CACHE_TTL_MS) return send(res, cached, 'HIT');
+    if (cached && age < CACHE_STALE_MS) {
+      send(res, cached, 'STALE');
+      if (!refreshing.has(key)) {
+        refreshing.add(key);
+        render(req)
+          .then((page) => page && !(page instanceof Response) && remember(key, page))
+          .catch(() => undefined)
+          .finally(() => refreshing.delete(key));
+      }
+      return;
+    }
+    const page = await render(req);
+    if (!page) return next();
+    if (page instanceof Response) return writeResponseToNodeResponse(page, res);
+    remember(key, page);
+    send(res, page, 'MISS');
+  } catch (err) {
+    next(err);
+  }
 });
 
 if (isMainModule(import.meta.url) || process.env['pm_id']) {

@@ -1,4 +1,5 @@
-import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Component, computed, inject, OnDestroy, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { DistrictOption, FeaturedItem } from '../../core/models/catalog.model';
@@ -453,6 +454,7 @@ export class HomePage implements OnInit, OnDestroy {
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   protected readonly canEdit = inject(AuthService).canEdit;
+  private readonly platformId = inject(PLATFORM_ID);
 
   protected readonly purposes = PURPOSE_TILES;
   protected readonly q = signal('');
@@ -562,8 +564,12 @@ export class HomePage implements OnInit, OnDestroy {
       .catch(() => undefined);
   }
 
-  /** Mỗi ô lấy ảnh của một quán / chỗ chơi tiêu biểu trong nhóm (quán: điểm cao nhất) */
+  /**
+   * Mỗi ô lấy ảnh của một quán / chỗ chơi tiêu biểu trong nhóm (quán: điểm cao nhất). Chỉ chạy trên trình duyệt:
+   * ảnh chỉ để trang trí, render trên server mà gọi thêm 7 API thì HTML trả về chậm hẳn.
+   */
   private loadTileImages(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
     for (const t of this.purposes) {
       const src = t.source;
       const req =
