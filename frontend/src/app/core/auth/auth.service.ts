@@ -30,6 +30,12 @@ interface AuthResponse {
 /** Request tới /auth/login|register|refresh|logout: không gắn Bearer, tự xử lý lỗi. */
 const PUBLIC = () => new HttpContext().set(SKIP_AUTH, true).set(SILENT_ERRORS, true);
 
+/** Khoá chung giữa các tab của cùng origin (Web Locks API); trình duyệt / server không có thì chạy luôn. */
+function withCrossTabLock<T>(work: () => Promise<T>): Promise<T> {
+  const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
+  return locks ? (locks.request('gfm.auth.refresh', () => work()) as Promise<T>) : work();
+}
+
 /**
  * Phiên đăng nhập. Access token chỉ giữ trong bộ nhớ (không localStorage, để XSS khó lấy);
  * refresh token nằm trong cookie httpOnly do server đặt, JS không đọc được.
@@ -100,10 +106,16 @@ export class AuthService {
     return (await this.refreshAccessToken()) !== null;
   }
 
-  /** Đổi cookie refresh lấy access token mới. Trả null nếu phiên đã hết. */
+  /**
+   * Đổi cookie refresh lấy access token mới. Trả null nếu phiên đã hết.
+   *
+   * Server xoay vòng refresh token: token cũ dùng lần hai bị coi là bị đánh cắp và cả phiên bị thu hồi. Trong một
+   * tab chỉ refresh một lần (`refreshing`); giữa các tab thì xếp hàng bằng Web Locks: tab sau chờ tab trước xong,
+   * lúc đó cookie đã là token mới nên không bao giờ hai tab cùng gửi một token cũ.
+   */
   refreshAccessToken(): Promise<string | null> {
-    this.refreshing ??= firstValueFrom(
-      this.http.post<AuthResponse>(`${API_BASE}/auth/refresh`, null, { context: PUBLIC() }),
+    this.refreshing ??= withCrossTabLock(() =>
+      firstValueFrom(this.http.post<AuthResponse>(`${API_BASE}/auth/refresh`, null, { context: PUBLIC() })),
     )
       .then((res) => {
         this.setSession(res);

@@ -1,37 +1,48 @@
 package com.gfmaster.spot;
 
-import com.gfmaster.common.web.Slugs;
-import com.gfmaster.catalog.VenuePhotos;
-import com.gfmaster.vibe.VibeDefaults;
-import com.gfmaster.vibe.VibeDefaults.Tagged;
 import com.gfmaster.catalog.CatalogDistrict;
+import com.gfmaster.catalog.CatalogDtos.BannerSetting;
+import com.gfmaster.catalog.FeaturedSlots;
+import com.gfmaster.catalog.FeaturedSlots.Entry;
+import com.gfmaster.catalog.FeaturedSlots.Row;
+import com.gfmaster.catalog.VenuePhotos;
 import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
-import com.gfmaster.catalog.CatalogDtos.BannerSetting;
+import com.gfmaster.common.jpa.OpenHours;
+import com.gfmaster.common.jpa.VenueSpecs;
+import com.gfmaster.common.settings.AppSettings;
+import com.gfmaster.common.web.Slugs;
 import com.gfmaster.spot.SpotDtos.FeaturedSpot;
 import com.gfmaster.spot.SpotDtos.FeaturedSpotRequest;
 import com.gfmaster.spot.SpotDtos.SpotItem;
 import com.gfmaster.spot.SpotDtos.SpotPage;
 import com.gfmaster.spot.SpotDtos.SpotRequest;
 import com.gfmaster.upload.storage.ImageUrls;
-import com.gfmaster.common.jpa.OpenHours;
+import com.gfmaster.vibe.VibeDefaults;
+import com.gfmaster.vibe.VibeDefaults.Tagged;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Tuple;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /** "Tìm chỗ chơi": admin thêm/sửa/xoá; mọi người tìm, lọc theo nhóm, khu vực, giá, trong nhà, giờ mở cửa. */
 @Service
@@ -39,16 +50,29 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 public class SpotService {
 
   static final int MAX_PAGE_SIZE = 100;
+  static final String BANNER_KEY = "spots.banner";
+  static final int MAX_FEATURED = FeaturedSlots.MAX;
 
   private final DateSpotRepository spots;
   private final ImageUrls imageUrls;
-
   private final NamedParameterJdbcTemplate jdbc;
+  private final AppSettings settings;
+  private final FeaturedSlots featured;
+  private final EntityManager em;
 
-  public SpotService(DateSpotRepository spots, ImageUrls imageUrls, NamedParameterJdbcTemplate jdbc) {
+  public SpotService(
+      DateSpotRepository spots,
+      ImageUrls imageUrls,
+      NamedParameterJdbcTemplate jdbc,
+      AppSettings settings,
+      FeaturedSlots featured,
+      EntityManager em) {
     this.spots = spots;
     this.imageUrls = imageUrls;
     this.jdbc = jdbc;
+    this.settings = settings;
+    this.featured = featured;
+    this.em = em;
   }
 
   /**
@@ -70,14 +94,35 @@ public class SpotService {
     return new SpotPage(items, result.getTotalElements(), result.getNumber(), pageSize);
   }
 
-  /** Số chỗ chơi theo từng nhóm cho chip lọc, theo mọi bộ lọc khác đang chọn. Khoá {@code all} là tổng. */
+  /**
+   * Số chỗ chơi theo từng nhóm cho chip lọc, theo mọi bộ lọc khác đang chọn. Khoá {@code all} là tổng. Hai truy vấn
+   * GROUP BY: theo nhóm chính (mỗi chỗ đúng một nhóm, cộng lại là tổng) và theo nhóm phụ (không chứa nhóm chính).
+   */
   @Transactional(readOnly = true)
   public Map<String, Long> counts(SpotFilter f) {
+    Specification<DateSpot> spec = filter(f.withCategory(null));
+    CriteriaBuilder cb = em.getCriteriaBuilder();
+    Map<SpotCategory, Long> byCategory = new EnumMap<>(SpotCategory.class);
+
+    CriteriaQuery<Tuple> primary = cb.createTupleQuery();
+    Root<DateSpot> root = primary.from(DateSpot.class);
+    Predicate where = spec.toPredicate(root, primary, cb);
+    primary.multiselect(root.get("category"), cb.count(root)).groupBy(root.get("category"));
+    if (where != null) primary.where(where);
+    for (Tuple t : em.createQuery(primary).getResultList()) byCategory.put(t.get(0, SpotCategory.class), t.get(1, Long.class));
+    long all = byCategory.values().stream().mapToLong(Long::longValue).sum();
+
+    CriteriaQuery<Tuple> extra = cb.createTupleQuery();
+    Root<DateSpot> root2 = extra.from(DateSpot.class);
+    Join<DateSpot, SpotCategory> e = root2.join("extraCategories");
+    Predicate where2 = spec.toPredicate(root2, extra, cb);
+    extra.multiselect(e, cb.count(root2)).groupBy(e);
+    if (where2 != null) extra.where(where2);
+    for (Tuple t : em.createQuery(extra).getResultList()) byCategory.merge(t.get(0, SpotCategory.class), t.get(1, Long.class), Long::sum);
+
     Map<String, Long> out = new LinkedHashMap<>();
-    out.put("all", spots.count(filter(f.withCategory(null))));
-    for (SpotCategory c : SpotCategory.values()) {
-      out.put(c.name(), spots.count(filter(f.withCategory(c))));
-    }
+    out.put("all", all);
+    for (SpotCategory c : SpotCategory.values()) out.put(c.name(), byCategory.getOrDefault(c, 0L));
     return out;
   }
 
@@ -91,12 +136,7 @@ public class SpotService {
   @Transactional(readOnly = true)
   public SpotItem bySlug(UUID userId, String slug) {
     DateSpot s = spots.findBySlug(slug).orElseThrow(ApiException::notFound);
-    boolean saved = userId != null && Boolean.TRUE.equals(
-        jdbc.queryForObject(
-            "SELECT EXISTS (SELECT 1 FROM saved_spots WHERE user_id = :u AND spot_id = :s)",
-            Map.of("u", userId, "s", s.getId()),
-            Boolean.class));
-    return toItem(s, saved);
+    return toItem(s, !savedAmong(userId, List.of(s.getId())).isEmpty());
   }
 
   public SpotItem create(SpotRequest req) {
@@ -118,80 +158,42 @@ public class SpotService {
 
   // ---- Ảnh nền banner Tìm chỗ chơi (admin đổi được) ----
 
-  static final String BANNER_KEY = "spots.banner";
-
   /** Công khai: ảnh nền banner (URL công khai), null = frontend tự chọn ảnh mặc định */
   @Transactional(readOnly = true)
   public BannerSetting banner() {
-    List<String> v =
-        jdbc.queryForList("SELECT value FROM app_settings WHERE key = :key", Map.of("key", BANNER_KEY), String.class);
-    return new BannerSetting(v.isEmpty() ? null : imageUrls.toPublic(v.getFirst()));
+    return new BannerSetting(settings.get(BANNER_KEY).map(imageUrls::toPublic).orElse(null));
   }
 
   /** Admin: đổi ảnh nền; null / rỗng = quay về ảnh mặc định */
   public BannerSetting setBanner(String imageUrl) {
-    if (imageUrl == null || imageUrl.isBlank()) {
-      jdbc.update("DELETE FROM app_settings WHERE key = :key", Map.of("key", BANNER_KEY));
-    } else {
-      jdbc.update(
-          """
-          INSERT INTO app_settings (key, value, updated_at) VALUES (:key, :value, now())
-          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at
-          """,
-          Map.of("key", BANNER_KEY, "value", imageUrls.toStored(imageUrl.strip())));
-    }
+    settings.set(BANNER_KEY, imageUrl == null ? null : imageUrls.toStored(imageUrl.strip()));
     return banner();
   }
 
-  // ---- Chỗ chơi nổi bật (admin chọn, tối đa 6) ----
-
-  static final int MAX_FEATURED = 10;
-
-  private record FeaturedRow(int position, UUID spotId, String kicker, String headline) {}
+  // ---- Chỗ chơi nổi bật (admin chọn) ----
 
   /** Công khai: các chỗ chơi nổi bật theo vị trí, kèm "đã lưu" như danh sách. */
   @Transactional(readOnly = true)
   public List<FeaturedSpot> featured(UUID userId) {
-    List<FeaturedRow> rows =
-        jdbc.query(
-            "SELECT position, spot_id, kicker, headline FROM featured_spots ORDER BY position",
-            Map.of(),
-            (rs, i) ->
-                new FeaturedRow(
-                    rs.getInt("position"), rs.getObject("spot_id", UUID.class), rs.getString("kicker"), rs.getString("headline")));
+    List<Row> rows = featured.list(FeaturedSlots.Table.SPOTS);
     if (rows.isEmpty()) return List.of();
-    List<UUID> ids = rows.stream().map(FeaturedRow::spotId).toList();
+    List<UUID> ids = rows.stream().map(Row::id).toList();
     Map<UUID, DateSpot> byId = new HashMap<>();
     spots.findAllById(ids).forEach(s -> byId.put(s.getId(), s));
     Set<UUID> saved = savedAmong(userId, ids);
     return rows.stream()
-        .filter(r -> byId.containsKey(r.spotId()))
-        .map(r -> new FeaturedSpot(r.position(), r.kicker(), r.headline(), toItem(byId.get(r.spotId()), saved.contains(r.spotId()))))
+        .filter(r -> byId.containsKey(r.id()))
+        .map(r -> new FeaturedSpot(r.position(), r.kicker(), r.headline(), toItem(byId.get(r.id()), saved.contains(r.id()))))
         .toList();
   }
 
   /** Admin: thay toàn bộ danh sách nổi bật (thứ tự trong danh sách là vị trí; rỗng = tắt khối nổi bật). */
   public List<FeaturedSpot> setFeatured(List<FeaturedSpotRequest> list) {
-    if (list.size() > MAX_FEATURED) {
-      throw new ApiException(ErrorCode.VALIDATION_FAILED, "Tối đa " + MAX_FEATURED + " chỗ chơi nổi bật.");
-    }
-    if (list.stream().map(FeaturedSpotRequest::spotId).distinct().count() != list.size()) {
-      throw new ApiException(ErrorCode.VALIDATION_FAILED, "Mỗi chỗ chơi chỉ chọn một lần.");
-    }
-    for (FeaturedSpotRequest f : list) {
-      if (!spots.existsById(f.spotId())) throw ApiException.notFound();
-    }
-    jdbc.update("DELETE FROM featured_spots", Map.of());
-    for (int i = 0; i < list.size(); i++) {
-      FeaturedSpotRequest f = list.get(i);
-      jdbc.update(
-          "INSERT INTO featured_spots (position, spot_id, kicker, headline) VALUES (:pos, :id, :kicker, :headline)",
-          Map.of(
-              "pos", i + 1,
-              "id", f.spotId(),
-              "kicker", f.kicker() == null ? "" : f.kicker().strip(),
-              "headline", f.headline() == null ? "" : f.headline().strip()));
-    }
+    featured.replace(
+        FeaturedSlots.Table.SPOTS,
+        list.stream().map(f -> new Entry(f.spotId(), f.kicker(), f.headline())).toList(),
+        spots::existsById,
+        "chỗ chơi");
     return featured(null);
   }
 
@@ -296,7 +298,6 @@ public class SpotService {
   }
 
   private static Specification<DateSpot> filter(SpotFilter f) {
-    String q = f.q();
     SpotCategory category = f.category();
     CatalogDistrict district = f.district();
     Integer maxPrice = f.maxPrice();
@@ -318,24 +319,9 @@ public class SpotService {
     if (f.minDuration() != null) spec = spec.and((root, query, cb) -> cb.ge(root.get("durationMin"), f.minDuration()));
     if (f.maxDuration() != null) spec = spec.and((root, query, cb) -> cb.le(root.get("durationMin"), f.maxDuration()));
     if (f.noBooking()) spec = spec.and((root, query, cb) -> cb.isFalse(root.get("needsBooking")));
-    if (!f.vibes().isEmpty()) {
-      spec =
-          spec.and(
-              (root, query, cb) ->
-                  cb.or(f.vibes().stream().map(v -> cb.like(root.get("vibesText"), "%" + v.name() + "%")).toArray(Predicate[]::new)));
-    }
-    if (q != null && !q.isBlank()) {
-      String like = "%" + q.trim().toLowerCase(Locale.ROOT).replace("%", "\\%").replace("_", "\\_") + "%";
-      spec =
-          spec.and(
-              (root, query, cb) ->
-                  cb.or(
-                      cb.like(cb.lower(root.get("name")), like, '\\'),
-                      cb.like(cb.lower(root.get("address")), like, '\\')));
-    }
-    return spec;
+    spec = spec.and(VenueSpecs.anyVibe(f.vibes()));
+    return spec.and(VenueSpecs.search(f.q()));
   }
-
 
   private SpotItem toItem(DateSpot s, boolean inMyPlace) {
     return new SpotItem(

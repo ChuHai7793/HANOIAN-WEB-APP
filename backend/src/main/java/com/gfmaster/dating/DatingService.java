@@ -15,6 +15,7 @@ import com.gfmaster.dating.DatingDtos.TodayStats;
 import com.gfmaster.dating.DatingDtos.UndoResult;
 import com.gfmaster.dating.DatingDtos.UnmatchEvent;
 import com.gfmaster.dating.DatingRepository.LastSwipe;
+import com.gfmaster.dating.DatingRepository.MatchListRow;
 import com.gfmaster.dating.DatingRepository.MatchRow;
 import com.gfmaster.profile.DatingInterest;
 import com.gfmaster.profile.UserProfile;
@@ -107,12 +108,12 @@ public class DatingService {
   public SwipeResult swipe(UUID me, UUID target, boolean liked, boolean superLike) {
     requireEnabled(me);
     if (superLike && !liked) throw new ApiException(ErrorCode.VALIDATION_FAILED, "Siêu thích phải là thích.");
-    if (me.equals(target) || !dating.isVisibleTo(me, target)) throw ApiException.notFound();
-    if (superLike) {
-      // Khoá hồ sơ của mình rồi mới đếm: hai lượt bấm đồng thời không vượt giới hạn
-      dating.lockProfile(me);
-      if (dating.superLikesToday(me) >= superLikesPerDay) throw new ApiException(ErrorCode.SUPER_LIKE_LIMIT);
-    }
+    if (me.equals(target)) throw ApiException.notFound();
+    // Khoá hồ sơ hai bên trước mọi kiểm tra: hai lượt quẹt vào nhau cùng lúc chạy lần lượt, lượt sau thấy lượt
+    // trước đã thích và tạo match; hai lượt siêu thích đồng thời không vượt giới hạn ngày
+    dating.lockProfiles(me, target);
+    if (!dating.isVisibleTo(me, target)) throw ApiException.notFound();
+    if (superLike && dating.superLikesToday(me) >= superLikesPerDay) throw new ApiException(ErrorCode.SUPER_LIKE_LIMIT);
     if (!dating.insertSwipe(me, target, liked, superLike)) throw new ApiException(ErrorCode.ALREADY_SWIPED);
     boolean matched = liked && dating.liked(target, me);
     if (superLike && !matched) events.send(target, "super_like", new SuperLikeEvent());
@@ -135,13 +136,12 @@ public class DatingService {
   @Transactional(readOnly = true)
   public List<MatchView> matches(UUID me) {
     var rows = dating.matchesOf(me);
-    // Thẻ của mọi người kia trong một lượt (quán cùng lưu tính cho cả danh sách)
+    // Thẻ của mọi người kia trong một lượt (hồ sơ, ảnh, sở thích, quán cùng lưu: vài truy vấn cho cả danh sách)
     var cards =
-        dating
-            .forViewer(me, rows.stream().map(m -> dating.card(m.otherUserId()).orElseThrow(ApiException::notFound)).toList())
-            .stream()
+        dating.forViewer(me, dating.cards(rows.stream().map(MatchListRow::otherUserId).toList())).stream()
             .collect(Collectors.toMap(Candidate::userId, c -> c));
     return rows.stream()
+        .filter(m -> cards.containsKey(m.otherUserId()))
         .map(m -> new MatchView(m.id(), cards.get(m.otherUserId()), m.createdAt(), m.lastMessage(), m.unread()))
         .toList();
   }

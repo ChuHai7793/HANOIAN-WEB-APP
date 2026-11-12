@@ -200,21 +200,34 @@ public class PlanRepository {
                 rs.getString("memory")));
   }
 
-  /** Số điểm và tên vài điểm đầu của nhiều plan (danh sách plan) */
-  public Map<UUID, List<String>> stopNames(List<UUID> planIds) {
-    Map<UUID, List<String>> out = new HashMap<>();
+  /** Tên và ảnh bìa (URL công khai, rỗng nếu không có) của một điểm, cho thẻ plan trong danh sách. */
+  public record StopPreview(String name, String imageUrl) {}
+
+  /** Tên và ảnh của mọi điểm của nhiều plan, theo thứ tự đi: một truy vấn cho cả danh sách plan. */
+  public Map<UUID, List<StopPreview>> stopPreviews(List<UUID> planIds) {
+    Map<UUID, List<StopPreview>> out = new HashMap<>();
     if (planIds.isEmpty()) return out;
     jdbc.query(
         """
-        SELECT s.plan_id, coalesce(c.name, d.name) AS name FROM plan_stops s
+        SELECT s.plan_id, coalesce(c.name, d.name) AS name, coalesce(c.image_url, d.image_url, '') AS image_url
+        FROM plan_stops s
         LEFT JOIN place_catalog c ON c.id = s.catalog_id LEFT JOIN date_spots d ON d.id = s.spot_id
         WHERE s.plan_id IN (:ids) ORDER BY s.plan_id, s.position
         """,
         Map.of("ids", planIds),
         rs -> {
-          out.computeIfAbsent(rs.getObject("plan_id", UUID.class), k -> new ArrayList<>()).add(rs.getString("name"));
+          out.computeIfAbsent(rs.getObject("plan_id", UUID.class), k -> new ArrayList<>())
+              .add(new StopPreview(rs.getString("name"), imageUrls.toPublic(rs.getString("image_url"))));
         });
     return out;
+  }
+
+  /**
+   * Khoá dòng plan tới hết transaction: hai request cùng thêm / xếp / đổi điểm của một plan chạy lần lượt, không vượt
+   * quá MAX_STOPS hay trùng vị trí. Trả false nếu plan không có.
+   */
+  public boolean lock(UUID id) {
+    return !jdbc.queryForList("SELECT id FROM plans WHERE id = :id FOR UPDATE", Map.of("id", id), UUID.class).isEmpty();
   }
 
   public UUID insertStop(UUID planId, int position, StopKind kind, UUID refId, int durationMin) {

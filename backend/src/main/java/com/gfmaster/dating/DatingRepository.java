@@ -253,8 +253,26 @@ public class DatingRepository {
 
   /** Thẻ của một người bất kỳ (không xét điều kiện hiện), dùng cho match và hoàn tác. */
   public Optional<Candidate> card(UUID userId) {
-    String sql = "SELECT " + CARD_COLUMNS + " FROM users u JOIN user_profiles p ON p.user_id = u.id WHERE u.id = :id";
-    return withPhotosAndInterests(jdbc.query(sql, Map.of("id", userId), this::mapCard)).stream().findFirst();
+    return cards(List.of(userId)).stream().findFirst();
+  }
+
+  /** Thẻ của nhiều người trong một lượt (danh sách match): một truy vấn hồ sơ + hai truy vấn ảnh / sở thích. */
+  public List<Candidate> cards(Collection<UUID> userIds) {
+    if (userIds.isEmpty()) return List.of();
+    String sql = "SELECT " + CARD_COLUMNS + " FROM users u JOIN user_profiles p ON p.user_id = u.id WHERE u.id IN (:ids)";
+    return withPhotosAndInterests(jdbc.query(sql, Map.of("ids", userIds), this::mapCard));
+  }
+
+  /**
+   * Khoá hồ sơ của cả hai người theo thứ tự id tới hết transaction. Hai lượt quẹt vào nhau cùng lúc chạy lần lượt,
+   * lượt sau thấy lượt trước đã thích → tạo match (không khoá thì cả hai đều không thấy nhau, mất match). Cùng thứ tự
+   * khoá ở mọi nơi nên không deadlock. Cũng chặn hai lượt siêu thích đồng thời vượt giới hạn ngày.
+   */
+  public void lockProfiles(UUID a, UUID b) {
+    jdbc.query(
+        "SELECT user_id FROM user_profiles WHERE user_id IN (:a, :b) ORDER BY user_id FOR UPDATE",
+        Map.of("a", a, "b", b),
+        (ResultSet rs) -> {});
   }
 
   /** Người này có hiện với :me không (đích của một lượt quẹt): hiện được và không chặn nhau. */

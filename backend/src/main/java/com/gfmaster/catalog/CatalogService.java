@@ -1,39 +1,44 @@
 package com.gfmaster.catalog;
 
-import com.gfmaster.common.web.Slugs;
 import com.gfmaster.catalog.CatalogDtos.BannerSetting;
-import com.gfmaster.catalog.CatalogDtos.FeaturedRequest;
-import com.gfmaster.catalog.CatalogDtos.FeaturedItem;
-import java.util.HashMap;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import com.gfmaster.vibe.VibeDefaults;
-import com.gfmaster.vibe.VibeDefaults.Tagged;
 import com.gfmaster.catalog.CatalogDtos.CatalogItem;
 import com.gfmaster.catalog.CatalogDtos.CatalogPage;
 import com.gfmaster.catalog.CatalogDtos.CatalogRequest;
 import com.gfmaster.catalog.CatalogDtos.DistrictOption;
+import com.gfmaster.catalog.CatalogDtos.FeaturedItem;
+import com.gfmaster.catalog.CatalogDtos.FeaturedRequest;
+import com.gfmaster.catalog.FeaturedSlots.Entry;
+import com.gfmaster.catalog.FeaturedSlots.Row;
 import com.gfmaster.common.error.ApiException;
-import com.gfmaster.common.jpa.OpenHours;
-import com.gfmaster.place.PriceRange;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
 import com.gfmaster.common.error.ErrorCode;
+import com.gfmaster.common.jpa.OpenHours;
+import com.gfmaster.common.jpa.VenueSpecs;
+import com.gfmaster.common.settings.AppSettings;
+import com.gfmaster.common.web.Slugs;
 import com.gfmaster.dating.DatingRepository;
+import com.gfmaster.place.Place;
 import com.gfmaster.place.PlaceRepository;
 import com.gfmaster.place.PlaceService;
-import com.gfmaster.place.Place;
 import com.gfmaster.place.PlaceType;
+import com.gfmaster.place.PriceRange;
 import com.gfmaster.place.dto.PlaceRequest;
 import com.gfmaster.place.dto.PlaceResponse;
 import com.gfmaster.upload.storage.ImageUrls;
+import com.gfmaster.vibe.VibeDefaults;
+import com.gfmaster.vibe.VibeDefaults.Tagged;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Tuple;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.LinkedHashMap;
-import java.util.Locale;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -54,13 +59,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class CatalogService {
 
   static final int MAX_PAGE_SIZE = 100;
+  static final String BANNER_KEY = "explore.banner";
+  static final int MAX_FEATURED = FeaturedSlots.MAX;
 
   private final CatalogPlaceRepository catalog;
   private final PlaceRepository places;
   private final PlaceService placeService;
   private final ImageUrls imageUrls;
   private final DatingRepository dating;
-  private final NamedParameterJdbcTemplate jdbc;
+  private final AppSettings settings;
+  private final FeaturedSlots featured;
+  private final EntityManager em;
 
   public CatalogService(
       CatalogPlaceRepository catalog,
@@ -68,13 +77,17 @@ public class CatalogService {
       PlaceService placeService,
       ImageUrls imageUrls,
       DatingRepository dating,
-      NamedParameterJdbcTemplate jdbc) {
+      AppSettings settings,
+      FeaturedSlots featured,
+      EntityManager em) {
     this.catalog = catalog;
     this.places = places;
     this.placeService = placeService;
     this.imageUrls = imageUrls;
     this.dating = dating;
-    this.jdbc = jdbc;
+    this.settings = settings;
+    this.featured = featured;
+    this.em = em;
   }
 
   /** Gán đường dẫn trang riêng cho quán mới (giữ nguyên khi đổi tên sau này) */
@@ -95,87 +108,49 @@ public class CatalogService {
 
   // ---- Ảnh nền banner Khám phá quán (admin đổi được) ----
 
-  static final String BANNER_KEY = "explore.banner";
-
   /** Công khai: ảnh nền banner (URL công khai), null = dùng ảnh mặc định */
   @Transactional(readOnly = true)
   public BannerSetting banner() {
-    List<String> v =
-        jdbc.queryForList("SELECT value FROM app_settings WHERE key = :key", Map.of("key", BANNER_KEY), String.class);
-    return new BannerSetting(v.isEmpty() ? null : imageUrls.toPublic(v.getFirst()));
+    return new BannerSetting(settings.get(BANNER_KEY).map(imageUrls::toPublic).orElse(null));
   }
 
   /** Admin: đổi ảnh nền; null / rỗng = quay về ảnh mặc định */
   public BannerSetting setBanner(String imageUrl) {
-    if (imageUrl == null || imageUrl.isBlank()) {
-      jdbc.update("DELETE FROM app_settings WHERE key = :key", Map.of("key", BANNER_KEY));
-    } else {
-      jdbc.update(
-          """
-          INSERT INTO app_settings (key, value, updated_at) VALUES (:key, :value, now())
-          ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at
-          """,
-          Map.of("key", BANNER_KEY, "value", imageUrls.toStored(imageUrl.strip())));
-    }
+    settings.set(BANNER_KEY, imageUrl == null ? null : imageUrls.toStored(imageUrl.strip()));
     return banner();
   }
 
-  // ---- Điểm hẹn nổi bật (admin chọn, tối đa 6) ----
-
-  static final int MAX_FEATURED = 10;
-
-  private record FeaturedRow(int position, UUID catalogId, String kicker, String headline) {}
+  // ---- Điểm hẹn nổi bật (admin chọn) ----
 
   /** Công khai: các điểm hẹn nổi bật theo vị trí, kèm "đã lưu" / "người hợp gu" như danh sách quán. */
   @Transactional(readOnly = true)
   public List<FeaturedItem> featured(UUID userId) {
-    List<FeaturedRow> rows =
-        jdbc.query(
-            "SELECT position, catalog_id, kicker, headline FROM featured_places ORDER BY position",
-            Map.of(),
-            (rs, i) ->
-                new FeaturedRow(
-                    rs.getInt("position"), rs.getObject("catalog_id", UUID.class), rs.getString("kicker"), rs.getString("headline")));
+    List<Row> rows = featured.list(FeaturedSlots.Table.PLACES);
     if (rows.isEmpty()) return List.of();
-    List<UUID> ids = rows.stream().map(FeaturedRow::catalogId).toList();
+    List<UUID> ids = rows.stream().map(Row::id).toList();
     Map<UUID, CatalogPlace> byId = new HashMap<>();
     catalog.findAllById(ids).forEach(c -> byId.put(c.getId(), c));
     Set<UUID> saved = userId == null ? Set.of() : new HashSet<>(places.findCatalogIdsInMyPlace(userId, ids));
     Map<UUID, Integer> fans = userId != null && dating.canSeeDeck(userId) ? dating.fansOf(userId, ids) : null;
     return rows.stream()
-        .filter(r -> byId.containsKey(r.catalogId()))
+        .filter(r -> byId.containsKey(r.id()))
         .map(
             r ->
                 new FeaturedItem(
                     r.position(),
                     r.kicker(),
                     r.headline(),
-                    toItem(byId.get(r.catalogId()), saved.contains(r.catalogId()), fans == null ? null : fans.getOrDefault(r.catalogId(), 0))))
+                    toItem(byId.get(r.id()), saved.contains(r.id()), fans == null ? null : fans.getOrDefault(r.id(), 0))))
         .toList();
   }
 
   /** Admin: thay toàn bộ danh sách nổi bật (thứ tự trong danh sách là vị trí; rỗng = tắt khối nổi bật). */
   public List<FeaturedItem> setFeatured(List<FeaturedRequest> list) {
-    if (list.size() > MAX_FEATURED) {
-      throw new ApiException(ErrorCode.VALIDATION_FAILED, "Tối đa " + MAX_FEATURED + " điểm hẹn nổi bật.");
-    }
-    if (list.stream().map(FeaturedRequest::catalogId).distinct().count() != list.size()) {
-      throw new ApiException(ErrorCode.VALIDATION_FAILED, "Mỗi quán chỉ chọn một lần.");
-    }
-    for (FeaturedRequest f : list) {
-      if (!catalog.existsById(f.catalogId())) throw ApiException.notFound();
-    }
-    jdbc.update("DELETE FROM featured_places", Map.of());
-    for (int i = 0; i < list.size(); i++) {
-      FeaturedRequest f = list.get(i);
-      jdbc.update(
-          "INSERT INTO featured_places (position, catalog_id, kicker, headline) VALUES (:pos, :id, :kicker, :headline)",
-          Map.of(
-              "pos", i + 1,
-              "id", f.catalogId(),
-              "kicker", f.kicker() == null ? "" : f.kicker().strip(),
-              "headline", f.headline() == null ? "" : f.headline().strip()));
-    }
+    featured.replace(
+        FeaturedSlots.Table.PLACES,
+        list.stream().map(f -> new Entry(f.catalogId(), f.kicker(), f.headline())).toList(),
+        catalog::existsById,
+        "quán");
     return featured(null);
   }
 
@@ -187,19 +162,27 @@ public class CatalogService {
     Map<String, String> covers = new HashMap<>();
     for (Object[] row : catalog.coverByDistrict()) covers.put((String) row[0], imageUrls.toPublic((String) row[1]));
     return Arrays.stream(CatalogDistrict.values())
-        .map(d -> new DistrictOption(d.name(), d.label(), counts.getOrDefault(d, 0L), covers.get(d.name())))
+        .map(d -> new DistrictOption(d.name(), d.label(), d.slug(), counts.getOrDefault(d, 0L), covers.get(d.name())))
         .toList();
   }
 
   /**
    * Số quán theo từng loại cho chip lọc ("Cafe · 10"), theo từ khoá và khu vực đang chọn (không theo loại,
-   * nếu không chip khác luôn bằng 0). Khoá {@code all} là tổng.
+   * nếu không chip khác luôn bằng 0). Khoá {@code all} là tổng. Một truy vấn GROUP BY.
    */
   @Transactional(readOnly = true)
   public Map<String, Long> counts(CatalogFilter f) {
+    CriteriaBuilder cb = em.getCriteriaBuilder();
+    CriteriaQuery<Tuple> cq = cb.createTupleQuery();
+    Root<CatalogPlace> root = cq.from(CatalogPlace.class);
+    Predicate where = filter(f.withType(null)).toPredicate(root, cq, cb);
+    cq.multiselect(root.get("type"), cb.count(root)).groupBy(root.get("type"));
+    if (where != null) cq.where(where);
+    Map<PlaceType, Long> byType = new EnumMap<>(PlaceType.class);
+    for (Tuple t : em.createQuery(cq).getResultList()) byType.put(t.get(0, PlaceType.class), t.get(1, Long.class));
     Map<String, Long> out = new LinkedHashMap<>();
-    out.put("all", catalog.count(filter(f.withType(null))));
-    for (PlaceType t : PlaceType.values()) out.put(t.name(), catalog.count(filter(f.withType(t))));
+    out.put("all", byType.values().stream().mapToLong(Long::longValue).sum());
+    for (PlaceType t : PlaceType.values()) out.put(t.name(), byType.getOrDefault(t, 0L));
     return out;
   }
 
@@ -362,7 +345,6 @@ public class CatalogService {
 
   private static Specification<CatalogPlace> filter(CatalogFilter f) {
     Specification<CatalogPlace> spec = (root, query, cb) -> cb.conjunction();
-    String q = f.q();
     if (f.type() != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("type"), f.type()));
     if (f.district() != null) spec = spec.and((root, query, cb) -> cb.equal(root.get("district"), f.district()));
     // Lọc theo tiền: chỉ quán đã nhập giá cụ thể; khoảng giá của quán [from, to ?? from] giao với [min, max]
@@ -373,27 +355,13 @@ public class CatalogService {
     if (f.minStars() != null) spec = spec.and((root, query, cb) -> cb.ge(root.get("rating"), f.minStars()));
     // Chỉ quán ăn có loại món, nên chọn loại món là chỉ còn quán ăn
     if (!f.cuisines().isEmpty()) spec = spec.and((root, query, cb) -> root.get("cuisine").in(f.cuisines()));
-    if (!f.vibes().isEmpty()) {
-      spec =
-          spec.and(
-              (root, query, cb) ->
-                  cb.or(f.vibes().stream().map(v -> cb.like(root.get("vibesText"), "%" + v.name() + "%")).toArray(Predicate[]::new)));
-    }
+    spec = spec.and(VenueSpecs.anyVibe(f.vibes()));
     if (f.openAt() != null) {
       spec = spec.and((root, query, cb) -> OpenHours.isOpenAt(cb, root.get("openTime"), root.get("closeTime"), f.openAt(), false));
     }
     if (f.wifi()) spec = spec.and((root, query, cb) -> cb.isTrue(root.get("hasWifi")));
     if (f.parking()) spec = spec.and((root, query, cb) -> cb.isTrue(root.get("hasParking")));
-    if (q != null && !q.isBlank()) {
-      String like = "%" + q.trim().toLowerCase(Locale.ROOT).replace("%", "\\%").replace("_", "\\_") + "%";
-      spec =
-          spec.and(
-              (root, query, cb) ->
-                  cb.or(
-                      cb.like(cb.lower(root.get("name")), like, '\\'),
-                      cb.like(cb.lower(root.get("address")), like, '\\')));
-    }
-    return spec;
+    return spec.and(VenueSpecs.search(f.q()));
   }
 
   private CatalogItem toItem(CatalogPlace c, boolean inMyPlace, Integer fans) {

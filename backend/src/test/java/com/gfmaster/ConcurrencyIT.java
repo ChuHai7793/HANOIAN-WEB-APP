@@ -3,6 +3,8 @@ package com.gfmaster;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.gfmaster.messaging.Topology;
 import com.gfmaster.support.ApiTestSupport;
@@ -147,7 +149,113 @@ class ConcurrencyIT extends ApiTestSupport {
     }
   }
 
+  /** (5) Hai người thích nhau cùng lúc: đúng một match được tạo, không bên nào "trượt" match. */
+  @Test
+  void mutualLikesAtTheSameMomentStillMatch() throws Exception {
+    UUID a = datingUser("female", "male");
+    UUID b = datingUser("male", "female");
+    UUID[] from = {a, b};
+    UUID[] to = {b, a};
+
+    List<MockHttpServletResponse> results =
+        runConcurrently(
+            2,
+            i ->
+                post("/api/v1/dating/swipes")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(from[i]))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"targetId\": \"%s\", \"liked\": true}".formatted(to[i])));
+
+    assertThat(statuses(results)).containsOnly(200);
+    long matchedResponses = results.stream().filter(r -> readBody(r).get("matched").asBoolean()).count();
+    assertThat(matchedResponses).isEqualTo(1);
+    assertThat(
+            jdbc.queryForObject(
+                "select count(*) from matches where (user_a = ?::uuid and user_b = ?::uuid) or (user_a = ?::uuid and user_b = ?::uuid)",
+                Integer.class, a.toString(), b.toString(), b.toString(), a.toString()))
+        .isEqualTo(1);
+  }
+
+  /** (6) Năm người đánh giá cùng một quán cùng lúc: điểm trung bình và số đánh giá lưu trên quán đúng với cả năm. */
+  @Test
+  void concurrentReviewsKeepTheStoredAverageExact() throws Exception {
+    UUID admin = newUser();
+    String place =
+        body(postAs(admin, "/api/v1/admin/catalog", """
+            {"type": "cafe", "district": "HOAN_KIEM", "name": "Quán đông khách", "priceRange": "medium",
+             "rating": 4, "openTime": "07:00", "closeTime": "22:00"}
+            """).andExpect(status().isCreated())).get("id").asString();
+    UUID[] reviewers = new UUID[5];
+    for (int i = 0; i < reviewers.length; i++) reviewers[i] = newGuestOf(admin);
+
+    List<MockHttpServletResponse> results =
+        runConcurrently(
+            reviewers.length,
+            i ->
+                put("/api/v1/reviews/mine?target=place&id=" + place)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(reviewers[i]))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"rating\": %d, \"body\": \"Nhận xét đủ mười ký tự\", \"companion\": \"lover\"}".formatted(i + 1)));
+
+    assertThat(statuses(results)).containsOnly(200);
+    assertThat(jdbc.queryForObject("select rating_count from place_catalog where id = ?::uuid", Integer.class, place)).isEqualTo(5);
+    assertThat(jdbc.queryForObject("select rating_avg from place_catalog where id = ?::uuid", java.math.BigDecimal.class, place))
+        .isEqualByComparingTo("3.0");
+  }
+
+  /** (7) Thêm 15 điểm vào một plan cùng lúc: đúng 12 (MAX_STOPS) được nhận, vị trí 0..11 không trùng. */
+  @Test
+  void concurrentAddStopsRespectMaxStopsAndUniquePositions() throws Exception {
+    UUID admin = newUser();
+    String cafe =
+        body(postAs(admin, "/api/v1/admin/catalog", """
+            {"type": "cafe", "district": "HOAN_KIEM", "name": "Quán nhiều điểm", "priceRange": "medium",
+             "rating": 4, "openTime": "07:00", "closeTime": "23:00"}
+            """).andExpect(status().isCreated())).get("id").asString();
+    String plan =
+        body(postAs(admin, "/api/v1/plans", "{\"title\": \"Đi suốt ngày\", \"startTime\": \"08:00\", \"district\": \"HOAN_KIEM\"}")
+                .andExpect(status().isCreated()))
+            .get("id")
+            .asString();
+
+    List<MockHttpServletResponse> results =
+        runConcurrently(
+            15,
+            i ->
+                post("/api/v1/plans/" + plan + "/stops")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(admin))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"kind\": \"place\", \"refId\": \"%s\", \"durationMin\": 30, \"position\": 0}".formatted(cafe)));
+
+    assertThat(statuses(results)).containsOnly(200, 409);
+    assertThat(statuses(results).stream().filter(s -> s == 200).count()).isEqualTo(12);
+    List<Integer> positions =
+        jdbc.queryForList("select position from plan_stops where plan_id = ?::uuid order by position", Integer.class, plan);
+    assertThat(positions).containsExactly(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
+  }
+
   // ---- Helpers ----
+
+  /** Người đã bật Tìm đối tượng, đủ 18 tuổi, có ảnh. */
+  private UUID datingUser(String gender, String interestedIn) {
+    UUID id = newUser();
+    jdbc.update(
+        """
+        insert into user_profiles (user_id, avatar_url, birthday, gender, city, bio, completed_at,
+                                   created_at, updated_at, version, dating_enabled, interested_in)
+        values (?, '/uploads/a.webp', ?, ?, 'Hà Nội', '', now(), now(), now(), 0, true, ?)
+        """,
+        id, java.time.LocalDate.now().minusYears(25), gender, interestedIn);
+    return id;
+  }
+
+  private JsonNode readBody(MockHttpServletResponse response) {
+    try {
+      return body(response);
+    } catch (Exception e) {
+      throw new IllegalStateException(e);
+    }
+  }
 
   private interface RequestFactory {
     RequestBuilder build(int index) throws Exception;

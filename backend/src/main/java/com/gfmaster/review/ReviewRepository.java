@@ -47,6 +47,15 @@ public class ReviewRepository {
             "SELECT EXISTS (SELECT 1 FROM " + type.table + " WHERE id = :id)", Map.of("id", id), Boolean.class));
   }
 
+  /**
+   * Khoá dòng địa điểm tới hết transaction: hai đánh giá cùng lúc cho một địa điểm ghi lần lượt, nên
+   * {@link #refreshAggregate} lần sau thấy cả hai (không khoá thì lần sau tính trên ảnh chụp cũ, thiếu một đánh giá).
+   * Trả false nếu địa điểm không có.
+   */
+  boolean lockTarget(TargetType type, UUID id) {
+    return !jdbc.queryForList("SELECT id FROM " + type.table + " WHERE id = :id FOR UPDATE", Map.of("id", id), UUID.class).isEmpty();
+  }
+
   /** Đánh giá của mọi người trừ {@code me} (đánh giá của mình trả riêng), theo {@code sort}. */
   List<ReviewView> page(TargetType type, UUID target, UUID me, ReviewSort sort, int page, int size) {
     String order =

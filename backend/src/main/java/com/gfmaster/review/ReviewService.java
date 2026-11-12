@@ -48,7 +48,7 @@ public class ReviewService {
 
   @Transactional
   public ReviewView save(TargetType type, UUID target, UUID me, ReviewRequest req) {
-    requireTarget(type, target);
+    if (!reviews.lockTarget(type, target)) throw ApiException.notFound();
     String body = req.body().strip();
     if (body.length() < 10) throw new ApiException(ErrorCode.VALIDATION_FAILED, "Nhận xét tối thiểu 10 ký tự.");
     reviews.upsert(type, target, me, req.rating(), body, req.companion());
@@ -58,7 +58,7 @@ public class ReviewService {
 
   @Transactional
   public void delete(TargetType type, UUID target, UUID me) {
-    if (!reviews.deleteMine(type, target, me)) throw ApiException.notFound();
+    if (!reviews.lockTarget(type, target) || !reviews.deleteMine(type, target, me)) throw ApiException.notFound();
     reviews.refreshAggregate(type, target);
   }
 

@@ -47,8 +47,10 @@ class CatalogIT extends ApiTestSupport {
     postAs(admin, "/api/v1/admin/catalog", cafe("Highlands Ba Đình", "BA_DINH", null)).andExpect(status().isCreated());
     postAs(admin, "/api/v1/admin/catalog", bar("Polite Pub", "BA_DINH")).andExpect(status().isCreated());
 
-    // Mọi người xem được; tìm không phân biệt hoa thường; lọc khu vực và loại
+    // Mọi người xem được; tìm không phân biệt hoa thường lẫn dấu (V35); lọc khu vực và loại
     getAs(guest, "/api/v1/catalog?q=GIẢNG").andExpect(jsonPath("$.total").value(1));
+    getAs(guest, "/api/v1/catalog?q=cafe giang").andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.items[0].name").value("Cafe Giảng"));
+    getAs(guest, "/api/v1/catalog?q=highlands ba dinh").andExpect(jsonPath("$.total").value(1));
     getAs(guest, "/api/v1/catalog?district=BA_DINH").andExpect(jsonPath("$.total").value(2));
     getAs(guest, "/api/v1/catalog?district=BA_DINH&type=bar").andExpect(jsonPath("$.items[0].name").value("Polite Pub"));
     getAs(guest, "/api/v1/catalog?size=1000").andExpect(jsonPath("$.size").value(CatalogService.MAX_PAGE_SIZE));

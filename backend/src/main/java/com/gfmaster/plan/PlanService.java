@@ -21,6 +21,7 @@ import com.gfmaster.plan.PlanDtos.StopPatch;
 import com.gfmaster.plan.PlanDtos.StopView;
 import com.gfmaster.plan.PlanRepository.PlanFields;
 import com.gfmaster.plan.PlanRepository.PlanRow;
+import com.gfmaster.plan.PlanRepository.StopPreview;
 import com.gfmaster.plan.PlanRepository.StopRow;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -74,11 +75,11 @@ public class PlanService {
   @Transactional(readOnly = true)
   public List<PlanSummary> list(UUID me) {
     List<PlanRow> rows = plans.plansOf(me);
-    Map<UUID, List<String>> names = plans.stopNames(rows.stream().map(PlanRow::id).toList());
+    Map<UUID, List<StopPreview>> previews = plans.stopPreviews(rows.stream().map(PlanRow::id).toList());
     return rows.stream()
         .map(
             r -> {
-              List<String> n = names.getOrDefault(r.id(), List.of());
+              List<StopPreview> stops = previews.getOrDefault(r.id(), List.of());
               return new PlanSummary(
                   r.id(),
                   r.title(),
@@ -86,9 +87,9 @@ public class PlanService {
                   r.startTime(),
                   r.district() == null ? null : r.district().label(),
                   r.status(),
-                  n.size(),
-                  n.stream().limit(5).toList(),
-                  firstImage(r.id()),
+                  stops.size(),
+                  stops.stream().map(StopPreview::name).limit(5).toList(),
+                  stops.stream().map(StopPreview::imageUrl).filter(u -> !u.isBlank()).findFirst().orElse(null),
                   r.updatedAt());
             })
         .toList();
@@ -127,7 +128,7 @@ public class PlanService {
   // ---- Điểm dừng ----
 
   public PlanView addStop(UUID me, UUID id, AddStopRequest req) {
-    own(me, id);
+    ownForUpdate(me, id);
     List<StopRow> stops = plans.stops(id);
     if (stops.size() >= MAX_STOPS) throw new ApiException(ErrorCode.PLAN_FULL);
     Venue v = plans.venue(req.kind(), req.refId()).orElseThrow(ApiException::notFound);
@@ -138,7 +139,7 @@ public class PlanService {
   }
 
   public PlanView updateStop(UUID me, UUID id, UUID stopId, StopPatch patch) {
-    own(me, id);
+    ownForUpdate(me, id);
     StopRow s = stop(id, stopId);
     plans.updateStop(
         stopId,
@@ -151,7 +152,7 @@ public class PlanService {
   }
 
   public PlanView deleteStop(UUID me, UUID id, UUID stopId) {
-    own(me, id);
+    ownForUpdate(me, id);
     stop(id, stopId);
     plans.deleteStop(id, stopId);
     plans.touch(id);
@@ -159,7 +160,7 @@ public class PlanService {
   }
 
   public PlanView reorder(UUID me, UUID id, List<UUID> stopIds) {
-    own(me, id);
+    ownForUpdate(me, id);
     Set<UUID> current = plans.stops(id).stream().map(StopRow::id).collect(Collectors.toSet());
     if (stopIds.size() != current.size() || !current.equals(new HashSet<>(stopIds))) {
       throw new ApiException(ErrorCode.VALIDATION_FAILED);
@@ -171,7 +172,7 @@ public class PlanService {
 
   /** "Đổi": thay một điểm bằng phương án khác cùng loại, gần điểm trước, hợp kiểu hẹn của plan. */
   public PlanView swapStop(UUID me, UUID id, UUID stopId) {
-    PlanRow row = own(me, id);
+    PlanRow row = ownForUpdate(me, id);
     List<StopRow> stops = plans.stops(id);
     List<Timed> timed = timed(row, stops);
     int i = indexOf(stops, stopId);
@@ -236,7 +237,7 @@ public class PlanService {
 
   /** Bật link công khai (giữ mã cũ nếu đã có). */
   public PublicLink publicLink(UUID me, UUID id) {
-    PlanRow row = own(me, id);
+    PlanRow row = ownForUpdate(me, id);
     String token = row.shareToken() != null ? row.shareToken() : newShareToken();
     plans.setShareToken(id, token);
     return new PublicLink(token);
@@ -341,6 +342,12 @@ public class PlanService {
     return row;
   }
 
+  /** Như {@link #own} nhưng khoá dòng plan trước: các thao tác đổi điểm dừng của cùng plan chạy lần lượt. */
+  private PlanRow ownForUpdate(UUID me, UUID id) {
+    if (!plans.lock(id)) throw ApiException.notFound();
+    return own(me, id);
+  }
+
   private StopRow stop(UUID planId, UUID stopId) {
     return plans.stops(planId).stream().filter(s -> s.id().equals(stopId)).findFirst().orElseThrow(ApiException::notFound);
   }
@@ -348,19 +355,6 @@ public class PlanService {
   private static int indexOf(List<StopRow> stops, UUID stopId) {
     for (int i = 0; i < stops.size(); i++) if (stops.get(i).id().equals(stopId)) return i;
     throw ApiException.notFound();
-  }
-
-  private String firstImage(UUID planId) {
-    List<StopRow> stops = plans.stops(planId);
-    if (stops.isEmpty()) return null;
-    Map<UUID, Venue> venues = venuesOf(stops);
-    return stops.stream()
-        .map(s -> venues.get(s.refId()))
-        .filter(Objects::nonNull)
-        .map(Venue::imageUrl)
-        .filter(u -> u != null && !u.isBlank())
-        .findFirst()
-        .orElse(null);
   }
 
   private Map<UUID, Venue> venuesOf(List<StopRow> stops) {
