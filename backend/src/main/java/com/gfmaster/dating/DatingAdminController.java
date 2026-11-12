@@ -1,6 +1,7 @@
 package com.gfmaster.dating;
 
 import com.gfmaster.common.error.ApiException;
+import com.gfmaster.common.security.CurrentUser;
 import com.gfmaster.upload.storage.ImageUrls;
 import jakarta.validation.constraints.NotNull;
 import java.sql.ResultSet;
@@ -13,6 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +37,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/dating")
 @Transactional
 public class DatingAdminController {
+
+  private static final Logger log = LoggerFactory.getLogger(DatingAdminController.class);
 
   private final NamedParameterJdbcTemplate jdbc;
   private final ImageUrls imageUrls;
@@ -246,11 +251,15 @@ public class DatingAdminController {
         });
   }
 
-  /** Admin có toàn quyền: đọc cuộc trò chuyện của một match (cũ trước mới sau, tối đa 500 tin). */
+  /**
+   * Admin có toàn quyền: đọc cuộc trò chuyện của một match (cũ trước mới sau, tối đa 500 tin). Mỗi lần đọc được ghi
+   * log (ai, match nào) để kiểm tra lại việc xem tin nhắn riêng.
+   */
   @GetMapping("/matches/{id}/messages")
   @Transactional(readOnly = true)
-  public List<DatingDtos.MessageView> messages(@PathVariable UUID id) {
+  public List<DatingDtos.MessageView> messages(@CurrentUser UUID admin, @PathVariable UUID id) {
     if (dating.participants(id).isEmpty()) throw ApiException.notFound();
+    log.info("AUDIT admin {} đọc tin nhắn của match {}", admin, id);
     return dating.messages(id, null, null, null, 500);
   }
 

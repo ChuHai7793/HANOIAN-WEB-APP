@@ -15,6 +15,7 @@ import com.gfmaster.upload.storage.IncomingStorage;
 import com.gfmaster.upload.storage.StorageDriver;
 import com.gfmaster.user.UserRepository;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
@@ -56,6 +57,7 @@ public class UploadService {
   private final UserRepository users;
   private final DomainEventPublisher events;
   private final ImageUrls imageUrls;
+  private final UploadQuota quota;
   private final long maxBytes;
 
   public UploadService(
@@ -66,6 +68,7 @@ public class UploadService {
       UserRepository users,
       DomainEventPublisher events,
       ImageUrls imageUrls,
+      UploadQuota quota,
       GfmProperties props) {
     this.processor = processor;
     this.storage = storage;
@@ -74,6 +77,7 @@ public class UploadService {
     this.users = users;
     this.events = events;
     this.imageUrls = imageUrls;
+    this.quota = quota;
     this.maxBytes = props.storage().maxUploadSize().toBytes();
   }
 
@@ -129,6 +133,7 @@ public class UploadService {
     String type = contentType == null ? "" : contentType.trim().toLowerCase();
     if (!ACCEPTED_TYPES.contains(type)) throw new ApiException(ErrorCode.UNSUPPORTED_IMAGE);
     if (sizeBytes <= 0 || sizeBytes > maxBytes) throw tooLarge();
+    quota.reserve(userId, sizeBytes);
 
     Upload upload = new Upload();
     upload.setUser(users.getReferenceById(userId));
@@ -149,16 +154,22 @@ public class UploadService {
         saved.getId(), url, "PUT", Map.of("Content-Type", type), Instant.now().plus(UPLOAD_URL_TTL));
   }
 
-  /** Bước 2 khi dùng driver local: backend nhận nội dung thay cho storage. */
+  /**
+   * Bước 2 khi dùng driver local: backend nhận nội dung thay cho storage, ghi thẳng từ luồng request xuống vùng
+   * incoming (không giữ cả file trong bộ nhớ). File rỗng → 415; quá giới hạn → xoá và 413.
+   */
   @Transactional(readOnly = true)
-  public void receiveContent(UUID userId, UUID id, byte[] content) {
+  public void receiveContent(UUID userId, UUID id, InputStream content) throws IOException {
     Upload upload = load(userId, id);
     if (upload.getStatus() != UploadStatus.AWAITING_UPLOAD) {
       throw new ApiException(ErrorCode.DATA_CONFLICT, "Ảnh này đã được gửi rồi.");
     }
-    if (content.length == 0) throw new ApiException(ErrorCode.UNSUPPORTED_IMAGE, "File rỗng.");
-    if (content.length > maxBytes) throw tooLarge();
-    incoming.put(upload.getIncomingKey(), content, upload.getMimeType());
+    long written = incoming.put(upload.getIncomingKey(), content, maxBytes, upload.getMimeType());
+    if (written == 0 || written > maxBytes) {
+      incoming.delete(upload.getIncomingKey());
+      if (written == 0) throw new ApiException(ErrorCode.UNSUPPORTED_IMAGE, "File rỗng.");
+      throw tooLarge();
+    }
   }
 
   /** Bước 3: trình duyệt báo đã PUT xong → kiểm tra file có thật, giao cho worker xử lý. */
@@ -237,6 +248,8 @@ public class UploadService {
 
   @Transactional
   public UploadResponse storeImage(UUID userId, byte[] raw, String purpose, String name) {
+    if (raw.length > maxBytes) throw tooLarge();
+    quota.reserve(userId, raw.length);
     ProcessedImage image = processor.process(raw);
     Upload upload = new Upload();
     upload.setPurpose(ImagePurpose.parse(purpose).name());

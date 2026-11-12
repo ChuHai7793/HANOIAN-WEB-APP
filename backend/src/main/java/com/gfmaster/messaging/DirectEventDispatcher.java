@@ -11,6 +11,8 @@ import com.gfmaster.stats.StatsService;
 import com.gfmaster.upload.ImageIntakeService;
 import com.gfmaster.upload.ThumbnailService;
 import com.gfmaster.upload.storage.StorageDriver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -23,6 +25,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 @ConditionalOnProperty(name = "gfm.messaging.enabled", havingValue = "false")
 public class DirectEventDispatcher {
+
+  private static final Logger log = LoggerFactory.getLogger(DirectEventDispatcher.class);
 
   private final ThumbnailService thumbnails;
   private final StorageDriver storage;
@@ -43,14 +47,22 @@ public class DirectEventDispatcher {
     this.intake = intake;
   }
 
+  /**
+   * Lỗi ở đây chỉ được log: transaction của request đã commit, ném tiếp sẽ biến request thành công thành 500.
+   * Ảnh kẹt PROCESSING / thiếu thumbnail do job dọn dẹp và TTL cache tự xử lý, như khi mất message RabbitMQ.
+   */
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
   public void dispatch(DomainEvent event) {
-    switch (event) {
-      case ImageReceived e -> intake.process(e.uploadId());
-      case ImageUploaded e -> thumbnails.generate(e.uploadId());
-      case UploadsDeleted e -> e.storageKeys().forEach(storage::delete);
-      case EntityChanged e -> stats.evict(e.userId());
-      case ImportRequested e -> imports.run(e);
+    try {
+      switch (event) {
+        case ImageReceived e -> intake.process(e.uploadId());
+        case ImageUploaded e -> thumbnails.generate(e.uploadId());
+        case UploadsDeleted e -> e.storageKeys().forEach(storage::delete);
+        case EntityChanged e -> stats.evict(e.userId());
+        case ImportRequested e -> imports.run(e);
+      }
+    } catch (RuntimeException ex) {
+      log.error("Không xử lý được event {} (đã commit DB): {}", event.routingKey(), ex.getMessage(), ex);
     }
   }
 }

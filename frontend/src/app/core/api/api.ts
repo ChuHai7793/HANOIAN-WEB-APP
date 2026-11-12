@@ -38,6 +38,8 @@ const MESSAGES: Record<string, string> = {
   IDEMPOTENCY_IN_PROGRESS: 'Yêu cầu đang được xử lý, chờ chút nhé.',
   IDEMPOTENCY_KEY_REUSED: 'Yêu cầu bị trùng mã với một yêu cầu khác, hãy thử lại.',
   FILE_TOO_LARGE: 'Ảnh quá lớn (tối đa 12MB).',
+  IMAGE_TOO_LARGE: 'Ảnh có kích thước quá lớn, hãy thu nhỏ trước khi tải lên.',
+  UPLOAD_QUOTA_EXCEEDED: 'Bạn đã tải lên quá nhiều ảnh hôm nay, mai thử lại nhé.',
   UNSUPPORTED_IMAGE: 'Chỉ nhận ảnh JPG, PNG hoặc WebP.',
   IMPORT_RUNNING: 'Đang có một lần import khác chạy.',
   MAPS_URL_NOT_ALLOWED: 'Chỉ nhận link Google Maps (bắt đầu bằng https://).',

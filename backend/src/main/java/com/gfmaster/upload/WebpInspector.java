@@ -24,6 +24,26 @@ final class WebpInspector {
 
   private WebpInspector() {}
 
+  /**
+   * Chỉ kích thước ảnh từ chunk đầu (VP8 / VP8L / VP8X), không kiểm tra gì khác: để chặn ảnh quá lớn trước khi
+   * giải mã. Rỗng nếu không đọc được.
+   */
+  static Optional<Size> dimensions(byte[] b) {
+    if (b.length < 30 || !fourCc(b, 0).equals("RIFF") || !fourCc(b, 8).equals("WEBP")) return Optional.empty();
+    String type = fourCc(b, 12);
+    long len = u32(b, 16);
+    int data = 20;
+    if (data + len > b.length) return Optional.empty();
+    Size size =
+        switch (type) {
+          case "VP8X" -> len < 10 ? null : new Size(1 + u24(b, data + 4), 1 + u24(b, data + 7));
+          case "VP8 " -> vp8Size(b, data, len);
+          case "VP8L" -> vp8lSize(b, data, len);
+          default -> null;
+        };
+    return Optional.ofNullable(size);
+  }
+
   static Optional<Size> inspect(byte[] b) {
     if (b.length < 30 || !fourCc(b, 0).equals("RIFF") || !fourCc(b, 8).equals("WEBP")) return Optional.empty();
     long riffSize = u32(b, 4);

@@ -1,5 +1,7 @@
 package com.gfmaster.upload.storage;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Optional;
@@ -21,6 +23,17 @@ public interface IncomingStorage {
 
   /** Dùng cho endpoint PUT của backend (driver local) và test. */
   void put(String key, byte[] content, String contentType);
+
+  /**
+   * Nhận nội dung từ luồng (endpoint PUT của backend) mà không giữ cả file trong bộ nhớ: ghi tối đa
+   * {@code maxBytes + 1} byte rồi dừng. Trả về số byte đã ghi; lớn hơn {@code maxBytes} nghĩa là file quá giới hạn
+   * (người gọi xoá và báo 413). Driver không ghi được theo luồng thì đọc vào bộ nhớ (cùng giới hạn).
+   */
+  default long put(String key, InputStream in, long maxBytes, String contentType) throws IOException {
+    byte[] content = in.readNBytes((int) Math.min(Integer.MAX_VALUE - 8, maxBytes + 1));
+    put(key, content, contentType);
+    return content.length;
+  }
 
   byte[] get(String key);
 

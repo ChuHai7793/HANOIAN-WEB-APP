@@ -4,10 +4,18 @@ import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
 import com.sksamuel.scrimage.ImmutableImage;
 import com.sksamuel.scrimage.webp.WebpWriter;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Optional;
+import java.util.concurrent.Semaphore;
+import java.util.function.Supplier;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,7 +30,16 @@ public class ImageProcessor {
   static final int MAX_EDGE = 1200;
   static final int THUMB_EDGE = 320;
   static final int CARD_EDGE = 800;
+  /**
+   * Ảnh giải nén ra tối đa chừng này điểm ảnh (~120MB bộ nhớ). Một PNG 12MB có thể khai 30000×30000 (3,6GB khi giải
+   * nén, "decompression bomb"); đọc kích thước từ header rồi từ chối trước khi giải mã.
+   */
+  static final long MAX_PIXELS = 30_000_000L;
+  /** Giải mã tối đa chừng này ảnh cùng lúc: container 512MB không chết vì nhiều người upload một lúc. */
+  static final int MAX_CONCURRENT_DECODES = 2;
   private static final WebpWriter WRITER = WebpWriter.DEFAULT.withQ(78);
+
+  private final Semaphore decodes = new Semaphore(MAX_CONCURRENT_DECODES, true);
 
   public record ProcessedImage(byte[] bytes, int width, int height) {}
 
@@ -30,14 +47,55 @@ public class ImageProcessor {
     if (!isSupported(input)) {
       throw new ApiException(ErrorCode.UNSUPPORTED_IMAGE);
     }
-    try {
-      ImmutableImage image = ImmutableImage.loader().detectOrientation(true).fromBytes(input);
-      if (image.width > MAX_EDGE || image.height > MAX_EDGE) {
-        image = image.bound(MAX_EDGE, MAX_EDGE);
+    rejectHuge(input);
+    return decoding(
+        () -> {
+          try {
+            ImmutableImage image = ImmutableImage.loader().detectOrientation(true).fromBytes(input);
+            if (image.width > MAX_EDGE || image.height > MAX_EDGE) {
+              image = image.bound(MAX_EDGE, MAX_EDGE);
+            }
+            return new ProcessedImage(image.bytes(WRITER), image.width, image.height);
+          } catch (IOException e) {
+            throw new ApiException(ErrorCode.UNSUPPORTED_IMAGE, "Không đọc được file ảnh này.");
+          }
+        });
+  }
+
+  /** Kích thước khai trong header (JPEG / PNG qua ImageIO, WebP tự đọc RIFF); rỗng nếu không đọc được. */
+  static Optional<long[]> headerSize(byte[] input) {
+    if (isWebp(input)) return WebpInspector.dimensions(input).map(s -> new long[] {s.width(), s.height()});
+    try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(input))) {
+      Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
+      if (!readers.hasNext()) return Optional.empty();
+      ImageReader reader = readers.next();
+      try {
+        reader.setInput(in);
+        return Optional.of(new long[] {reader.getWidth(0), reader.getHeight(0)});
+      } finally {
+        reader.dispose();
       }
-      return new ProcessedImage(image.bytes(WRITER), image.width, image.height);
-    } catch (IOException e) {
-      throw new ApiException(ErrorCode.UNSUPPORTED_IMAGE, "Không đọc được file ảnh này.");
+    } catch (IOException | RuntimeException e) {
+      return Optional.empty();
+    }
+  }
+
+  private static void rejectHuge(byte[] input) {
+    headerSize(input)
+        .ifPresent(
+            wh -> {
+              if (wh[0] <= 0 || wh[1] <= 0 || wh[0] * wh[1] > MAX_PIXELS) {
+                throw new ApiException(ErrorCode.IMAGE_TOO_LARGE, "Ảnh tối đa " + (MAX_PIXELS / 1_000_000) + " megapixel.");
+              }
+            });
+  }
+
+  private <T> T decoding(Supplier<T> work) {
+    decodes.acquireUninterruptibly();
+    try {
+      return work.get();
+    } finally {
+      decodes.release();
     }
   }
 
@@ -52,15 +110,18 @@ public class ImageProcessor {
   }
 
   private ProcessedImage resized(byte[] processed, int edge) {
-    try {
-      ImmutableImage image = ImmutableImage.loader().fromBytes(processed);
-      if (image.width > edge || image.height > edge) {
-        image = image.bound(edge, edge);
-      }
-      return new ProcessedImage(image.bytes(WRITER), image.width, image.height);
-    } catch (IOException e) {
-      throw new UncheckedIOException("Không đọc được ảnh để tạo bản thu nhỏ", e);
-    }
+    return decoding(
+        () -> {
+          try {
+            ImmutableImage image = ImmutableImage.loader().fromBytes(processed);
+            if (image.width > edge || image.height > edge) {
+              image = image.bound(edge, edge);
+            }
+            return new ProcessedImage(image.bytes(WRITER), image.width, image.height);
+          } catch (IOException e) {
+            throw new UncheckedIOException("Không đọc được ảnh để tạo bản thu nhỏ", e);
+          }
+        });
   }
 
   static boolean isSupported(byte[] b) {

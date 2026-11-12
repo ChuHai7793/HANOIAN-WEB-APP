@@ -7,6 +7,8 @@ import com.gfmaster.auth.dto.AuthDtos.UserResponse;
 import com.gfmaster.auth.social.SocialIdentity;
 import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
+import com.gfmaster.common.web.RateLimiter;
+import com.gfmaster.config.GfmProperties;
 import com.gfmaster.profile.ProfileService;
 import com.gfmaster.user.Role;
 import com.gfmaster.user.User;
@@ -33,6 +35,8 @@ public class AuthService {
   private final JwtService jwt;
   private final RefreshTokenStore refreshTokens;
   private final ProfileService profiles;
+  private final RateLimiter limiter;
+  private final int loginPerAccountPerMinute;
   /** So mật khẩu với hash giả khi email không tồn tại, để thời gian phản hồi không lộ email nào có thật. */
   private final String dummyHash;
 
@@ -42,13 +46,17 @@ public class AuthService {
       PasswordEncoder passwordEncoder,
       JwtService jwt,
       RefreshTokenStore refreshTokens,
-      ProfileService profiles) {
+      ProfileService profiles,
+      RateLimiter limiter,
+      GfmProperties props) {
     this.users = users;
     this.identities = identities;
     this.passwordEncoder = passwordEncoder;
     this.jwt = jwt;
     this.refreshTokens = refreshTokens;
     this.profiles = profiles;
+    this.limiter = limiter;
+    this.loginPerAccountPerMinute = props.rateLimit().loginPerAccountPerMinute();
     this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
   }
 
@@ -71,6 +79,12 @@ public class AuthService {
   @Transactional(readOnly = true)
   public Session login(LoginRequest req, String userAgent) {
     String login = normalize(req.login());
+    // Giới hạn theo tài khoản, ngoài giới hạn theo IP ở RateLimitFilter: dò mật khẩu từ nhiều IP vẫn bị chặn.
+    // Tính cả lần đúng (không lộ tài khoản có thật hay không qua việc bị chặn hay không)
+    RateLimiter.Decision allowed = limiter.tryConsume("login:" + login, loginPerAccountPerMinute);
+    if (!allowed.allowed()) {
+      throw new ApiException(ErrorCode.RATE_LIMITED).with("retryAfterSeconds", allowed.retryAfterSeconds());
+    }
     // Có "@" là email, không thì là tên đăng nhập (admin, guest...)
     Optional<User> user =
         login.contains("@") ? users.findByEmailIgnoreCase(login) : users.findByUsernameIgnoreCase(login);

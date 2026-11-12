@@ -2,6 +2,8 @@ package com.gfmaster.upload.storage;
 
 import com.gfmaster.config.GfmProperties;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -42,6 +44,23 @@ public class LocalIncomingStorage implements IncomingStorage {
     } catch (IOException e) {
       throw new UncheckedIOException("Không ghi được file " + key, e);
     }
+  }
+
+  /** Ghi thẳng từ luồng request xuống file theo từng khối 64KB; quá {@code maxBytes} thì dừng (file dở sẽ bị xoá). */
+  @Override
+  public long put(String key, InputStream in, long maxBytes, String contentType) throws IOException {
+    Path target = resolve(key);
+    Files.createDirectories(target.getParent());
+    long total = 0;
+    byte[] buf = new byte[64 * 1024];
+    try (OutputStream out = Files.newOutputStream(target)) {
+      int n;
+      while (total <= maxBytes && (n = in.read(buf)) > 0) {
+        out.write(buf, 0, n);
+        total += n;
+      }
+    }
+    return total;
   }
 
   @Override

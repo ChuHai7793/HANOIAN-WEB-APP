@@ -132,7 +132,7 @@ class S3StorageIT {
 
   private static GfmProperties props(GfmProperties.S3 s3) {
     GfmProperties.Storage storage =
-        new GfmProperties.Storage("s3", "u", "i", "https://img.example.com", DataSize.ofMegabytes(12), s3);
+        new GfmProperties.Storage("s3", "u", "i", "https://img.example.com", DataSize.ofMegabytes(12), s3, null);
     return new GfmProperties(null, null, null, null, null, storage, null, null, null, null, null);
   }
 

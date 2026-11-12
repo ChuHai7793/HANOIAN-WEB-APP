@@ -6,7 +6,10 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/gfmaster}
     username: ${DB_USER:gfm}
     password: ${DB_PASSWORD:gfm}
-    hikari.maximum-pool-size: 10
+    hikari:
+      maximum-pool-size: 10
+      # Hết connection thì báo lỗi sau 5 giây thay vì 30 giây mặc định: request xếp hàng ngắn, không treo
+      connection-timeout: 5000
 
   jpa:
     open-in-view: false
@@ -85,6 +88,7 @@ gfm:
     auth-per-minute: 5              # login/register theo IP
     api-per-minute: 100             # mọi API khác theo user
     maps-per-minute: 20             # /maps/resolve theo user (mỗi lần có thể gọi ra Google)
+    login-per-account-per-minute: 10 # đăng nhập theo tài khoản (nhiều IP cùng dò một tài khoản)
   idempotency:
     ttl: 24h                        # POST cùng Idempotency-Key trong 24h nhận lại response cũ
     in-progress-ttl: 5m             # app chết giữa chừng thì khoá "đang xử lý" tự nhả sau 5 phút
@@ -97,6 +101,9 @@ gfm:
     # URL công khai của ảnh: /uploads (local) hoặc CDN, ví dụ https://img.example.com
     public-base-url: ${PUBLIC_UPLOAD_BASE_URL:/uploads}
     max-upload-size: 12MB
+    quota:                          # mỗi người mỗi ngày (giờ Việt Nam); đếm trong Redis
+      daily-bytes: 300MB
+      daily-files: 300
     s3:
       endpoint: ${S3_ENDPOINT:}                  # R2: https://<account>.r2.cloudflarestorage.com
       region: ${S3_REGION:auto}

@@ -72,8 +72,8 @@ public class UploadController {
   public ResponseEntity<Void> content(@CurrentUser UUID userId, @PathVariable UUID id, HttpServletRequest request)
       throws IOException {
     try (InputStream in = request.getInputStream()) {
-      // Đọc tối đa giới hạn + 1 byte: đủ để biết file lớn hơn giới hạn (service báo 413) mà không đọc hết
-      service.receiveContent(userId, id, in.readNBytes((int) service.maxUploadBytes() + 1));
+      // Ghi thẳng luồng xuống vùng incoming, dừng ở giới hạn + 1 byte (service báo 413), không giữ file trong RAM
+      service.receiveContent(userId, id, in);
     }
     return ResponseEntity.noContent().build();
   }

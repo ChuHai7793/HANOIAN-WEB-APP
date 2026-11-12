@@ -10,7 +10,7 @@ class ImageUrlsTest {
 
   private static ImageUrls withBase(String base) {
     GfmProperties.Storage storage =
-        new GfmProperties.Storage("local", "u", "i", base, DataSize.ofMegabytes(12), null);
+        new GfmProperties.Storage("local", "u", "i", base, DataSize.ofMegabytes(12), null, null);
     return new ImageUrls(new GfmProperties(null, null, null, null, null, storage, null, null, null, null, null));
   }
 
