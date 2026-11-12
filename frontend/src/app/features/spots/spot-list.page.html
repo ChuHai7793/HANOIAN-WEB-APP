@@ -1,0 +1,242 @@
+<div class="flex flex-col gap-3 px-4 pb-10 pt-4 sm:px-6 lg:px-8 lg:pt-5">
+  <!-- Banner đầu trang như Khám phá quán: ảnh nền (admin đổi được; chưa đổi thì lấy ảnh chỗ chơi nổi bật đầu tiên) -->
+  <app-page-banner
+    kicker="Hà Nội, ngoài quán xá"
+    [heading]="heading()"
+    tagline="Music box, workshop, bảo tàng, dạo phố. Hẹn hò đâu chỉ ở quán."
+    [image]="bannerImage()"
+    [imageSrcset]="bannerImage() === defaultBanner ? defaultSrcset : null"
+    [imagePosition]="bannerImage() === defaultBanner ? '70% 28%' : 'center'"
+    [credit]="bannerImage() === defaultBanner ? defaultCredit : null"
+    [editable]="canEdit()"
+    [custom]="!!banner.custom()"
+    [busy]="banner.busy()"
+    (upload)="banner.upload($event)"
+    (reset)="banner.reset()"
+  >
+    <button
+      bannerLeft
+      type="button"
+      class="flex h-9 items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 text-[13px] font-medium text-white backdrop-blur transition hover:bg-white/25"
+      (click)="cityHint()"
+    >
+      <app-icon name="pin" [size]="15" />Hà Nội<app-icon name="chevronDown" [size]="14" />
+    </button>
+    <button
+      bannerRight
+      type="button"
+      class="flex h-9 items-center gap-1 rounded-full bg-white px-2 text-[12px] font-semibold text-brand-700 shadow-md shadow-brand-900/20 transition hover:bg-brand-50 sm:px-3"
+      aria-label="Autoplan buổi hẹn"
+      (click)="autoplanOpen.set(true)"
+    >
+      <app-icon name="shuffle" [size]="14" /><span class="max-sm:hidden">Autoplan buổi hẹn</span>
+    </button>
+    @if (canEdit()) {
+      <button
+        bannerRight
+        type="button"
+        class="flex h-9 items-center gap-1 rounded-full bg-brand-600 px-2 text-[12px] font-semibold text-white shadow-md shadow-brand-900/30 transition hover:bg-brand-700 sm:px-3"
+        aria-label="Thêm chỗ chơi"
+        (click)="openCreate()"
+      >
+        <app-icon name="plus" [size]="14" [stroke]="2.4" /><span class="max-sm:hidden">Thêm chỗ chơi</span>
+      </button>
+    }
+
+    <div class="flex flex-wrap items-center gap-2">
+        <label class="flex h-11 min-w-0 flex-[1_1_100%] items-center gap-2.5 rounded-full bg-white px-4 text-slate-500 shadow-lg shadow-brand-900/20 sm:max-w-[420px] sm:flex-[1_1_280px]">
+          <app-icon name="search" [size]="18" />
+          <span class="sr-only">Tìm chỗ chơi</span>
+          <input
+            type="search"
+            [value]="q()"
+            (input)="onSearch($any($event.target).value)"
+            class="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+            placeholder="Tìm theo tên, địa chỉ…"
+          />
+        </label>
+        <!-- Điện thoại: khu vực và Bộ lọc gom thành một hàng vuốt ngang (sm:contents: màn rộng xếp chung hàng trên); nhóm chỗ chơi nằm trong Bộ lọc -->
+        <div role="group" aria-label="Khu vực và bộ lọc" class="flex gap-2 max-sm:-mx-4 max-sm:w-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] *:shrink-0 *:whitespace-nowrap sm:contents">
+          <label class="flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm text-slate-700 shadow-lg shadow-brand-900/20">
+            <span class="text-brand-600"><app-icon name="pin" [size]="18" /></span>
+            <span class="sr-only">Khu vực</span>
+            <select
+              [value]="district()"
+              (change)="setDistrict($any($event.target).value)"
+              class="cursor-pointer bg-transparent text-sm text-slate-900 outline-none"
+            >
+              <option value="">Mọi khu vực</option>
+              @for (d of districts(); track d.code) {
+                <option [value]="d.code">{{ d.label }}</option>
+              }
+            </select>
+          </label>
+          <app-filter-button [count]="filterCount()" (open)="filterOpen.set(true)" />
+        </div>
+    </div>
+  </app-page-banner>
+
+  <!-- Chỗ chơi nổi bật (admin chọn): ẩn / hiện, nhớ theo trình duyệt -->
+  <app-featured-section
+    heading="Chỗ chơi nổi bật"
+    storageKey="gfm.featuredSpotsHidden"
+    [cards]="featuredCards()"
+    [canEdit]="canEdit()"
+    (open)="openFeatured($event)"
+    (edit)="featuredEditorOpen.set(true)"
+  />
+
+  <app-active-filters [items]="filterChips()" (remove)="removeFilter($event)" (clear)="clearFilters()" />
+  @if (missingDistrict()) {
+    <div class="rounded-[20px] border border-dashed border-brand-300 bg-white px-6 py-12 text-center text-sm text-slate-500">
+      Không có khu vực này. <a routerLink="/spots" class="font-semibold text-brand-700 hover:underline">Xem mọi khu vực</a>
+    </div>
+  } @else if (loading() && items().length === 0) {
+    <p class="text-sm text-slate-500">Đang tải…</p>
+  } @else if (items().length === 0) {
+    <div class="rounded-[20px] border border-dashed border-brand-300 bg-white px-6 py-12 text-center text-sm text-slate-500">
+      {{ hasFilter() ? 'Không tìm thấy chỗ nào hợp bộ lọc. Thử bỏ bớt bộ lọc nhé.' : 'Chưa có chỗ chơi nào.' }}
+    </div>
+  } @else {
+    <h2 id="danh-sach" class="mt-2 flex scroll-mt-4 items-baseline gap-2 text-lg font-bold tracking-tight text-slate-900">
+      {{ categoryTitle() }}<span class="text-sm font-medium text-slate-500">{{ total() }} chỗ</span>
+    </h2>
+    <!-- Hàng thẻ đầu vừa khít màn hình, hàng sau cuộn mới thấy -->
+    <div appFitRow class="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+      @for (item of items(); track item.id) {
+        <article
+          class="flex h-[var(--row-h,420px)] cursor-pointer flex-col overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_1px_2px_rgba(48,30,110,0.04),0_8px_24px_rgba(48,30,110,0.05)] transition hover:border-brand-300 focus-visible:outline-2 focus-visible:outline-brand-500"
+          tabindex="0"
+          role="button"
+          [attr.aria-label]="'Xem chi tiết ' + item.name"
+          (click)="detail.set(item)"
+          (keydown.enter)="detail.set(item)"
+        >
+          <div class="relative flex min-h-0 flex-[0_1_75%] items-center justify-center bg-[#EFEAFC] text-brand-500">
+            @if (item.imageUrl) {
+              <app-photo-carousel class="h-full w-full" [photos]="photosOf(item)" [alt]="item.name" [variants]="true" />
+            } @else {
+              <app-icon [name]="cat(item).icon" [size]="44" [stroke]="1.5" />
+            }
+            <span class="absolute left-3 top-3 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-brand-800" [title]="cat(item).label">
+              {{ shortLabel(item) }}
+            </span>
+            <span class="absolute right-3 top-3 rounded-full bg-slate-900/70 px-2.5 py-1 text-xs font-medium text-white">
+              {{ price(item) }}
+            </span>
+            @if (canEdit()) {
+              <div class="absolute bottom-3 right-3 flex gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
+                <button type="button" class="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm text-slate-600 hover:text-brand-700" title="Sửa" (click)="openEdit(item)"><app-icon name="edit" [size]="14" /></button>
+                <button type="button" class="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm text-rose-600 hover:text-rose-700" title="Xoá" (click)="pendingDelete.set(item)"><app-icon name="trash" [size]="14" /></button>
+              </div>
+            }
+            @if (item.needsBooking) {
+              <span class="absolute bottom-3 left-3 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                Cần đặt trước
+              </span>
+            }
+          </div>
+          <div class="flex flex-[1_0_25%] flex-col justify-between gap-2 px-3.5 pb-3 pt-2.5">
+            <div class="flex min-w-0 flex-col gap-1">
+              <h2 class="truncate text-base font-bold tracking-tight text-slate-900" [title]="item.name">{{ item.name }}</h2>
+              <div class="flex items-center gap-2">
+                @if (item.ratingCount && item.ratingAvg !== null) {
+                  <span class="shrink-0 text-[13px] font-semibold text-slate-700" [attr.aria-label]="'Đánh giá ' + rating(item.ratingAvg) + ' trên 5, ' + item.ratingCount + ' lượt'"><span class="text-[#E29A2D]">★</span> {{ rating(item.ratingAvg) }} <span class="font-normal text-slate-400">({{ item.ratingCount }})</span></span>
+                }
+                <span class="min-w-0 flex-1 truncate text-[13px] text-slate-500">{{ item.address || 'Chưa có địa chỉ' }} · <span class="font-medium text-slate-600">{{ item.districtLabel }}</span></span>
+                <app-vibe-tags class="shrink-0" [vibes]="item.vibes" />
+              </div>
+            </div>
+            <!-- Một nút chính (Lưu); Chỉ đường / Vào plan là icon, rê chuột thì hiện chữ -->
+            <div class="flex items-center gap-1.5" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
+              <a [href]="directions(item)" target="_blank" rel="noopener" class="group/act flex h-9 touch:h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-brand-50 focus-visible:bg-brand-50" aria-label="Chỉ đường" title="Chỉ đường">
+                <app-icon name="navigate" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[80px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[80px] group-focus-visible/act:opacity-100 touch:ml-1 touch:max-w-none touch:opacity-100">Chỉ đường</span>
+              </a>
+              <button type="button" class="group/act flex h-9 touch:h-10 items-center rounded-[10px] border border-brand-200 px-2.5 text-xs font-medium text-slate-700 transition-colors hover:bg-brand-50 focus-visible:bg-brand-50" aria-label="Vào plan" title="Vào plan" (click)="addToPlan({ kind: 'spot', refId: item.id, name: item.name, district: item.district })">
+                <app-icon name="route" [size]="15" /><span class="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover/act:ml-1 group-hover/act:max-w-[80px] group-hover/act:opacity-100 group-focus-visible/act:ml-1 group-focus-visible/act:max-w-[80px] group-focus-visible/act:opacity-100 touch:ml-1 touch:max-w-none touch:opacity-100">Vào plan</span>
+              </button>
+              @if (item.inMyPlace) {
+                <span class="flex min-h-9 touch:min-h-10 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-100 px-2 text-xs font-semibold text-brand-800">
+                  <app-icon name="heart" [size]="14" [filled]="true" />Đã lưu
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  class="flex min-h-9 touch:min-h-10 min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-[10px] bg-brand-600 px-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                  [disabled]="savingSpot() === item.id"
+                  (click)="saveSpot(item)"
+                >
+                  <app-icon name="plus" [size]="14" [stroke]="2.4" />Lưu
+                </button>
+              }
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+    <app-pager class="mt-2" [page]="pager.page()" [total]="total()" unit="chỗ chơi" (pageChange)="goPage($event)" />
+  }
+</div>
+
+@if (filterOpen()) {
+  <app-filter-sheet [resultLabel]="'Xem ' + total() + ' chỗ'" [activeCount]="filterCount()" (closed)="filterOpen.set(false)" (cleared)="clearFilters()">
+    <app-filter-group title="Nhóm chỗ chơi">
+      <app-choice-chips [options]="categoryOptions()" [selected]="[category()]" (toggle)="setCategory($any($event))" />
+    </app-filter-group>
+    <app-filter-group title="Ngân sách" hint="giá thấp nhất mỗi người">
+      <app-choice-chips [options]="budgetOptions" [selected]="[filters().budget]" (toggle)="setFilter({ budget: filters().budget === $event ? null : $any($event) })" />
+    </app-filter-group>
+    <app-filter-group title="Thời lượng">
+      <app-choice-chips [options]="durationOptions" [selected]="[filters().duration]" (toggle)="setFilter({ duration: filters().duration === $event ? '' : $any($event) })" />
+    </app-filter-group>
+    <app-filter-group title="Kiểu hẹn">
+      <app-choice-chips [options]="vibeOptions" [selected]="filters().vibes" (toggle)="setFilter({ vibes: toggleIn(filters().vibes, $any($event)) })" />
+    </app-filter-group>
+    <app-filter-group title="Giờ mở cửa & thời tiết">
+      <div class="flex flex-col gap-2">
+        <app-filter-switch label="Đang mở cửa" icon="clock" [on]="filters().openNow" (toggle)="setFilter({ openNow: !filters().openNow })" />
+        <app-filter-switch label="Ngày mưa: chỉ chỗ trong nhà" icon="umbrella" [on]="filters().rainy" (toggle)="setFilter({ rainy: !filters().rainy })" />
+        <app-filter-switch label="Không cần đặt trước" icon="calendar" [on]="filters().noBooking" (toggle)="setFilter({ noBooking: !filters().noBooking })" />
+      </div>
+    </app-filter-group>
+    <app-filter-group title="Sắp xếp">
+      <app-choice-chips [options]="sortOptions" [selected]="[filters().sort]" (toggle)="setFilter({ sort: $any($event) })" />
+    </app-filter-group>
+  </app-filter-sheet>
+}
+
+@if (formOpen()) {
+  <app-spot-form [spot]="editing()" [districts]="districts()" (save)="save($event)" (cancel)="closeForm()" />
+}
+
+@if (pendingDelete(); as target) {
+  <app-confirm-dialog
+    title="Xoá chỗ chơi?"
+    [message]="'Xoá &quot;' + target.name + '&quot; khỏi Tìm chỗ chơi.'"
+    (confirm)="confirmDelete()"
+    (cancel)="pendingDelete.set(null)"
+  />
+}
+
+@if (planTarget(); as t) {
+  <app-add-to-plan-dialog [kind]="t.kind" [refId]="t.refId" [name]="t.name" [district]="t.district" (closed)="planTarget.set(null)" />
+}
+
+@if (featuredEditorOpen()) {
+  <app-featured-editor kind="spot" [current]="featuredSlots()" (closed)="featuredEditorOpen.set(false)" (saved)="reloadFeatured(); featuredEditorOpen.set(false)" />
+}
+
+@if (autoplanOpen()) {
+  <app-autoplan-dialog (closed)="autoplanOpen.set(false)" />
+}
+
+@if (detail(); as d) {
+  <app-spot-detail-dialog
+    [spot]="d"
+    [saved]="d.inMyPlace"
+    (closed)="detail.set(null)"
+    (plan)="detail.set(null); addToPlan({ kind: 'spot', refId: $event.id, name: $event.name, district: $event.district })"
+    (save)="saveSpot($event)"
+    (ratingChange)="onRatingChange(d.id, $event)"
+  />
+}

@@ -1,6 +1,7 @@
-import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, input, OnDestroy, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { photosOf, thumbOf } from '../../core/models/place.model';
+import { SeoService } from '../../core/seo/seo.service';
 import { Vibe, vibeMeta } from '../../core/models/vibe.model';
 import { AuthService } from '../../core/auth/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
@@ -189,9 +190,14 @@ interface Pick {
     }
   `,
 })
-export class QuizPage implements OnInit {
+export class QuizPage implements OnInit, OnDestroy {
   protected readonly thumbOf = thumbOf;
+  private readonly seo = inject(SeoService);
   private readonly dateVibe = inject(DateVibeService);
+
+  ngOnDestroy(): void {
+    this.seo.clear();
+  }
   private readonly catalog = inject(CatalogService);
   private readonly spots = inject(SpotService);
   private readonly toast = inject(ToastService);
@@ -211,6 +217,13 @@ export class QuizPage implements OnInit {
   protected readonly autoplanOpen = signal(false);
 
   ngOnInit(): void {
+    this.seo.set({
+      title: 'Gu hẹn hò của bạn là gì? Quiz 6 câu',
+      description:
+        'Trả lời 6 câu hỏi ngắn để biết gu hẹn hò của bạn (chill, năng động hay lãng mạn) và nhận gợi ý quán cafe, chỗ chơi ở Hà Nội hợp gu.',
+      path: '/quiz',
+      jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: 'Quiz gu hẹn hò', url: this.seo.absolute('/quiz') },
+    });
     const r = this.r();
     if (r === 'chill' || r === 'active' || r === 'romantic') {
       this.shared.set(true);

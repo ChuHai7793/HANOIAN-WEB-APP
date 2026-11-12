@@ -55,8 +55,15 @@ class SeoPagesIT extends ApiTestSupport {
     assertThat(spot).isEqualTo("bao-tang-dong-xuan-" + suffix);
     mvc.perform(get("/api/v1/spots/by-slug/" + spot)).andExpect(status().isOk());
 
+    // Sitemap: trang riêng và trang hub theo loại / khu vực đang có dữ liệu (quán đã chuyển sang Cầu Giấy)
     String sitemap = body(mvc.perform(get("/api/v1/public/sitemap")).andExpect(status().isOk())).toString();
-    assertThat(sitemap).contains("/quan/" + slug).contains("/cho-choi/" + spot);
+    assertThat(sitemap)
+        .contains("/quan/" + slug)
+        .contains("/cho-choi/" + spot)
+        .contains("\"/quan-cafe\"")
+        .contains("/quan-cafe/cau-giay")
+        .contains("/khu-vuc/cau-giay")
+        .contains("/cho-choi/khu-vuc/ba-dinh");
   }
 
   @Test

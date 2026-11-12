@@ -1,0 +1,311 @@
+<div class="flex flex-col gap-10 px-4 pb-8 pt-4 sm:px-6 lg:px-8 lg:pt-5">
+  <!-- Hero căn giữa: dùng chung ảnh nền với Khám phá quán (admin đổi ở đâu cũng được) -->
+  <app-page-banner
+    kicker="Hà Nội, hẹn hò"
+    heading="Hẹn ở đâu cũng đẹp."
+    tagline="Gợi ý quán cafe, quán ăn, bar và chỗ chơi cho buổi hẹn ở Hà Nội."
+    [centered]="true"
+    [typing]="true"
+    [image]="banner.ready() ? (banner.custom() ?? defaultBanner) : null"
+    [imageSrcset]="banner.custom() ? null : defaultSrcset"
+    [imagePosition]="banner.custom() ? 'center' : '70% 40%'"
+    [credit]="banner.custom() ? null : defaultCredit"
+    [editable]="canEdit()"
+    [custom]="!!banner.custom()"
+    [busy]="banner.busy()"
+    (upload)="banner.upload($event)"
+    (reset)="banner.reset()"
+  >
+    <!-- Tìm: Enter hoặc bấm nút thì sang Khám phá quán với từ khoá -->
+    <form
+      class="mx-auto flex w-full max-w-2xl items-center gap-2"
+      role="search"
+      (submit)="search($event)"
+    >
+      <label
+        class="flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-xl bg-white px-4 text-slate-500 shadow-lg shadow-brand-900/30 sm:h-14"
+      >
+        <app-icon name="search" [size]="18" />
+        <span class="sr-only">Tìm quán</span>
+        <input
+          type="search"
+          name="q"
+          [value]="q()"
+          (input)="q.set($any($event.target).value)"
+          class="min-w-0 flex-1 bg-transparent text-[15px] text-slate-900 outline-none placeholder:text-slate-400"
+          placeholder="Tên quán, khu vực, kiểu quán…"
+        />
+      </label>
+      <button
+        type="submit"
+        class="flex h-12 shrink-0 items-center gap-2 rounded-xl bg-brand-600 px-4 text-[15px] font-semibold text-white shadow-lg shadow-brand-900/30 transition hover:bg-brand-700 sm:h-14 sm:px-6"
+      >
+        <app-icon name="search" [size]="18" [stroke]="2.4" /><span class="max-sm:hidden"
+          >Tìm quán</span
+        >
+      </button>
+    </form>
+  </app-page-banner>
+
+  <!-- Hẹn kiểu gì: ô ảnh lớn, chữ căn giữa trên ảnh, trượt ngang -->
+  <section class="flex flex-col gap-5">
+    <h2
+      class="flex flex-col items-center gap-2 text-center text-2xl font-extrabold tracking-tight text-slate-900 sm:text-[28px]"
+    >
+      Hẹn kiểu gì?<span class="h-1 w-12 rounded-full bg-brand-600" aria-hidden="true"></span>
+    </h2>
+    <app-scroll-row>
+      @for (t of purposes; track t.key) {
+        <a
+          [routerLink]="t.link"
+          [queryParams]="t.query"
+          class="group relative flex h-[150px] w-[72%] shrink-0 snap-start items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br text-white shadow-sm transition hover:shadow-md sm:h-[190px] sm:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]"
+          [class]="t.tone"
+        >
+          @if (tileImage(t.key); as src) {
+            <img
+              [src]="src"
+              alt=""
+              loading="lazy"
+              decoding="async"
+              (error)="imageFailed(tileUrl(t.key))"
+              class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            />
+            <span
+              class="absolute inset-0 bg-black/45 transition group-hover:bg-black/35"
+            ></span>
+          }
+          <span
+            class="relative flex items-center gap-2.5 text-2xl font-extrabold tracking-tight [text-shadow:0_2px_12px_rgb(0_0_0/0.5)] sm:text-[28px]"
+          >
+            <app-icon [name]="t.icon" [size]="24" />{{ t.title }}
+          </span>
+        </a>
+      }
+    </app-scroll-row>
+  </section>
+
+  <!-- Khu vực: ô ảnh, tên quận và số quán ở góc dưới; chỉ khu vực đang có quán, nhiều quán trước -->
+  @if (districtTiles().length) {
+    <section class="flex flex-col gap-5">
+      <h2
+        class="flex flex-col items-center gap-2 text-center text-2xl font-extrabold tracking-tight text-slate-900 sm:text-[28px]"
+      >
+        Hẹn ở khu nào?<span
+          class="h-1 w-12 rounded-full bg-brand-600"
+          aria-hidden="true"
+        ></span>
+      </h2>
+      <app-scroll-row>
+        @for (d of districtTiles(); track d.code) {
+          <a
+            [routerLink]="['/khu-vuc', d.slug]"
+            class="group relative flex h-[220px] w-[60%] shrink-0 snap-start flex-col justify-end overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 to-brand-900 p-4 text-white shadow-sm transition hover:shadow-md sm:h-[260px] sm:w-[calc((100%-1rem)/2)] md:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-3rem)/4)]"
+          >
+            @if (thumb(d.imageUrl); as src) {
+              <img
+                [src]="src"
+                alt=""
+                loading="lazy"
+                decoding="async"
+                (error)="imageFailed(d.imageUrl)"
+                class="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+              />
+            }
+            <span
+              class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent"
+            ></span>
+            <span class="relative">
+              <span class="block text-xl font-extrabold leading-tight">{{ d.label }}</span>
+              <span class="mt-0.5 block text-[13px] text-white/85">{{ d.count }} quán</span>
+            </span>
+          </a>
+        }
+      </app-scroll-row>
+    </section>
+  }
+
+  <!-- Điểm hẹn nổi bật (admin chọn quán và chỗ chơi): lưới 4 cột, thẻ gọn -->
+  @if (cards().length || canEdit()) {
+    <section class="flex flex-col gap-5">
+      <div class="relative flex justify-center">
+        <h2
+          class="flex flex-col items-center gap-2 text-center text-2xl font-extrabold tracking-tight text-slate-900 sm:text-[28px]"
+        >
+          Điểm hẹn nổi bật<span
+            class="h-1 w-12 rounded-full bg-brand-600"
+            aria-hidden="true"
+          ></span>
+        </h2>
+        @if (canEdit()) {
+          <div
+            class="flex gap-2 max-sm:mt-3 max-sm:w-full max-sm:justify-center sm:absolute sm:right-0 sm:top-0"
+          >
+            <button
+              type="button"
+              class="flex min-h-9 items-center gap-1.5 rounded-full border border-brand-200 bg-white px-3 text-[13px] font-medium text-brand-700 transition hover:bg-brand-50"
+              (click)="placeEditorOpen.set(true)"
+            >
+              <app-icon name="edit" [size]="14" />Chọn quán
+            </button>
+            <button
+              type="button"
+              class="flex min-h-9 items-center gap-1.5 rounded-full border border-brand-200 bg-white px-3 text-[13px] font-medium text-brand-700 transition hover:bg-brand-50"
+              (click)="spotEditorOpen.set(true)"
+            >
+              <app-icon name="edit" [size]="14" />Chọn chỗ chơi
+            </button>
+          </div>
+        }
+      </div>
+      @if (cards().length) {
+        <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          @for (c of cards(); track c.key) {
+            <a
+              [routerLink]="c.link"
+              class="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md"
+            >
+              <span class="relative block aspect-square overflow-hidden bg-[#EFEAFC]">
+                @if (thumb(c.imageUrl); as src) {
+                  <img
+                    [src]="src"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    (error)="imageFailed(c.imageUrl)"
+                    class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                  />
+                } @else {
+                  <span class="flex h-full w-full items-center justify-center text-brand-500"
+                    ><app-icon name="image" [size]="36" [stroke]="1.5"
+                  /></span>
+                }
+                <span
+                  class="absolute left-2.5 top-2.5 rounded-full bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-brand-800"
+                  >{{ c.badge }}</span
+                >
+              </span>
+              <span class="flex flex-col gap-0.5 px-3 pb-3 pt-2.5">
+                <span
+                  class="truncate text-[15px] font-bold tracking-tight text-slate-900 group-hover:text-brand-700"
+                  [title]="c.name"
+                  >{{ c.name }}</span
+                >
+                <span class="truncate text-[13px] text-slate-500">{{
+                  c.address || 'Chưa có địa chỉ'
+                }}</span>
+              </span>
+            </a>
+          }
+        </div>
+      } @else {
+        <p
+          class="rounded-2xl border border-dashed border-brand-200 bg-white px-6 py-10 text-center text-sm text-slate-500"
+        >
+          Admin chưa chọn điểm hẹn nổi bật.
+        </p>
+      }
+      <div
+        class="flex flex-wrap justify-center gap-x-6 gap-y-1 text-sm font-semibold text-brand-700"
+      >
+        <a routerLink="/explore" class="hover:underline">Xem tất cả quán →</a>
+        <a routerLink="/spots" class="hover:underline">Xem tất cả chỗ chơi →</a>
+      </div>
+    </section>
+  }
+
+  <!-- Hẹn hò: Tìm đối tượng (khối lớn, không hiện hồ sơ người dùng ra ngoài), Autoplan và quiz bên cạnh -->
+  <section class="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
+    <div
+      class="flex flex-col gap-4 rounded-[22px] border border-rose-200 bg-rose-50 p-5 sm:p-6"
+    >
+      <p
+        class="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.18em] text-rose-600"
+      >
+        <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>Tìm đối tượng
+      </p>
+      <h2 class="text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
+        Gặp người cùng gu, hẹn ở quán cả hai cùng thích.
+      </h2>
+      <ul class="grid gap-2 text-sm text-slate-700 sm:grid-cols-3">
+        <li class="flex items-start gap-2">
+          <span class="mt-0.5 text-rose-600"><app-icon name="checkCircle" [size]="16" /></span
+          >Quẹt theo quán và chỗ chơi mà cả hai đã lưu
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="mt-0.5 text-rose-600"><app-icon name="checkCircle" [size]="16" /></span
+          >Lọc theo giới tính, tuổi, cùng thành phố
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="mt-0.5 text-rose-600"><app-icon name="checkCircle" [size]="16" /></span
+          >Match là nhắn tin ngay, gợi ý điểm hẹn sẵn
+        </li>
+      </ul>
+      <a
+        routerLink="/dating"
+        class="flex w-fit min-h-11 items-center gap-2 rounded-full bg-[#C2335F] px-5 text-sm font-semibold text-white transition hover:bg-rose-700"
+      >
+        <app-icon name="heart" [size]="16" [filled]="true" />Tìm người đi cùng<app-icon
+          name="arrowRight"
+          [size]="15"
+          [stroke]="2.4"
+        />
+      </a>
+    </div>
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+      <button
+        type="button"
+        class="flex items-start gap-3 rounded-2xl border border-brand-200 bg-brand-100 p-4 text-left transition hover:bg-brand-50"
+        (click)="autoplanOpen.set(true)"
+      >
+        <span
+          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-brand-600 shadow-sm"
+          ><app-icon name="shuffle" [size]="20"
+        /></span>
+        <span>
+          <span class="block font-bold text-slate-900">Autoplan buổi hẹn</span>
+          <span class="mt-0.5 block text-sm text-slate-600"
+            >Chọn khu vực và kiểu hẹn, app dựng sẵn lịch trình: quán, chỗ chơi, giờ đi.</span
+          >
+        </span>
+      </button>
+      <a
+        routerLink="/quiz"
+        class="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 transition hover:bg-amber-100/70"
+      >
+        <span
+          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-amber-600 shadow-sm"
+          ><app-icon name="smile" [size]="20"
+        /></span>
+        <span>
+          <span class="block font-bold text-slate-900">Gu hẹn hò của bạn</span>
+          <span class="mt-0.5 block text-sm text-slate-600"
+            >Vài câu hỏi ngắn, ra kiểu hẹn hợp gu và quán gợi ý.</span
+          >
+        </span>
+      </a>
+    </div>
+  </section>
+
+  <app-site-footer />
+</div>
+
+@if (placeEditorOpen()) {
+  <app-featured-editor
+    kind="place"
+    [current]="placeSlots()"
+    (closed)="placeEditorOpen.set(false)"
+    (saved)="loadFeaturedPlaces(); placeEditorOpen.set(false)"
+  />
+}
+@if (spotEditorOpen()) {
+  <app-featured-editor
+    kind="spot"
+    [current]="spotSlots()"
+    (closed)="spotEditorOpen.set(false)"
+    (saved)="loadFeaturedSpots(); spotEditorOpen.set(false)"
+  />
+}
+@if (autoplanOpen()) {
+  <app-autoplan-dialog (closed)="autoplanOpen.set(false)" />
+}

@@ -34,6 +34,8 @@ export interface CatalogPage {
 export interface DistrictOption {
   code: string;
   label: string;
+  /** Đường dẫn trang hub: /khu-vuc/{slug}, /quan-cafe/{slug}, /cho-choi/khu-vuc/{slug} */
+  slug: string;
   /** Số quán trong Khám phá quán ở khu vực này */
   count: number;
   /** Ảnh một quán tiêu biểu trong khu vực (ô trên trang chủ); null = chưa có */

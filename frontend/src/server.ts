@@ -106,9 +106,14 @@ function origin(req: express.Request): string {
   return canonicalHost ? `https://${canonicalHost}` : `${req.protocol}://${req.get('host')}`;
 }
 
-// Bản SSR là bản cho Google index (bản static chặn index bằng public/robots.txt)
+/**
+ * Bản SSR là bản cho Google index (bản static chặn index bằng public/robots.txt). Trang cá nhân / cần đăng nhập
+ * (render phía client, chỉ là khung trống với Google) và plan chia sẻ bằng link riêng không cho index.
+ */
+const NOINDEX_PATHS = ['/admin/', '/p/', '/login', '/register', '/onboarding', '/places', '/plans', '/dating', '/profile', '/girlfriends'];
 app.get('/robots.txt', (req, res) => {
-  res.type('text/plain').send(`User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /p/\n\nSitemap: ${origin(req)}/sitemap.xml\n`);
+  const rules = NOINDEX_PATHS.map((p) => `Disallow: ${p}`).join('\n');
+  res.type('text/plain').send(`User-agent: *\nAllow: /\n${rules}\n\nSitemap: ${origin(req)}/sitemap.xml\n`);
 });
 
 /** sitemap.xml: trang chính + mọi quán, chỗ chơi, bài viết đã xuất bản (lấy từ backend) */
@@ -117,6 +122,7 @@ app.get('/sitemap.xml', async (req, res) => {
     const r = await fetch(`${apiOrigin}/api/v1/public/sitemap`);
     const entries = r.ok ? ((await r.json()) as { path: string; updatedAt: string | null }[]) : [];
     const base = origin(req);
+    // Trang hub theo loại / khu vực và trang riêng lấy từ backend (chỉ hub đang có dữ liệu)
     const fixed = ['/', '/explore', '/spots', '/cam-nang', '/quiz', '/autoplan'].map((path) => ({ path, updatedAt: null }));
     const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
     const urls = [...fixed, ...entries]

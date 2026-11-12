@@ -21,6 +21,18 @@ import { VibeTagsComponent } from '../../shared/ui/vibe-tags.component';
 
 type Kind = 'place' | 'spot';
 
+/** "Cầu Giấy" → "cau-giay", cùng cách với CatalogDistrict.slug() ở backend */
+function districtSlug(label: string): string {
+  return label
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'd')
+    .normalize('NFD')
+    .replace(/\p{M}+/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 interface Fact {
   label: string;
   value: string;
@@ -331,12 +343,25 @@ export class VenuePage implements OnDestroy {
     if (v.ratingCount > 0 && v.ratingAvg !== null) {
       jsonLd['aggregateRating'] = { '@type': 'AggregateRating', ratingValue: v.ratingAvg, reviewCount: v.ratingCount, bestRating: 5, worstRating: 1 };
     }
+    // Đường dẫn: Trang chủ › Khám phá quán / Tìm chỗ chơi › Khu vực › Quán (Google hiện dưới tiêu đề kết quả)
+    const listPath = v.kind === 'place' ? '/explore' : '/spots';
+    const hubPath = v.kind === 'place' ? `/khu-vuc/${districtSlug(v.districtLabel)}` : `/cho-choi/khu-vuc/${districtSlug(v.districtLabel)}`;
+    const breadcrumb = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'HANOIVIBE', item: this.seo.absolute('/') },
+        { '@type': 'ListItem', position: 2, name: v.kind === 'place' ? 'Khám phá quán' : 'Tìm chỗ chơi', item: this.seo.absolute(listPath) },
+        { '@type': 'ListItem', position: 3, name: v.districtLabel, item: this.seo.absolute(hubPath) },
+        { '@type': 'ListItem', position: 4, name: v.name, item: this.seo.absolute(this.path()) },
+      ],
+    };
     this.seo.set({
-      title: `${v.name}: ${v.typeLabel.split(' · ')[0]} ${v.districtLabel}`,
+      title: `${v.name}: ${v.typeLabel.split(' · ')[0]} ${v.districtLabel}, Hà Nội`,
       description,
       image: v.photos[0] ?? null,
       path: this.path(),
-      jsonLd,
+      jsonLd: [jsonLd, breadcrumb],
     });
   }
 }

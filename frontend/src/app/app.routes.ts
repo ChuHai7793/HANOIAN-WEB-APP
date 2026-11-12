@@ -79,11 +79,21 @@ export const routes: Routes = [
         title: 'Khám phá quán · HANOIVIBE',
         loadComponent: () => import('./features/explore/explore.page').then((m) => m.ExplorePage),
       },
+      // Trang hub SEO: cùng ExplorePage, loại / khu vực lấy từ đường dẫn (từ khoá "quán cafe hẹn hò Cầu Giấy").
+      // Khớp SitemapService ở backend.
+      { path: 'khu-vuc/:districtSlug', loadComponent: () => import('./features/explore/explore.page').then((m) => m.ExplorePage) },
+      { path: 'quan-cafe', data: { hubType: 'cafe' }, loadComponent: () => import('./features/explore/explore.page').then((m) => m.ExplorePage) },
+      { path: 'quan-cafe/:districtSlug', data: { hubType: 'cafe' }, loadComponent: () => import('./features/explore/explore.page').then((m) => m.ExplorePage) },
+      { path: 'quan-bar', data: { hubType: 'bar' }, loadComponent: () => import('./features/explore/explore.page').then((m) => m.ExplorePage) },
+      { path: 'quan-bar/:districtSlug', data: { hubType: 'bar' }, loadComponent: () => import('./features/explore/explore.page').then((m) => m.ExplorePage) },
+      { path: 'quan-an', data: { hubType: 'restaurant' }, loadComponent: () => import('./features/explore/explore.page').then((m) => m.ExplorePage) },
+      { path: 'quan-an/:districtSlug', data: { hubType: 'restaurant' }, loadComponent: () => import('./features/explore/explore.page').then((m) => m.ExplorePage) },
       {
         path: 'spots',
         title: 'Tìm chỗ chơi · HANOIVIBE',
         loadComponent: () => import('./features/spots/spot-list.page').then((m) => m.SpotListPage),
       },
+      { path: 'cho-choi/khu-vuc/:districtSlug', loadComponent: () => import('./features/spots/spot-list.page').then((m) => m.SpotListPage) },
       {
         path: 'quan/:slug',
         data: { kind: 'place' },
@@ -158,7 +168,8 @@ export const routes: Routes = [
         canMatch: [adminGuard],
         loadComponent: () => import('./features/admin/admin-user-detail.page').then((m) => m.AdminUserDetailPage),
       },
+      // Đường dẫn lạ: trang 404 thật (HTTP 404 + noindex trên server), không chuyển về trang chủ
+      { path: '**', loadComponent: () => import('./features/not-found.page').then((m) => m.NotFoundPage) },
     ],
   },
-  { path: '**', redirectTo: '' },
 ];

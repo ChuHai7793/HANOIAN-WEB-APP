@@ -47,7 +47,4 @@ public final class ArticleDtos {
       @Size(max = 1024) @Pattern(regexp = PlaceRequest.IMAGE_URL, message = "Chỉ nhận URL http(s) hoặc /uploads/") String coverUrl,
       @Size(max = 100_000) String body,
       @Pattern(regexp = "draft|published") String status) {}
-
-  /** Dữ liệu cho sitemap.xml của frontend */
-  public record SitemapEntry(String path, Instant updatedAt) {}
 }

@@ -4,7 +4,6 @@ import com.gfmaster.article.ArticleDtos.ArticlePage;
 import com.gfmaster.article.ArticleDtos.ArticleRequest;
 import com.gfmaster.article.ArticleDtos.ArticleSummary;
 import com.gfmaster.article.ArticleDtos.ArticleView;
-import com.gfmaster.article.ArticleDtos.SitemapEntry;
 import com.gfmaster.common.security.CurrentUser;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -38,12 +37,6 @@ public class ArticleController {
   @GetMapping("/api/v1/articles/{slug}")
   public ArticleView get(@PathVariable String slug) {
     return articles.publishedBySlug(slug);
-  }
-
-  /** Đường dẫn công khai để frontend dựng sitemap.xml */
-  @GetMapping("/api/v1/public/sitemap")
-  public List<SitemapEntry> sitemap() {
-    return articles.sitemap();
   }
 
   @GetMapping("/api/v1/admin/articles")

@@ -1,6 +1,8 @@
-import { Component, computed, inject, input, OnInit, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Component, computed, inject, input, OnDestroy, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
+import { SeoService } from '../../core/seo/seo.service';
 import { directionsUrl, distanceText } from '../../core/models/plan.model';
 import { vibeMeta } from '../../core/models/vibe.model';
 import { IconComponent } from '../../shared/ui/icon.component';
@@ -85,8 +87,10 @@ import { PlanTimelineComponent } from './plan-timeline.component';
     }
   `,
 })
-export class AutoplanPreviewPage implements OnInit {
+export class AutoplanPreviewPage implements OnInit, OnDestroy {
   private readonly flow = inject(AutoplanFlowService);
+  private readonly seo = inject(SeoService);
+  private readonly platformId = inject(PLATFORM_ID);
   protected readonly loggedIn = inject(AuthService).isLoggedIn;
   /** ?save=1: vừa đăng ký / đăng nhập xong để lưu bản thử */
   readonly save_ = input<string | undefined>(undefined, { alias: 'save' });
@@ -100,8 +104,20 @@ export class AutoplanPreviewPage implements OnInit {
   protected readonly vibeLabel = computed(() => vibeMeta(this.draft()!.plan.vibe!).label);
 
   ngOnInit(): void {
+    this.seo.set({
+      title: 'Autoplan: lịch trình hẹn hò Hà Nội trong 10 giây',
+      description:
+        'Chọn khu vực, buổi, kiểu hẹn và ngân sách, Autoplan dựng sẵn lịch trình buổi hẹn ở Hà Nội: quán cafe, quán ăn, chỗ chơi gần nhau, đúng giờ mở cửa.',
+      path: '/autoplan',
+      jsonLd: { '@context': 'https://schema.org', '@type': 'WebApplication', name: 'Autoplan HANOIVIBE', url: this.seo.absolute('/autoplan'), applicationCategory: 'LifestyleApplication' },
+    });
     if (this.save_() && this.loggedIn() && this.draft()) void this.save();
-    if (!this.draft()) this.dialogOpen.set(true);
+    // Hộp thoại chỉ mở trên trình duyệt: render trên server (SEO) chỉ cần phần giới thiệu
+    if (!this.draft() && isPlatformBrowser(this.platformId)) this.dialogOpen.set(true);
+  }
+
+  ngOnDestroy(): void {
+    this.seo.clear();
   }
 
   protected distance(m: number) {

@@ -4,7 +4,6 @@ import com.gfmaster.article.ArticleDtos.ArticlePage;
 import com.gfmaster.article.ArticleDtos.ArticleRequest;
 import com.gfmaster.article.ArticleDtos.ArticleSummary;
 import com.gfmaster.article.ArticleDtos.ArticleView;
-import com.gfmaster.article.ArticleDtos.SitemapEntry;
 import com.gfmaster.common.error.ApiException;
 import com.gfmaster.common.error.ErrorCode;
 import com.gfmaster.common.web.Slugs;
@@ -13,7 +12,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -64,16 +62,6 @@ public class ArticleService {
   @Transactional(readOnly = true)
   public ArticleView publishedBySlug(String slug) {
     return find("a.slug = :key AND a.status = 'published'", slug);
-  }
-
-  /** Đường dẫn công khai cho sitemap.xml: quán, chỗ chơi, bài viết đã xuất bản */
-  @Transactional(readOnly = true)
-  public List<SitemapEntry> sitemap() {
-    List<SitemapEntry> out = new ArrayList<>();
-    out.addAll(jdbc.query("SELECT '/quan/' || slug AS path, updated_at FROM place_catalog WHERE slug IS NOT NULL ORDER BY slug", Map.of(), (rs, i) -> entry(rs)));
-    out.addAll(jdbc.query("SELECT '/cho-choi/' || slug AS path, updated_at FROM date_spots WHERE slug IS NOT NULL ORDER BY slug", Map.of(), (rs, i) -> entry(rs)));
-    out.addAll(jdbc.query("SELECT '/cam-nang/' || slug AS path, updated_at FROM articles WHERE status = 'published' ORDER BY published_at DESC", Map.of(), (rs, i) -> entry(rs)));
-    return out;
   }
 
   // ---- Admin ----
@@ -210,10 +198,6 @@ public class ArticleService {
     Matcher m = EMBED.matcher(body);
     while (m.find()) n++;
     return n;
-  }
-
-  private static SitemapEntry entry(ResultSet rs) throws SQLException {
-    return new SitemapEntry(rs.getString("path"), instant(rs, "updated_at"));
   }
 
   private static Instant instant(ResultSet rs, String col) throws SQLException {
